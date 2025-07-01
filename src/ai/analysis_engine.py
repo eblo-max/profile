@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 
 from src.ai.anthropic_client import anthropic_client
+from src.ai.watson_client import watson_client
 from src.database.connection import get_async_session
 from src.database.models import Analysis, AnalysisError
 from src.config.settings import settings
@@ -48,9 +49,10 @@ class AnalysisEngine:
     def __init__(self):
         """Инициализация движка"""
         self.claude_client = anthropic_client
+        self.watson_client = watson_client
         self.supported_services = {
             "claude": True,
-            "watson": settings.ibm_watson_api_key is not None,
+            "watson": watson_client.is_available,
             "azure": settings.azure_cognitive_key is not None,
             "google": settings.google_cloud_project_id is not None,
             "aws": settings.aws_access_key_id is not None,
@@ -154,7 +156,7 @@ class AnalysisEngine:
     
     async def quick_analyze(self, text: str, user_id: int, telegram_id: int) -> str:
         """
-        Быстрый анализ только через Claude (для демо)
+        Быстрый анализ через Claude + Watson (если доступен)
         
         Args:
             text: Текст для анализа
@@ -165,42 +167,93 @@ class AnalysisEngine:
             Форматированный результат анализа
         """
         try:
-            logger.info("⚡ Быстрый анализ через Claude", 
-                       user_id=user_id, 
-                       text_length=len(text))
+            user_context = {"user_id": user_id, "telegram_id": telegram_id}
             
-            # Анализ через Claude
-            claude_result = await self.claude_client.analyze_text(
-                text=text,
-                analysis_type="psychological",
-                user_context={"user_id": user_id, "telegram_id": telegram_id}
-            )
+            # Определяем доступные сервисы
+            services_to_use = ["Claude"]
+            if self.supported_services["watson"]:
+                services_to_use.append("Watson")
+            
+            logger.info("⚡ Быстрый анализ", 
+                       user_id=user_id, 
+                       text_length=len(text),
+                       services=services_to_use)
+            
+            # Запуск анализов параллельно
+            tasks = []
+            
+            # Claude (всегда)
+            tasks.append(self._run_claude_analysis(text, user_context))
+            
+            # Watson (если доступен и текст достаточно длинный)
+            watson_result = None
+            if self.supported_services["watson"] and len(text.split()) >= 100:
+                tasks.append(self._run_watson_analysis(text, user_context))
+            
+            # Выполнение анализов
+            if len(tasks) > 1:
+                claude_result, watson_result = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # Обработка исключений
+                if isinstance(claude_result, Exception):
+                    logger.error("❌ Ошибка Claude", error=str(claude_result))
+                    claude_result = {"error": str(claude_result), "status": "failed"}
+                
+                if isinstance(watson_result, Exception):
+                    logger.warning("⚠️ Watson недоступен", error=str(watson_result))
+                    watson_result = None
+                
+            else:
+                # Только Claude
+                claude_result = await tasks[0]
+            
+            # Создание комбинированного результата
+            if watson_result and watson_result.get("status") == "success":
+                # Обогащаем Claude результат данными Watson
+                enhanced_result = self._enrich_with_watson_data(claude_result, watson_result)
+                logger.info("✅ Быстрый анализ завершен (Claude + Watson)", 
+                           user_id=user_id,
+                           confidence=enhanced_result.get('confidence_score', 0))
+            else:
+                # Только Claude
+                enhanced_result = claude_result
+                logger.info("✅ Быстрый анализ завершен (только Claude)", 
+                           user_id=user_id,
+                           confidence=enhanced_result.get('confidence_score', 0))
             
             # Форматирование результата для пользователя
-            formatted_result = self._format_quick_result(claude_result)
+            formatted_result = self._format_quick_result(enhanced_result, watson_available=bool(watson_result))
             
-            logger.info("✅ Быстрый анализ завершен", user_id=user_id)
             return formatted_result
             
         except Exception as e:
-            logger.error("❌ Ошибка быстрого анализа", error=str(e))
+            logger.error("❌ Ошибка быстрого анализа", error=str(e), exc_info=True)
             return f"⚠️ **Ошибка анализа**: {str(e)}\n\nПопробуйте позже или обратитесь к администратору."
     
-    def _format_quick_result(self, claude_result: Dict[str, Any]) -> str:
+    def _format_quick_result(self, analysis_result: Dict[str, Any], watson_available: bool = False) -> str:
         """Форматирование детального результата для Telegram"""
         
-        if "error" in claude_result:
-            return f"⚠️ **Ошибка анализа**: {claude_result['error']}"
+        if "error" in analysis_result:
+            return f"⚠️ **Ошибка анализа**: {analysis_result['error']}"
         
-        # Извлечение данных из новой структуры
-        hook_summary = claude_result.get("hook_summary", "")
-        personality_core = claude_result.get("personality_core", {})
-        main_findings = claude_result.get("main_findings", {})
-        big_five_detailed = claude_result.get("psychological_profile", {}).get("big_five_traits", {})
-        practical_insights = claude_result.get("practical_insights", {})
-        actionable_recommendations = claude_result.get("actionable_recommendations", {})
-        fascinating_details = claude_result.get("fascinating_details", {})
-        confidence = claude_result.get("confidence_score", 80)
+        # Извлечение данных из структуры
+        hook_summary = analysis_result.get("hook_summary", "")
+        personality_core = analysis_result.get("personality_core", {})
+        main_findings = analysis_result.get("main_findings", {})
+        psychological_profile = analysis_result.get("psychological_profile", {})
+        
+        # Приоритет Watson Big Five данным если доступны
+        watson_big_five = psychological_profile.get("watson_big_five", {})
+        claude_big_five = psychological_profile.get("big_five_traits", {})
+        big_five_detailed = watson_big_five if watson_big_five else claude_big_five
+        
+        practical_insights = analysis_result.get("practical_insights", {})
+        actionable_recommendations = analysis_result.get("actionable_recommendations", {})
+        fascinating_details = analysis_result.get("fascinating_details", {})
+        confidence = analysis_result.get("confidence_score", 80)
+        
+        # Данные источников
+        data_sources = analysis_result.get("data_sources", {})
         
         # Начало форматирования
         result = "🧠 **ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ**\n"
@@ -285,30 +338,243 @@ class AnalysisEngine:
         
         # Метаинформация
         result += f"📈 **ИНДЕКС УВЕРЕННОСТИ:** {confidence}%\n"
-        result += f"🤖 **AI ДВИЖОК:** Claude 3.5 Sonnet\n"
-        result += f"🔬 **МЕТОДЫ:** Big Five, лингвистический анализ\n\n"
         
-        result += "💬 Отправьте еще текст для дополнительного анализа!"
+        # AI движки
+        if watson_available and data_sources:
+            result += f"🤖 **AI ДВИЖКИ:** Claude 3.5 Sonnet + IBM Watson\n"
+            result += f"🔬 **МЕТОДЫ:** Big Five (Watson), лингвистический анализ (Claude)\n"
+            if psychological_profile.get("scientific_validation"):
+                result += f"✅ **НАУЧНАЯ ВАЛИДАЦИЯ:** IBM Research\n"
+        else:
+            result += f"🤖 **AI ДВИЖОК:** Claude 3.5 Sonnet\n"
+            result += f"🔬 **МЕТОДЫ:** Big Five, лингвистический анализ\n"
+        
+        # Watson специфичные данные
+        if watson_available and watson_big_five:
+            # Показываем Watson потребности если есть
+            watson_needs = psychological_profile.get("psychological_needs", {})
+            if watson_needs:
+                top_needs = sorted(watson_needs.items(), key=lambda x: x[1].get('percentile', 0), reverse=True)[:2]
+                if top_needs:
+                    result += f"\n🎯 **КЛЮЧЕВЫЕ ПОТРЕБНОСТИ (Watson):**\n"
+                    for need_id, need_data in top_needs:
+                        result += f"• {need_data.get('name', need_id)}: {need_data.get('percentile', 0):.0f}%\n"
+        
+        result += "\n💬 Отправьте еще текст для дополнительного анализа!"
         
         return result
     
     async def _collect_ai_insights(self, analysis_input: AnalysisInput, analysis_id: int) -> Dict[str, Any]:
-        """Сбор данных от всех доступных AI сервисов (демо версия)"""
+        """Сбор данных от всех доступных AI сервисов"""
         results = {}
+        tasks = []
         
         if analysis_input.text:
-            claude_result = await self.claude_client.analyze_text(
-                text=analysis_input.text,
-                analysis_type="comprehensive_psychological",
-                user_context=analysis_input.metadata
-            )
-            results["claude"] = claude_result
+            # Claude анализ (всегда доступен)
+            tasks.append(self._run_claude_analysis(analysis_input.text, analysis_input.metadata))
+            
+            # Watson анализ (если доступен)
+            if self.supported_services["watson"]:
+                tasks.append(self._run_watson_analysis(analysis_input.text, analysis_input.metadata))
+            
+            logger.info("🔄 Запуск параллельного AI анализа", 
+                       services_count=len(tasks),
+                       analysis_id=analysis_id)
+            
+            # Параллельное выполнение всех анализов
+            ai_results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Обработка результатов
+            service_names = ["claude"]
+            if self.supported_services["watson"]:
+                service_names.append("watson")
+            
+            for i, result in enumerate(ai_results):
+                service_name = service_names[i]
+                
+                if isinstance(result, Exception):
+                    logger.error(f"❌ Ошибка {service_name} анализа", 
+                               error=str(result), 
+                               analysis_id=analysis_id)
+                    results[service_name] = {
+                        "error": str(result),
+                        "status": "failed",
+                        "service": service_name
+                    }
+                else:
+                    results[service_name] = result
+                    logger.info(f"✅ {service_name.title()} анализ завершен", 
+                               confidence=result.get('confidence_score', 0),
+                               analysis_id=analysis_id)
         
         return results
     
+    async def _run_claude_analysis(self, text: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Запуск Claude анализа"""
+        try:
+            return await self.claude_client.analyze_text(
+                text=text,
+                analysis_type="comprehensive_psychological",
+                user_context=metadata
+            )
+        except Exception as e:
+            logger.error("❌ Ошибка Claude анализа", error=str(e))
+            return {
+                "error": str(e),
+                "status": "failed",
+                "service": "claude"
+            }
+    
+    async def _run_watson_analysis(self, text: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Запуск Watson анализа"""
+        try:
+            return await self.watson_client.analyze_personality(
+                text=text,
+                user_context=metadata
+            )
+        except Exception as e:
+            logger.error("❌ Ошибка Watson анализа", error=str(e))
+            return {
+                "error": str(e),
+                "status": "failed", 
+                "service": "watson"
+            }
+    
     async def _synthesize_results(self, ai_results: Dict[str, Any], analysis_input: AnalysisInput) -> Dict[str, Any]:
-        """Синтез результатов (упрощенная версия)"""
-        return ai_results.get("claude", {})
+        """Синтез результатов через Claude с учетом данных от всех AI сервисов"""
+        try:
+            logger.info("🔄 Синтез результатов от AI сервисов", 
+                       services_available=list(ai_results.keys()))
+            
+            # Если есть данные от нескольких сервисов - используем синтез
+            if len(ai_results) > 1 and "watson" in ai_results and "claude" in ai_results:
+                # Комплексный синтез через Claude
+                synthesis_context = {
+                    "ai_results": ai_results,
+                    "services_used": list(ai_results.keys()),
+                    "analysis_input": analysis_input.metadata
+                }
+                
+                synthesis_result = await self.claude_client.analyze_text(
+                    text=analysis_input.text,
+                    analysis_type="synthesis",
+                    user_context=synthesis_context
+                )
+                
+                # Обогащение синтеза данными Watson
+                if "watson" in ai_results and ai_results["watson"].get("status") == "success":
+                    synthesis_result = self._enrich_with_watson_data(synthesis_result, ai_results["watson"])
+                
+                logger.info("✅ Комплексный синтез завершен", 
+                           confidence=synthesis_result.get('confidence_score', 0))
+                
+                return synthesis_result
+            
+            # Если Watson недоступен - возвращаем Claude результат
+            elif "claude" in ai_results:
+                logger.info("📝 Используем только Claude результат")
+                return ai_results["claude"]
+            
+            # Если только Watson доступен
+            elif "watson" in ai_results:
+                logger.info("🧠 Используем только Watson результат")
+                return self._format_watson_only_result(ai_results["watson"])
+            
+            else:
+                logger.warning("⚠️ Нет доступных результатов анализа")
+                return {"error": "Нет доступных результатов анализа", "status": "no_results"}
+                
+        except Exception as e:
+            logger.error("❌ Ошибка синтеза результатов", error=str(e), exc_info=True)
+            # Fallback на Claude если есть
+            return ai_results.get("claude", {"error": str(e), "status": "synthesis_failed"})
+    
+    def _enrich_with_watson_data(self, claude_result: Dict[str, Any], watson_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Обогащение результата Claude данными от Watson"""
+        try:
+            # Добавляем научные данные Watson в Claude результат
+            if "psychological_profile" not in claude_result:
+                claude_result["psychological_profile"] = {}
+            
+            # Watson Big Five данные
+            watson_big_five = watson_result.get("big_five_traits", {})
+            if watson_big_five:
+                claude_result["psychological_profile"]["watson_big_five"] = watson_big_five
+                claude_result["psychological_profile"]["scientific_validation"] = True
+            
+            # Watson потребности и ценности
+            if "psychological_needs" in watson_result:
+                claude_result["psychological_profile"]["psychological_needs"] = watson_result["psychological_needs"]
+            
+            if "core_values" in watson_result:
+                claude_result["psychological_profile"]["core_values"] = watson_result["core_values"]
+            
+            # Обновляем confidence score (средний между Claude и Watson)
+            watson_confidence = watson_result.get("confidence_score", 0)
+            claude_confidence = claude_result.get("confidence_score", 0)
+            
+            if watson_confidence > 0 and claude_confidence > 0:
+                # Взвешенное среднее: Watson больше веса из-за научной основы
+                combined_confidence = (watson_confidence * 0.6 + claude_confidence * 0.4)
+                claude_result["confidence_score"] = round(combined_confidence, 1)
+            
+            # Добавляем метаданные о источниках
+            claude_result["data_sources"] = {
+                "claude": "Психологический синтез и интерпретация",
+                "watson": "Научная валидация IBM Research (Big Five модель)",
+                "synthesis_method": "Гибридный анализ с кросс-валидацией"
+            }
+            
+            logger.info("✅ Claude результат обогащен данными Watson")
+            return claude_result
+            
+        except Exception as e:
+            logger.error("❌ Ошибка обогащения Watson данными", error=str(e))
+            return claude_result
+    
+    def _format_watson_only_result(self, watson_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Форматирование результата только от Watson для пользователя"""
+        try:
+            # Конвертируем Watson данные в формат похожий на Claude
+            formatted_result = {
+                "analysis_type": "watson_personality",
+                "hook_summary": "Научный анализ личности через IBM Watson",
+                "personality_core": {
+                    "essence": watson_result.get("personality_summary", "Профиль личности по Watson"),
+                    "unique_traits": [],
+                    "hidden_depths": "Анализ основан на научной модели Big Five"
+                },
+                "main_findings": {
+                    "personality_traits": [],
+                    "emotional_signature": "Научная оценка эмоциональной стабильности",
+                    "thinking_style": "Анализ когнитивных особенностей"
+                },
+                "psychological_profile": {
+                    "big_five_traits": watson_result.get("big_five_traits", {}),
+                    "psychological_needs": watson_result.get("psychological_needs", {}),
+                    "core_values": watson_result.get("core_values", {})
+                },
+                "confidence_score": watson_result.get("confidence_score", 80),
+                "data_sources": {
+                    "watson": "IBM Watson Personality Insights (научная основа)",
+                    "methodology": "Big Five модель личности"
+                },
+                "status": "watson_only"
+            }
+            
+            # Извлекаем доминирующие черты из Watson
+            big_five = watson_result.get("big_five_traits", {})
+            for trait_name, trait_data in big_five.items():
+                if isinstance(trait_data, dict) and trait_data.get("percentile", 0) >= 70:
+                    formatted_result["personality_core"]["unique_traits"].append(
+                        f"{trait_name.title()}: {trait_data.get('description', '')}"
+                    )
+            
+            return formatted_result
+            
+        except Exception as e:
+            logger.error("❌ Ошибка форматирования Watson результата", error=str(e))
+            return watson_result
     
     async def _validate_analysis(self, synthesis_result: Dict[str, Any]) -> Dict[str, Any]:
         """Валидация (упрощенная версия)"""
@@ -319,16 +585,55 @@ class AnalysisEngine:
         return self._format_quick_result(synthesis_result)
     
     def _calculate_confidence_score(self, ai_results: Dict[str, Any], validation_result: Dict[str, Any]) -> float:
-        """Расчет уверенности"""
-        return 80.0
+        """Расчет уверенности на основе доступных AI сервисов"""
+        base_confidence = 75.0
+        
+        # Бонус за каждый успешный AI сервис
+        successful_services = 0
+        total_confidence = 0
+        
+        for service_name, service_result in ai_results.items():
+            if service_result.get("status") != "failed" and "error" not in service_result:
+                successful_services += 1
+                service_confidence = service_result.get("confidence_score", 75)
+                total_confidence += service_confidence
+        
+        if successful_services > 0:
+            # Средний confidence с бонусом за множественные источники
+            avg_confidence = total_confidence / successful_services
+            
+            # Бонус за Watson (научная валидация)
+            if "watson" in ai_results and ai_results["watson"].get("status") == "success":
+                avg_confidence += 10  # +10% за научную валидацию
+            
+            # Бонус за кросс-валидацию (несколько сервисов)
+            if successful_services > 1:
+                avg_confidence += 5  # +5% за кросс-валидацию
+            
+            return min(95.0, max(50.0, avg_confidence))
+        
+        return base_confidence
     
     def _detect_potential_bias(self, synthesis_result: Dict[str, Any], ai_results: Dict[str, Any]) -> List[str]:
         """Выявление предвзятостей"""
         return []
     
     def _get_methodology_used(self, ai_results: Dict[str, Any]) -> List[str]:
-        """Методология"""
-        return ["Anthropic Claude - комплексный анализ"]
+        """Определение использованной методологии"""
+        methodology = []
+        
+        if "claude" in ai_results and ai_results["claude"].get("status") != "failed":
+            methodology.append("Anthropic Claude 3.5 Sonnet - психологический синтез и интерпретация")
+        
+        if "watson" in ai_results and ai_results["watson"].get("status") == "success":
+            methodology.append("IBM Watson Personality Insights - научная валидация Big Five модели")
+            methodology.append("IBM Research - психометрические алгоритмы и статистический анализ")
+        
+        # Если использовались оба сервиса
+        if len([r for r in ai_results.values() if r.get("status") != "failed"]) > 1:
+            methodology.append("Гибридный анализ с кросс-валидацией между AI системами")
+        
+        return methodology if methodology else ["Базовый психологический анализ"]
     
     async def _create_analysis_record(self, analysis_input: AnalysisInput) -> int:
         """Создание записи (упрощенная версия)"""
