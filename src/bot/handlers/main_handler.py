@@ -9,6 +9,7 @@ from telegram.ext import (
 import structlog
 
 from src.bot.states.analysis_states import AnalysisStates
+from src.ai.analysis_engine import analysis_engine
 
 logger = structlog.get_logger()
 
@@ -128,42 +129,72 @@ async def text_handler(update: Update, context) -> int:
 
 async def start_analysis_command(update: Update, context) -> int:
     """Запуск анализа"""
+    user = update.effective_user
     collected_data = context.user_data.get('collected_data', {})
     
-    if not collected_data:
+    if not collected_data or not collected_data.get('text'):
         await update.message.reply_text(
-            "❌ Нет данных для анализа!\n"
-            "Отправьте текст или изображение."
+            "❌ **Нет данных для анализа!**\n\n"
+            "Пожалуйста, отправьте текст для анализа.\n"
+            "Используйте /analyze чтобы начать заново."
         )
         return AnalysisStates.COLLECT_TEXT
     
-    # Показ процесса анализа
-    processing_text = """
-🔄 **Запускаю анализ...**
-
-📊 Этапы обработки:
-□ IBM Watson - анализ личности
-□ Azure Cognitive - эмоции
-□ Google Cloud - сущности
-□ AWS Rekognition - лица
-□ Claude - синтез результатов
-
-⏳ Это займет 1-2 минуты...
-    """
+    logger.info("🚀 Запускаю реальный AI анализ", 
+               user_id=user.id, 
+               text_length=len(collected_data['text']))
     
-    await update.message.reply_text(
-        processing_text,
+    # Показ процесса анализа
+    processing_message = await update.message.reply_text(
+        "🔄 **Запускаю AI анализ...**\n\n"
+        "📊 **Этапы обработки:**\n"
+        "🔄 Anthropic Claude - комплексный анализ\n"
+        "🔄 Валидация результатов\n"
+        "🔄 Генерация отчета\n\n"
+        "⏳ *Это займет 30-60 секунд...*",
         parse_mode='Markdown'
     )
     
-    # TODO: Здесь будет вызов движка анализа
-    
-    # Пока заглушка
-    await update.message.reply_text(
-        "🚧 **Функция в разработке**\n\n"
-        "Система анализа будет готова после настройки всех AI сервисов.\n\n"
-        "/menu - Вернуться в меню"
-    )
+    try:
+        # Реальный анализ через AI движок
+        analysis_result = await analysis_engine.quick_analyze(
+            text=collected_data['text'],
+            user_id=user.id,
+            telegram_id=user.id
+        )
+        
+        # Обновление сообщения с результатом
+        await processing_message.edit_text(
+            analysis_result,
+            parse_mode='Markdown'
+        )
+        
+        # Добавление кнопок действий
+        await update.message.reply_text(
+            "🎯 **Что дальше?**\n\n"
+            "• `/analyze` - Новый анализ\n"
+            "• `/history` - История анализов\n"
+            "• `/menu` - Главное меню\n\n"
+            "💡 *Tip: Отправьте больше текста для более точного анализа*",
+            parse_mode='Markdown'
+        )
+        
+        # Очистка собранных данных
+        context.user_data['collected_data'] = {}
+        
+        logger.info("✅ AI анализ завершен успешно", user_id=user.id)
+        
+    except Exception as e:
+        logger.error("❌ Ошибка AI анализа", user_id=user.id, error=str(e))
+        
+        # Сообщение об ошибке
+        await processing_message.edit_text(
+            "❌ **Ошибка анализа**\n\n"
+            f"Произошла ошибка: {str(e)}\n\n"
+            "Пожалуйста, попробуйте позже или обратитесь к администратору.\n\n"
+            "Используйте /menu для возврата в главное меню.",
+            parse_mode='Markdown'
+        )
     
     return AnalysisStates.SHOW_RESULTS
 
