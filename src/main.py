@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
             
             telegram_application = Application.builder().token(settings.telegram_bot_token).build()
             basic_logger.info("✅ Telegram Application создан")
-            logger.info("✅ Telegram Application готов", bot_id=telegram_application.bot.id)
+            logger.info("✅ Telegram Application готов")
         except Exception as bot_error:
             basic_logger.error(f"❌ ОШИБКА СОЗДАНИЯ БОТА: {bot_error}")
             logger.error("❌ Ошибка создания Telegram Application", error=str(bot_error), exc_info=True)
