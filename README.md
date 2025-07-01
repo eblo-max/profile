@@ -2,25 +2,33 @@
 
 AI-powered система психологического анализа через Telegram бота с использованием множественных специализированных AI сервисов.
 
-## Возможности
+## 🚀 Возможности (2025)
 
-- 🔍 **Многоуровневый анализ** через 8+ AI сервисов
+- 🔥 **Современный AI стек** - топ-5 лучших AI сервисов 2025 года
+- 🧠 **Multi-modal анализ** - текст + изображения через Gemini 2.0
 - 📊 **Научно обоснованные результаты** с кросс-валидацией
-- 🎯 **Полная прозрачность** источников данных
+- 🎯 **Constitutional AI** - этичность и безопасность анализа
 - ⚡ **Async архитектура** для высокой производительности
 - 🔄 **Real-time обработка** с FastAPI + Webhook/Polling
+- 🌐 **2M+ context window** для глубокого анализа больших текстов
 
 ## Архитектура
 
-### AI Сервисы
-- **IBM Watson** - Personality Insights
-- **Azure Cognitive** - эмоциональный анализ
-- **Google Cloud NL** - анализ сущностей
-- **AWS Rekognition** - анализ лиц
-- **Crystal API** - DISC профилирование
-- **Receptiviti** - психолингвистика
-- **Lexalytics** - продвинутый sentiment
-- **Claude (Anthropic)** - синтез результатов
+### 🚀 AI Сервисы (СОВРЕМЕННАЯ АРХИТЕКТУРА 2025)
+- **Claude 3.5 Sonnet** - главный анализ и синтез ✅
+- **OpenAI GPT-4o** - заменяет IBM Watson ✅
+- **Google Gemini 2.0 Flash** - заменяет Google Cloud NL + Azure ⚡
+- **Cohere Command-R+** - заменяет Lexalytics + Receptiviti ⚡
+- **HuggingFace Transformers** - заменяет AWS Rekognition ⚡
+
+### 📉 Deprecated сервисы (заменены):
+- ~~IBM Watson~~ → **OpenAI GPT-4o**
+- ~~Azure Cognitive~~ → **Google Gemini 2.0**
+- ~~Google Cloud NL~~ → **Google Gemini 2.0**
+- ~~AWS Rekognition~~ → **HuggingFace Transformers**
+- ~~Crystal API~~ → **OpenAI GPT-4o**
+- ~~Receptiviti~~ → **Cohere Command-R+**
+- ~~Lexalytics~~ → **Cohere Command-R+**
 
 ### Технологии
 - **Python 3.12+** с async/await
@@ -66,17 +74,25 @@ createdb psychology_bot
 
 ## Конфигурация
 
-### API Ключи
-Получите API ключи для всех сервисов:
+### 🔑 API Ключи (2025)
+Получите API ключи для современных сервисов:
 
+#### **✅ ОСНОВНЫЕ (обязательные):**
 1. **Telegram Bot** - [@BotFather](https://t.me/botfather)
 2. **Anthropic Claude** - [console.anthropic.com](https://console.anthropic.com/)
-3. **IBM Watson** - [cloud.ibm.com](https://cloud.ibm.com/)
-4. **Microsoft Azure** - [portal.azure.com](https://portal.azure.com/)
-5. **Google Cloud** - [console.cloud.google.com](https://console.cloud.google.com/)
-6. **AWS** - [aws.amazon.com](https://aws.amazon.com/)
-7. **Crystal API** - [crystalknows.com](https://www.crystalknows.com/)
-8. **Receptiviti** - [receptiviti.com](https://www.receptiviti.com/)
+
+#### **⚡ СОВРЕМЕННЫЕ AI (рекомендуемые):**
+3. **OpenAI GPT-4o** - [platform.openai.com](https://platform.openai.com/)
+4. **Google Gemini** - [makersuite.google.com](https://makersuite.google.com/)
+5. **Cohere Command-R+** - [dashboard.cohere.ai](https://dashboard.cohere.ai/)
+6. **HuggingFace** - [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+
+#### **📉 DEPRECATED (необязательные):**
+7. ~~Microsoft Azure~~ - [portal.azure.com](https://portal.azure.com/)
+8. ~~Google Cloud~~ - [console.cloud.google.com](https://console.cloud.google.com/)
+9. ~~AWS~~ - [aws.amazon.com](https://aws.amazon.com/)
+10. ~~Crystal API~~ - [crystalknows.com](https://www.crystalknows.com/)
+11. ~~Receptiviti~~ - [receptiviti.com](https://www.receptiviti.com/)
 
 ### Переменные окружения (.env)
 ```env

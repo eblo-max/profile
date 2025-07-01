@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     lexalytics_api_key: Optional[str] = Field(default=None, env="LEXALYTICS_API_KEY")
     monkeylearn_api_key: Optional[str] = Field(default=None, env="MONKEYLEARN_API_KEY")
     
+    # 🚀 СОВРЕМЕННЫЕ AI API (2025) - ЗАМЕНА УСТАРЕВШИХ
+    
+    # Google Gemini 2.0 Flash (замена Google Cloud NL + Azure Cognitive)
+    google_gemini_api_key: Optional[str] = Field(default=None, env="GOOGLE_GEMINI_API_KEY")
+    
+    # Cohere Command-R+ (замена Lexalytics + Receptiviti)
+    cohere_api_key: Optional[str] = Field(default=None, env="COHERE_API_KEY")
+    
+    # HuggingFace Transformers (замена AWS Rekognition для текста)
+    huggingface_api_key: Optional[str] = Field(default=None, env="HUGGINGFACE_API_KEY")
+    
     # Настройки приложения
     debug: bool = Field(default=False, env="DEBUG")
     log_level: str = Field(default="INFO", env="LOG_LEVEL")

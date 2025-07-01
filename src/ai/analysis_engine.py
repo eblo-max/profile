@@ -10,6 +10,9 @@ from dataclasses import dataclass, asdict
 
 from src.ai.anthropic_client import anthropic_client
 from src.ai.watson_client import OpenAIClient
+from src.ai.google_client import google_gemini_client
+from src.ai.cohere_client import cohere_client
+from src.ai.huggingface_client import huggingface_client
 from src.database.connection import get_async_session
 from src.database.models import Analysis, AnalysisError
 from src.config.settings import settings
@@ -50,9 +53,19 @@ class AnalysisEngine:
         """Инициализация движка"""
         self.claude_client = anthropic_client
         self.openai_client = OpenAIClient()
+        self.google_gemini_client = google_gemini_client
+        self.cohere_client = cohere_client
+        self.huggingface_client = huggingface_client
+        
         self.supported_services = {
-            "claude": True,
-            "openai": self.openai_client.is_available,
+            # 🚀 СОВРЕМЕННЫЕ AI СЕРВИСЫ (2025)
+            "claude": True,  # Главный анализ и синтез
+            "openai": self.openai_client.is_available,  # GPT-4o
+            "google_gemini": google_gemini_client.is_available,  # Замена Google Cloud NL + Azure
+            "cohere": cohere_client.is_available,  # Замена Lexalytics + Receptiviti
+            "huggingface": huggingface_client.is_available,  # Замена AWS Rekognition
+            
+            # 📉 DEPRECATED СЕРВИСЫ (оставлены для совместимости)
             "azure": settings.azure_cognitive_key is not None,
             "google": settings.google_cloud_project_id is not None,
             "aws": settings.aws_access_key_id is not None,
@@ -169,15 +182,22 @@ class AnalysisEngine:
         try:
             user_context = {"user_id": user_id, "telegram_id": telegram_id}
             
-            # Определяем доступные сервисы
-            services_to_use = ["Claude"]
+            # Определяем доступные современные сервисы (2025)
+            services_to_use = ["Claude 3.5 Sonnet"]
             if self.supported_services["openai"]:
                 services_to_use.append("OpenAI GPT-4o")
+            if self.supported_services["google_gemini"]:
+                services_to_use.append("Google Gemini 2.0 Flash")
+            if self.supported_services["cohere"]:
+                services_to_use.append("Cohere Command-R+")
+            if self.supported_services["huggingface"]:
+                services_to_use.append("HuggingFace Transformers")
             
-            logger.info("⚡ Быстрый анализ", 
+            logger.info("⚡ Быстрый анализ (2025 AI Stack)", 
                        user_id=user_id, 
                        text_length=len(text),
-                       services=services_to_use)
+                       modern_services=services_to_use,
+                       total_services=len(services_to_use))
             
             # Запуск анализов параллельно
             tasks = []
