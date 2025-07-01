@@ -17,8 +17,11 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     
     # AI API ключи - необязательные для первого запуска
-    ibm_watson_api_key: Optional[str] = Field(default=None, env="IBM_WATSON_API_KEY")
-    ibm_watson_url: Optional[str] = Field(default=None, env="IBM_WATSON_URL")
+    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")  # Замена Watson
+    
+    # Deprecated Watson (заменен на OpenAI)
+    # ibm_watson_api_key: Optional[str] = Field(default=None, env="IBM_WATSON_API_KEY")
+    # ibm_watson_url: Optional[str] = Field(default=None, env="IBM_WATSON_URL")
     
     azure_cognitive_key: Optional[str] = Field(default=None, env="AZURE_COGNITIVE_KEY")
     azure_cognitive_endpoint: Optional[str] = Field(default=None, env="AZURE_COGNITIVE_ENDPOINT")

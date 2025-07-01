@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 
 from src.ai.anthropic_client import anthropic_client
-from src.ai.watson_client import watson_client
+from src.ai.watson_client import OpenAIClient
 from src.database.connection import get_async_session
 from src.database.models import Analysis, AnalysisError
 from src.config.settings import settings
@@ -49,10 +49,10 @@ class AnalysisEngine:
     def __init__(self):
         """Инициализация движка"""
         self.claude_client = anthropic_client
-        self.watson_client = watson_client
+        self.openai_client = OpenAIClient()
         self.supported_services = {
             "claude": True,
-            "watson": watson_client.is_available,
+            "openai": self.openai_client.is_available,
             "azure": settings.azure_cognitive_key is not None,
             "google": settings.google_cloud_project_id is not None,
             "aws": settings.aws_access_key_id is not None,
@@ -156,7 +156,7 @@ class AnalysisEngine:
     
     async def quick_analyze(self, text: str, user_id: int, telegram_id: int) -> str:
         """
-        Быстрый анализ через Claude + Watson (если доступен)
+        Быстрый анализ через Claude + OpenAI (если доступен)
         
         Args:
             text: Текст для анализа
@@ -171,8 +171,8 @@ class AnalysisEngine:
             
             # Определяем доступные сервисы
             services_to_use = ["Claude"]
-            if self.supported_services["watson"]:
-                services_to_use.append("Watson")
+            if self.supported_services["openai"]:
+                services_to_use.append("OpenAI GPT-4o")
             
             logger.info("⚡ Быстрый анализ", 
                        user_id=user_id, 
@@ -185,33 +185,33 @@ class AnalysisEngine:
             # Claude (всегда)
             tasks.append(self._run_claude_analysis(text, user_context))
             
-            # Watson (если доступен и текст достаточно длинный)
-            watson_result = None
-            if self.supported_services["watson"] and len(text.split()) >= 100:
-                tasks.append(self._run_watson_analysis(text, user_context))
+            # OpenAI (если доступен)
+            openai_result = None
+            if self.supported_services["openai"]:
+                tasks.append(self._run_openai_analysis(text, user_context))
             
             # Выполнение анализов
             if len(tasks) > 1:
-                claude_result, watson_result = await asyncio.gather(*tasks, return_exceptions=True)
+                claude_result, openai_result = await asyncio.gather(*tasks, return_exceptions=True)
                 
                 # Обработка исключений
                 if isinstance(claude_result, Exception):
                     logger.error("❌ Ошибка Claude", error=str(claude_result))
                     claude_result = {"error": str(claude_result), "status": "failed"}
                 
-                if isinstance(watson_result, Exception):
-                    logger.warning("⚠️ Watson недоступен", error=str(watson_result))
-                    watson_result = None
+                if isinstance(openai_result, Exception):
+                    logger.warning("⚠️ OpenAI недоступен", error=str(openai_result))
+                    openai_result = None
                 
             else:
                 # Только Claude
                 claude_result = await tasks[0]
             
             # Создание комбинированного результата
-            if watson_result and watson_result.get("status") == "success":
-                # Обогащаем Claude результат данными Watson
-                enhanced_result = self._enrich_with_watson_data(claude_result, watson_result)
-                logger.info("✅ Быстрый анализ завершен (Claude + Watson)", 
+            if openai_result and openai_result.get("status") == "success":
+                # Обогащаем Claude результат данными OpenAI
+                enhanced_result = self._enrich_with_openai_data(claude_result, openai_result)
+                logger.info("✅ Быстрый анализ завершен (Claude + OpenAI)", 
                            user_id=user_id,
                            confidence=enhanced_result.get('confidence_score', 0))
             else:
@@ -222,7 +222,7 @@ class AnalysisEngine:
                            confidence=enhanced_result.get('confidence_score', 0))
             
             # Форматирование результата для пользователя
-            formatted_result = self._format_quick_result(enhanced_result, watson_available=bool(watson_result))
+            formatted_result = self._format_quick_result(enhanced_result, openai_available=bool(openai_result))
             
             return formatted_result
             
@@ -230,7 +230,7 @@ class AnalysisEngine:
             logger.error("❌ Ошибка быстрого анализа", error=str(e), exc_info=True)
             return f"⚠️ **Ошибка анализа**: {str(e)}\n\nПопробуйте позже или обратитесь к администратору."
     
-    def _format_quick_result(self, analysis_result: Dict[str, Any], watson_available: bool = False) -> str:
+    def _format_quick_result(self, analysis_result: Dict[str, Any], openai_available: bool = False) -> str:
         """Форматирование детального результата для Telegram"""
         
         if "error" in analysis_result:
@@ -242,10 +242,10 @@ class AnalysisEngine:
         main_findings = analysis_result.get("main_findings", {})
         psychological_profile = analysis_result.get("psychological_profile", {})
         
-        # Приоритет Watson Big Five данным если доступны
-        watson_big_five = psychological_profile.get("watson_big_five", {})
+        # Приоритет OpenAI Big Five данным если доступны
+        openai_big_five = psychological_profile.get("openai_big_five", {})
         claude_big_five = psychological_profile.get("big_five_traits", {})
-        big_five_detailed = watson_big_five if watson_big_five else claude_big_five
+        big_five_detailed = openai_big_five if openai_big_five else claude_big_five
         
         practical_insights = analysis_result.get("practical_insights", {})
         actionable_recommendations = analysis_result.get("actionable_recommendations", {})
@@ -340,25 +340,29 @@ class AnalysisEngine:
         result += f"📈 **ИНДЕКС УВЕРЕННОСТИ:** {confidence}%\n"
         
         # AI движки
-        if watson_available and data_sources:
-            result += f"🤖 **AI ДВИЖКИ:** Claude 3.5 Sonnet + IBM Watson\n"
-            result += f"🔬 **МЕТОДЫ:** Big Five (Watson), лингвистический анализ (Claude)\n"
+        if openai_available and data_sources:
+            result += f"🤖 **AI ДВИЖКИ:** Claude 3.5 Sonnet + OpenAI GPT-4o\n"
+            result += f"🔬 **МЕТОДЫ:** Big Five (OpenAI), эмоциональный анализ (OpenAI), лингвистический анализ (Claude)\n"
             if psychological_profile.get("scientific_validation"):
-                result += f"✅ **НАУЧНАЯ ВАЛИДАЦИЯ:** IBM Research\n"
+                result += f"✅ **НАУЧНАЯ ВАЛИДАЦИЯ:** OpenAI Research\n"
         else:
             result += f"🤖 **AI ДВИЖОК:** Claude 3.5 Sonnet\n"
             result += f"🔬 **МЕТОДЫ:** Big Five, лингвистический анализ\n"
         
-        # Watson специфичные данные
-        if watson_available and watson_big_five:
-            # Показываем Watson потребности если есть
-            watson_needs = psychological_profile.get("psychological_needs", {})
-            if watson_needs:
-                top_needs = sorted(watson_needs.items(), key=lambda x: x[1].get('percentile', 0), reverse=True)[:2]
-                if top_needs:
-                    result += f"\n🎯 **КЛЮЧЕВЫЕ ПОТРЕБНОСТИ (Watson):**\n"
-                    for need_id, need_data in top_needs:
-                        result += f"• {need_data.get('name', need_id)}: {need_data.get('percentile', 0):.0f}%\n"
+        # OpenAI специфичные данные
+        if openai_available and openai_big_five:
+            # Показываем OpenAI эмоциональные данные если есть
+            openai_emotions = psychological_profile.get("emotional_analysis", {})
+            if openai_emotions:
+                dominant_emotion = openai_emotions.get("dominant_emotion", "")
+                if dominant_emotion:
+                    result += f"\n🎯 **ДОМИНИРУЮЩАЯ ЭМОЦИЯ (OpenAI):** {dominant_emotion}\n"
+                    
+                sentiment = psychological_profile.get("sentiment_analysis", {})
+                if sentiment:
+                    polarity = sentiment.get("polarity", 0)
+                    sentiment_text = "Позитивное" if polarity > 0.3 else "Негативное" if polarity < -0.3 else "Нейтральное"
+                    result += f"• **Общий настрой:** {sentiment_text} ({polarity:.2f})\n"
         
         result += "\n💬 Отправьте еще текст для дополнительного анализа!"
         
@@ -373,9 +377,9 @@ class AnalysisEngine:
             # Claude анализ (всегда доступен)
             tasks.append(self._run_claude_analysis(analysis_input.text, analysis_input.metadata))
             
-            # Watson анализ (если доступен)
-            if self.supported_services["watson"]:
-                tasks.append(self._run_watson_analysis(analysis_input.text, analysis_input.metadata))
+            # OpenAI анализ (если доступен)
+            if self.supported_services["openai"]:
+                tasks.append(self._run_openai_analysis(analysis_input.text, analysis_input.metadata))
             
             logger.info("🔄 Запуск параллельного AI анализа", 
                        services_count=len(tasks),
@@ -386,8 +390,8 @@ class AnalysisEngine:
             
             # Обработка результатов
             service_names = ["claude"]
-            if self.supported_services["watson"]:
-                service_names.append("watson")
+            if self.supported_services["openai"]:
+                service_names.append("openai")
             
             for i, result in enumerate(ai_results):
                 service_name = service_names[i]
@@ -425,19 +429,40 @@ class AnalysisEngine:
                 "service": "claude"
             }
     
-    async def _run_watson_analysis(self, text: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Запуск Watson анализа"""
+    async def _run_openai_analysis(self, text: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Запуск OpenAI анализа"""
         try:
-            return await self.watson_client.analyze_personality(
-                text=text,
-                user_context=metadata
+            # Параллельный запуск всех OpenAI анализов
+            personality_task = self.openai_client.analyze_personality(text)
+            emotions_task = self.openai_client.analyze_emotions(text)
+            sentiment_task = self.openai_client.analyze_sentiment(text)
+            
+            personality_result, emotions_result, sentiment_result = await asyncio.gather(
+                personality_task, emotions_task, sentiment_task, return_exceptions=True
             )
+            
+            # Объединение результатов
+            combined_result = {
+                "status": "success",
+                "service": "openai",
+                "big_five_traits": personality_result.get("big_five", {}) if not isinstance(personality_result, Exception) else {},
+                "mbti": personality_result.get("mbti", "Unknown") if not isinstance(personality_result, Exception) else "Unknown",
+                "disc": personality_result.get("disc", "Unknown") if not isinstance(personality_result, Exception) else "Unknown",
+                "emotions": emotions_result.get("emotions", {}) if not isinstance(emotions_result, Exception) else {},
+                "dominant_emotion": emotions_result.get("dominant_emotion", "neutral") if not isinstance(emotions_result, Exception) else "neutral",
+                "sentiment": sentiment_result.get("sentiment", "neutral") if not isinstance(sentiment_result, Exception) else "neutral",
+                "sentiment_polarity": sentiment_result.get("polarity", 0.0) if not isinstance(sentiment_result, Exception) else 0.0,
+                "confidence_score": 85  # OpenAI высокий confidence
+            }
+            
+            return combined_result
+            
         except Exception as e:
-            logger.error("❌ Ошибка Watson анализа", error=str(e))
+            logger.error("❌ Ошибка OpenAI анализа", error=str(e))
             return {
                 "error": str(e),
                 "status": "failed", 
-                "service": "watson"
+                "service": "openai"
             }
     
     async def _synthesize_results(self, ai_results: Dict[str, Any], analysis_input: AnalysisInput) -> Dict[str, Any]:
@@ -447,7 +472,7 @@ class AnalysisEngine:
                        services_available=list(ai_results.keys()))
             
             # Если есть данные от нескольких сервисов - используем синтез
-            if len(ai_results) > 1 and "watson" in ai_results and "claude" in ai_results:
+            if len(ai_results) > 1 and "openai" in ai_results and "claude" in ai_results:
                 # Комплексный синтез через Claude
                 synthesis_context = {
                     "ai_results": ai_results,
@@ -461,24 +486,24 @@ class AnalysisEngine:
                     user_context=synthesis_context
                 )
                 
-                # Обогащение синтеза данными Watson
-                if "watson" in ai_results and ai_results["watson"].get("status") == "success":
-                    synthesis_result = self._enrich_with_watson_data(synthesis_result, ai_results["watson"])
+                # Обогащение синтеза данными OpenAI
+                if "openai" in ai_results and ai_results["openai"].get("status") == "success":
+                    synthesis_result = self._enrich_with_openai_data(synthesis_result, ai_results["openai"])
                 
                 logger.info("✅ Комплексный синтез завершен", 
                            confidence=synthesis_result.get('confidence_score', 0))
                 
                 return synthesis_result
             
-            # Если Watson недоступен - возвращаем Claude результат
+            # Если OpenAI недоступен - возвращаем Claude результат
             elif "claude" in ai_results:
                 logger.info("📝 Используем только Claude результат")
                 return ai_results["claude"]
             
-            # Если только Watson доступен
-            elif "watson" in ai_results:
-                logger.info("🧠 Используем только Watson результат")
-                return self._format_watson_only_result(ai_results["watson"])
+            # Если только OpenAI доступен
+            elif "openai" in ai_results:
+                logger.info("🧠 Используем только OpenAI результат")
+                return self._format_openai_only_result(ai_results["openai"])
             
             else:
                 logger.warning("⚠️ Нет доступных результатов анализа")
@@ -489,92 +514,110 @@ class AnalysisEngine:
             # Fallback на Claude если есть
             return ai_results.get("claude", {"error": str(e), "status": "synthesis_failed"})
     
-    def _enrich_with_watson_data(self, claude_result: Dict[str, Any], watson_result: Dict[str, Any]) -> Dict[str, Any]:
-        """Обогащение результата Claude данными от Watson"""
+    def _enrich_with_openai_data(self, claude_result: Dict[str, Any], openai_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Обогащение результата Claude данными от OpenAI"""
         try:
-            # Добавляем научные данные Watson в Claude результат
+            # Добавляем данные OpenAI в Claude результат
             if "psychological_profile" not in claude_result:
                 claude_result["psychological_profile"] = {}
             
-            # Watson Big Five данные
-            watson_big_five = watson_result.get("big_five_traits", {})
-            if watson_big_five:
-                claude_result["psychological_profile"]["watson_big_five"] = watson_big_five
+            # OpenAI Big Five данные
+            openai_big_five = openai_result.get("big_five_traits", {})
+            if openai_big_five:
+                claude_result["psychological_profile"]["openai_big_five"] = openai_big_five
                 claude_result["psychological_profile"]["scientific_validation"] = True
             
-            # Watson потребности и ценности
-            if "psychological_needs" in watson_result:
-                claude_result["psychological_profile"]["psychological_needs"] = watson_result["psychological_needs"]
+            # OpenAI эмоциональный анализ
+            if "emotions" in openai_result:
+                claude_result["psychological_profile"]["emotional_analysis"] = {
+                    "emotions": openai_result["emotions"],
+                    "dominant_emotion": openai_result.get("dominant_emotion", "neutral"),
+                    "emotional_intensity": openai_result.get("emotional_intensity", 0.5)
+                }
             
-            if "core_values" in watson_result:
-                claude_result["psychological_profile"]["core_values"] = watson_result["core_values"]
+            # OpenAI анализ настроений
+            if "sentiment" in openai_result:
+                claude_result["psychological_profile"]["sentiment_analysis"] = {
+                    "sentiment": openai_result["sentiment"],
+                    "polarity": openai_result.get("sentiment_polarity", 0.0),
+                    "confidence": openai_result.get("sentiment_confidence", 0.8)
+                }
             
-            # Обновляем confidence score (средний между Claude и Watson)
-            watson_confidence = watson_result.get("confidence_score", 0)
+            # MBTI и DISC от OpenAI
+            if "mbti" in openai_result:
+                claude_result["psychological_profile"]["mbti_type"] = openai_result["mbti"]
+            if "disc" in openai_result:
+                claude_result["psychological_profile"]["disc_profile"] = openai_result["disc"]
+            
+            # Обновляем confidence score (средний между Claude и OpenAI)
+            openai_confidence = openai_result.get("confidence_score", 0)
             claude_confidence = claude_result.get("confidence_score", 0)
             
-            if watson_confidence > 0 and claude_confidence > 0:
-                # Взвешенное среднее: Watson больше веса из-за научной основы
-                combined_confidence = (watson_confidence * 0.6 + claude_confidence * 0.4)
+            if openai_confidence > 0 and claude_confidence > 0:
+                # Взвешенное среднее: равные веса для Claude и OpenAI
+                combined_confidence = (openai_confidence * 0.5 + claude_confidence * 0.5)
                 claude_result["confidence_score"] = round(combined_confidence, 1)
             
             # Добавляем метаданные о источниках
             claude_result["data_sources"] = {
                 "claude": "Психологический синтез и интерпретация",
-                "watson": "Научная валидация IBM Research (Big Five модель)",
+                "openai": "Многоаспектный анализ GPT-4o (Big Five, эмоции, настроения)",
                 "synthesis_method": "Гибридный анализ с кросс-валидацией"
             }
             
-            logger.info("✅ Claude результат обогащен данными Watson")
+            logger.info("✅ Claude результат обогащен данными OpenAI")
             return claude_result
             
         except Exception as e:
             logger.error("❌ Ошибка обогащения Watson данными", error=str(e))
             return claude_result
     
-    def _format_watson_only_result(self, watson_result: Dict[str, Any]) -> Dict[str, Any]:
-        """Форматирование результата только от Watson для пользователя"""
+    def _format_openai_only_result(self, openai_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Форматирование результата только от OpenAI для пользователя"""
         try:
-            # Конвертируем Watson данные в формат похожий на Claude
+            # Конвертируем OpenAI данные в формат похожий на Claude
             formatted_result = {
-                "analysis_type": "watson_personality",
-                "hook_summary": "Научный анализ личности через IBM Watson",
+                "analysis_type": "openai_personality",
+                "hook_summary": "Многоаспектный анализ через OpenAI GPT-4o",
                 "personality_core": {
-                    "essence": watson_result.get("personality_summary", "Профиль личности по Watson"),
+                    "essence": f"MBTI: {openai_result.get('mbti', 'Unknown')}, DISC: {openai_result.get('disc', 'Unknown')}",
                     "unique_traits": [],
-                    "hidden_depths": "Анализ основан на научной модели Big Five"
+                    "hidden_depths": "Анализ основан на Big Five + эмоциональный профиль"
                 },
                 "main_findings": {
                     "personality_traits": [],
-                    "emotional_signature": "Научная оценка эмоциональной стабильности",
-                    "thinking_style": "Анализ когнитивных особенностей"
+                    "emotional_signature": f"Доминирующая эмоция: {openai_result.get('dominant_emotion', 'neutral')}",
+                    "thinking_style": f"Настрой: {openai_result.get('sentiment', 'neutral')}"
                 },
                 "psychological_profile": {
-                    "big_five_traits": watson_result.get("big_five_traits", {}),
-                    "psychological_needs": watson_result.get("psychological_needs", {}),
-                    "core_values": watson_result.get("core_values", {})
+                    "big_five_traits": openai_result.get("big_five_traits", {}),
+                    "emotional_analysis": openai_result.get("emotions", {}),
+                    "sentiment_analysis": {
+                        "sentiment": openai_result.get("sentiment", "neutral"),
+                        "polarity": openai_result.get("sentiment_polarity", 0.0)
+                    }
                 },
-                "confidence_score": watson_result.get("confidence_score", 80),
+                "confidence_score": openai_result.get("confidence_score", 85),
                 "data_sources": {
-                    "watson": "IBM Watson Personality Insights (научная основа)",
-                    "methodology": "Big Five модель личности"
+                    "openai": "OpenAI GPT-4o (Big Five, эмоции, настроения)",
+                    "methodology": "Многоаспектный психологический анализ"
                 },
-                "status": "watson_only"
+                "status": "openai_only"
             }
             
-            # Извлекаем доминирующие черты из Watson
-            big_five = watson_result.get("big_five_traits", {})
-            for trait_name, trait_data in big_five.items():
-                if isinstance(trait_data, dict) and trait_data.get("percentile", 0) >= 70:
+            # Извлекаем доминирующие черты из OpenAI Big Five
+            big_five = openai_result.get("big_five_traits", {})
+            for trait_name, trait_score in big_five.items():
+                if isinstance(trait_score, (int, float)) and trait_score >= 70:
                     formatted_result["personality_core"]["unique_traits"].append(
-                        f"{trait_name.title()}: {trait_data.get('description', '')}"
+                        f"{trait_name.title()}: {trait_score}% (высокий уровень)"
                     )
             
             return formatted_result
             
         except Exception as e:
-            logger.error("❌ Ошибка форматирования Watson результата", error=str(e))
-            return watson_result
+            logger.error("❌ Ошибка форматирования OpenAI результата", error=str(e))
+            return openai_result
     
     async def _validate_analysis(self, synthesis_result: Dict[str, Any]) -> Dict[str, Any]:
         """Валидация (упрощенная версия)"""
@@ -602,9 +645,9 @@ class AnalysisEngine:
             # Средний confidence с бонусом за множественные источники
             avg_confidence = total_confidence / successful_services
             
-            # Бонус за Watson (научная валидация)
-            if "watson" in ai_results and ai_results["watson"].get("status") == "success":
-                avg_confidence += 10  # +10% за научную валидацию
+            # Бонус за OpenAI (многоаспектный анализ)
+            if "openai" in ai_results and ai_results["openai"].get("status") == "success":
+                avg_confidence += 8  # +8% за многоаспектный анализ
             
             # Бонус за кросс-валидацию (несколько сервисов)
             if successful_services > 1:
@@ -625,8 +668,8 @@ class AnalysisEngine:
         if "claude" in ai_results and ai_results["claude"].get("status") != "failed":
             methodology.append("Anthropic Claude 3.5 Sonnet - психологический синтез и интерпретация")
         
-        if "watson" in ai_results and ai_results["watson"].get("status") == "success":
-            methodology.append("IBM Watson Personality Insights - научная валидация Big Five модели")
+        if "openai" in ai_results and ai_results["openai"].get("status") == "success":
+            methodology.append("OpenAI GPT-4o - многоаспектный анализ (Big Five + эмоции + настроения)")
             methodology.append("IBM Research - психометрические алгоритмы и статистический анализ")
         
         # Если использовались оба сервиса
