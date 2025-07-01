@@ -13,7 +13,8 @@ from src.ai.prompts.psychology_prompts import (
     PERSONALITY_ASSESSMENT_PROMPT,
     EMOTIONAL_ANALYSIS_PROMPT,
     BEHAVIORAL_ANALYSIS_PROMPT,
-    SYNTHESIS_PROMPT
+    SYNTHESIS_PROMPT,
+    MULTI_AI_SYNTHESIS_PROMPT
 )
 
 logger = structlog.get_logger()
@@ -116,6 +117,13 @@ class AnthropicClient:
         elif analysis_type == "synthesis":
             # Для синтеза используем специальный формат
             return SYNTHESIS_PROMPT.format(
+                ai_results=user_context.get("ai_results", {}),
+                original_text=text[:1000] + "..." if len(text) > 1000 else text,
+                metadata=user_context
+            )
+        elif analysis_type == "multi_ai_synthesis":
+            # Для мульти-AI синтеза используем специальный промпт
+            return MULTI_AI_SYNTHESIS_PROMPT.format(
                 ai_results=user_context.get("ai_results", {}),
                 original_text=text[:1000] + "..." if len(text) > 1000 else text,
                 metadata=user_context

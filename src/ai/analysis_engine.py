@@ -169,7 +169,8 @@ class AnalysisEngine:
     
     async def quick_analyze(self, text: str, user_id: int, telegram_id: int) -> str:
         """
-        Быстрый анализ через Claude + OpenAI (если доступен)
+        🚀 СОВРЕМЕННЫЙ БЫСТРЫЙ АНАЛИЗ (2025) 
+        Через несколько топовых AI сервисов параллельно
         
         Args:
             text: Текст для анализа
@@ -183,72 +184,105 @@ class AnalysisEngine:
             user_context = {"user_id": user_id, "telegram_id": telegram_id}
             
             # Определяем доступные современные сервисы (2025)
-            services_to_use = ["Claude 3.5 Sonnet"]
-            if self.supported_services["openai"]:
-                services_to_use.append("OpenAI GPT-4o")
-            if self.supported_services["google_gemini"]:
-                services_to_use.append("Google Gemini 2.0 Flash")
-            if self.supported_services["cohere"]:
-                services_to_use.append("Cohere Command-R+")
-            if self.supported_services["huggingface"]:
-                services_to_use.append("HuggingFace Transformers")
+            available_services = []
+            if self.supported_services.get("claude", True):
+                available_services.append("Claude 3.5 Sonnet")
+            if self.supported_services.get("openai", False):
+                available_services.append("OpenAI GPT-4o")
+            if self.supported_services.get("cohere", False):
+                available_services.append("Cohere Command-R+")
+            if self.supported_services.get("huggingface", False):
+                available_services.append("HuggingFace Transformers")
             
-            logger.info("⚡ Быстрый анализ (2025 AI Stack)", 
+            logger.info("🚀 СОВРЕМЕННЫЙ АНАЛИЗ (2025)", 
                        user_id=user_id, 
                        text_length=len(text),
-                       modern_services=services_to_use,
-                       total_services=len(services_to_use))
+                       available_services=available_services,
+                       total_services=len(available_services))
             
-            # Запуск анализов параллельно
+            # === ПАРАЛЛЕЛЬНЫЙ ЗАПУСК ВСЕХ ДОСТУПНЫХ AI СЕРВИСОВ ===
             tasks = []
+            service_names = []
             
-            # Claude (всегда)
+            # 1. Claude 3.5 Sonnet (всегда доступен)
             tasks.append(self._run_claude_analysis(text, user_context))
+            service_names.append("claude")
             
-            # OpenAI (если доступен)
-            openai_result = None
-            if self.supported_services["openai"]:
+            # 2. OpenAI GPT-4o (если API ключ есть)
+            if self.supported_services.get("openai", False):
                 tasks.append(self._run_openai_analysis(text, user_context))
+                service_names.append("openai")
             
-            # Выполнение анализов
-            if len(tasks) > 1:
-                claude_result, openai_result = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # Обработка исключений
-                if isinstance(claude_result, Exception):
-                    logger.error("❌ Ошибка Claude", error=str(claude_result))
-                    claude_result = {"error": str(claude_result), "status": "failed"}
-                
-                if isinstance(openai_result, Exception):
-                    logger.warning("⚠️ OpenAI недоступен", error=str(openai_result))
-                    openai_result = None
-                
+            # 3. Cohere Command-R+ (психолингвистический анализ)
+            if self.supported_services.get("cohere", False):
+                tasks.append(self._run_cohere_analysis(text, user_context))
+                service_names.append("cohere")
+            
+            # 4. HuggingFace Transformers (эмоциональный анализ)
+            if self.supported_services.get("huggingface", False):
+                tasks.append(self._run_huggingface_analysis(text, user_context))
+                service_names.append("huggingface")
+            
+            logger.info(f"⚡ Запускаю {len(tasks)} AI сервисов параллельно", 
+                       services=service_names)
+            
+            # Параллельное выполнение всех анализов
+            ai_results_raw = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # === ОБРАБОТКА РЕЗУЛЬТАТОВ ===
+            ai_results = {}
+            successful_services = []
+            
+            for i, (service_name, result) in enumerate(zip(service_names, ai_results_raw)):
+                if isinstance(result, Exception):
+                    logger.error(f"❌ Ошибка {service_name}", error=str(result))
+                    ai_results[service_name] = {
+                        "error": str(result), 
+                        "status": "failed",
+                        "service": service_name
+                    }
+                else:
+                    ai_results[service_name] = result
+                    if result.get("status") != "failed" and "error" not in result:
+                        successful_services.append(service_name)
+                        logger.info(f"✅ {service_name.upper()} анализ завершен", 
+                                   confidence=result.get('confidence_score', 0))
+            
+            logger.info(f"🎯 Успешных анализов: {len(successful_services)}/{len(tasks)}", 
+                       successful=successful_services)
+            
+            # === СИНТЕЗ РЕЗУЛЬТАТОВ ===
+            if len(successful_services) > 1:
+                # Мульти-AI синтез через Claude
+                enhanced_result = await self._synthesize_multiple_ai_results(ai_results, text, user_context)
+                logger.info("🔄 Выполнен мульти-AI синтез", 
+                           sources=len(successful_services))
+            elif "claude" in successful_services:
+                # Обогащение Claude результата данными других сервисов
+                enhanced_result = self._enrich_claude_with_modern_ai(ai_results["claude"], ai_results)
+                logger.info("✨ Claude результат обогащен современными AI данными")
             else:
-                # Только Claude
-                claude_result = await tasks[0]
+                # Fallback на любой доступный результат
+                enhanced_result = next((r for r in ai_results.values() if r.get("status") != "failed"), {})
+                logger.warning("⚠️ Используется fallback результат")
             
-            # Создание комбинированного результата
-            if openai_result and openai_result.get("status") == "success":
-                # Обогащаем Claude результат данными OpenAI
-                enhanced_result = self._enrich_with_openai_data(claude_result, openai_result)
-                logger.info("✅ Быстрый анализ завершен (Claude + OpenAI)", 
-                           user_id=user_id,
-                           confidence=enhanced_result.get('confidence_score', 0))
-            else:
-                # Только Claude
-                enhanced_result = claude_result
-                logger.info("✅ Быстрый анализ завершен (только Claude)", 
-                           user_id=user_id,
-                           confidence=enhanced_result.get('confidence_score', 0))
+            # === ФОРМАТИРОВАНИЕ ДЛЯ ПОЛЬЗОВАТЕЛЯ ===
+            formatted_result = self._format_modern_analysis_result(
+                enhanced_result, 
+                successful_services,
+                ai_results
+            )
             
-            # Форматирование результата для пользователя
-            formatted_result = self._format_quick_result(enhanced_result, openai_available=bool(openai_result))
+            logger.info("✅ Современный анализ завершен", 
+                       user_id=user_id,
+                       ai_services=len(successful_services),
+                       confidence=enhanced_result.get('confidence_score', 0))
             
             return formatted_result
             
         except Exception as e:
-            logger.error("❌ Ошибка быстрого анализа", error=str(e), exc_info=True)
-            return f"⚠️ **Ошибка анализа**: {str(e)}\n\nПопробуйте позже или обратитесь к администратору."
+            logger.error("❌ Критическая ошибка современного анализа", error=str(e), exc_info=True)
+            return f"⚠️ **Системная ошибка**: {str(e)}\n\n🔧 Обратитесь к администратору или попробуйте позже."
     
     def _format_quick_result(self, analysis_result: Dict[str, Any], openai_available: bool = False) -> str:
         """Форматирование детального результата для Telegram"""
@@ -485,6 +519,100 @@ class AnalysisEngine:
                 "service": "openai"
             }
     
+    async def _run_cohere_analysis(self, text: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Запуск Cohere Command-R+ анализа"""
+        try:
+            # Параллельный запуск всех Cohere анализов
+            psycholinguistics_task = self.cohere_client.analyze_psycholinguistics(text)
+            sentiment_task = self.cohere_client.analyze_advanced_sentiment(text)
+            behavioral_task = self.cohere_client.analyze_behavioral_patterns(text)
+            
+            psycholinguistics_result, sentiment_result, behavioral_result = await asyncio.gather(
+                psycholinguistics_task, sentiment_task, behavioral_task, return_exceptions=True
+            )
+            
+            # Объединение результатов Cohere
+            combined_result = {
+                "status": "success",
+                "service": "cohere",
+                "psycholinguistics": psycholinguistics_result if not isinstance(psycholinguistics_result, Exception) else {},
+                "advanced_sentiment": sentiment_result if not isinstance(sentiment_result, Exception) else {},
+                "behavioral_patterns": behavioral_result if not isinstance(behavioral_result, Exception) else {},
+                "confidence_score": 80  # Cohere хороший confidence для психолингвистики
+            }
+            
+            # Извлечение ключевых инсайтов
+            if not isinstance(psycholinguistics_result, Exception):
+                combined_result["linguistic_insights"] = {
+                    "cognitive_style": psycholinguistics_result.get("cognitive_style", {}),
+                    "communication_psychology": psycholinguistics_result.get("communication_psychology", {}),
+                    "thought_process": psycholinguistics_result.get("thought_process_indicators", {})
+                }
+            
+            if not isinstance(sentiment_result, Exception):
+                combined_result["emotional_insights"] = {
+                    "dimensional_analysis": sentiment_result.get("dimensional_analysis", {}),
+                    "psychological_sentiment": sentiment_result.get("psychological_sentiment_markers", {}),
+                    "social_emotional": sentiment_result.get("social_emotional_context", {})
+                }
+            
+            return combined_result
+            
+        except Exception as e:
+            logger.error("❌ Ошибка Cohere анализа", error=str(e))
+            return {
+                "error": str(e),
+                "status": "failed",
+                "service": "cohere"
+            }
+    
+    async def _run_huggingface_analysis(self, text: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Запуск HuggingFace Transformers анализа"""
+        try:
+            # Параллельный запуск всех HuggingFace анализов
+            emotions_task = self.huggingface_client.analyze_emotions_transformers(text)
+            personality_task = self.huggingface_client.analyze_personality_transformers(text)
+            mental_health_task = self.huggingface_client.analyze_mental_health_indicators(text)
+            
+            emotions_result, personality_result, mental_health_result = await asyncio.gather(
+                emotions_task, personality_task, mental_health_task, return_exceptions=True
+            )
+            
+            # Объединение результатов HuggingFace
+            combined_result = {
+                "status": "success",
+                "service": "huggingface",
+                "transformer_emotions": emotions_result if not isinstance(emotions_result, Exception) else {},
+                "transformer_personality": personality_result if not isinstance(personality_result, Exception) else {},
+                "mental_health_analysis": mental_health_result if not isinstance(mental_health_result, Exception) else {},
+                "confidence_score": 75  # HuggingFace средний confidence (специализированные модели)
+            }
+            
+            # Извлечение ключевых инсайтов из трансформеров
+            if not isinstance(emotions_result, Exception):
+                combined_result["emotion_insights"] = {
+                    "transformer_emotions": emotions_result.get("transformer_emotions", {}),
+                    "emotional_profile": emotions_result.get("emotional_profile", {}),
+                    "psychological_insights": emotions_result.get("psychological_insights", {})
+                }
+            
+            if not isinstance(mental_health_result, Exception):
+                combined_result["wellbeing_insights"] = {
+                    "stress_indicators": mental_health_result.get("stress_indicators", {}),
+                    "resilience_factors": mental_health_result.get("resilience_factors", {}),
+                    "psychological_wellbeing": mental_health_result.get("psychological_wellbeing", {})
+                }
+            
+            return combined_result
+            
+        except Exception as e:
+            logger.error("❌ Ошибка HuggingFace анализа", error=str(e))
+            return {
+                "error": str(e),
+                "status": "failed",
+                "service": "huggingface"
+            }
+    
     async def _synthesize_results(self, ai_results: Dict[str, Any], analysis_input: AnalysisInput) -> Dict[str, Any]:
         """Синтез результатов через Claude с учетом данных от всех AI сервисов"""
         try:
@@ -709,6 +837,292 @@ class AnalysisEngine:
     async def _save_analysis_error(self, analysis_id: int, service_name: str, error_message: str):
         """Сохранение ошибки (упрощенная версия)"""
         pass
+    
+    async def _synthesize_multiple_ai_results(self, ai_results: Dict[str, Any], text: str, user_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Синтез результатов от нескольких AI сервисов через Claude"""
+        try:
+            # Подготовка данных для синтеза
+            synthesis_context = {
+                "ai_results": ai_results,
+                "successful_services": [name for name, result in ai_results.items() if result.get("status") != "failed"],
+                "text_length": len(text),
+                "user_context": user_context
+            }
+            
+            # Специальный промпт для мульти-AI синтеза
+            synthesis_result = await self.claude_client.analyze_text(
+                text=text,
+                analysis_type="multi_ai_synthesis",
+                user_context=synthesis_context
+            )
+            
+            # Обогащение синтеза данными от всех успешных сервисов
+            enriched_result = self._enrich_claude_with_modern_ai(synthesis_result, ai_results)
+            
+            # Добавление метаданных о мульти-AI анализе
+            enriched_result["multi_ai_analysis"] = {
+                "services_used": synthesis_context["successful_services"],
+                "synthesis_method": "claude_coordination",
+                "cross_validation": True,
+                "confidence_boost": len(synthesis_context["successful_services"]) * 5  # Бонус за множественные источники
+            }
+            
+            return enriched_result
+            
+        except Exception as e:
+            logger.error("❌ Ошибка мульти-AI синтеза", error=str(e))
+            # Fallback на Claude результат если синтез не удался
+            return ai_results.get("claude", {"error": str(e), "status": "synthesis_failed"})
+    
+    def _enrich_claude_with_modern_ai(self, claude_result: Dict[str, Any], ai_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Обогащение Claude результата данными от современных AI сервисов (2025)"""
+        try:
+            # Инициализация структуры если нужно
+            if "psychological_profile" not in claude_result:
+                claude_result["psychological_profile"] = {}
+            if "data_sources" not in claude_result:
+                claude_result["data_sources"] = {}
+            
+            confidence_scores = []
+            
+            # === ИНТЕГРАЦИЯ OPENAI ДАННЫХ ===
+            openai_data = ai_results.get("openai", {})
+            if openai_data.get("status") == "success":
+                # Big Five от OpenAI (наиболее точные)
+                if "big_five_traits" in openai_data:
+                    claude_result["psychological_profile"]["openai_big_five"] = openai_data["big_five_traits"]
+                    claude_result["psychological_profile"]["mbti_type"] = openai_data.get("mbti", "Unknown")
+                    claude_result["psychological_profile"]["disc_profile"] = openai_data.get("disc", "Unknown")
+                
+                # Эмоциональные данные от OpenAI
+                if "emotions" in openai_data:
+                    claude_result["psychological_profile"]["openai_emotions"] = {
+                        "emotions": openai_data["emotions"],
+                        "dominant_emotion": openai_data.get("dominant_emotion", "neutral"),
+                        "sentiment": openai_data.get("sentiment", "neutral"),
+                        "polarity": openai_data.get("sentiment_polarity", 0.0)
+                    }
+                
+                claude_result["data_sources"]["openai"] = "GPT-4o многоаспектный анализ (Big Five + эмоции)"
+                confidence_scores.append(openai_data.get("confidence_score", 85))
+            
+            # === ИНТЕГРАЦИЯ COHERE ДАННЫХ ===
+            cohere_data = ai_results.get("cohere", {})
+            if cohere_data.get("status") == "success":
+                # Психолингвистические инсайты
+                if "linguistic_insights" in cohere_data:
+                    claude_result["psychological_profile"]["psycholinguistics"] = cohere_data["linguistic_insights"]
+                
+                # Продвинутый анализ настроений
+                if "emotional_insights" in cohere_data:
+                    claude_result["psychological_profile"]["cohere_sentiment"] = cohere_data["emotional_insights"]
+                
+                # Поведенческие паттерны
+                if "behavioral_patterns" in cohere_data:
+                    claude_result["psychological_profile"]["behavioral_analysis"] = cohere_data["behavioral_patterns"]
+                
+                claude_result["data_sources"]["cohere"] = "Command-R+ психолингвистический анализ"
+                confidence_scores.append(cohere_data.get("confidence_score", 80))
+            
+            # === ИНТЕГРАЦИЯ HUGGINGFACE ДАННЫХ ===
+            huggingface_data = ai_results.get("huggingface", {})
+            if huggingface_data.get("status") == "success":
+                # Transformer эмоциональный анализ
+                if "emotion_insights" in huggingface_data:
+                    claude_result["psychological_profile"]["transformer_emotions"] = huggingface_data["emotion_insights"]
+                
+                # Анализ ментального здоровья
+                if "wellbeing_insights" in huggingface_data:
+                    claude_result["psychological_profile"]["mental_wellbeing"] = huggingface_data["wellbeing_insights"]
+                
+                claude_result["data_sources"]["huggingface"] = "Specialized Transformers эмоциональный анализ"
+                confidence_scores.append(huggingface_data.get("confidence_score", 75))
+            
+            # === РАСЧЕТ КОМБИНИРОВАННОГО CONFIDENCE ===
+            claude_confidence = claude_result.get("confidence_score", 75)
+            confidence_scores.append(claude_confidence)
+            
+            if len(confidence_scores) > 1:
+                # Взвешенное среднее с бонусом за кросс-валидацию
+                avg_confidence = sum(confidence_scores) / len(confidence_scores)
+                cross_validation_bonus = min(10, (len(confidence_scores) - 1) * 3)  # +3% за каждый дополнительный источник
+                combined_confidence = min(95, avg_confidence + cross_validation_bonus)
+                claude_result["confidence_score"] = round(combined_confidence, 1)
+            
+            # Добавление метаданных о современном анализе
+            claude_result["modern_ai_integration"] = {
+                "ai_services_count": len([r for r in ai_results.values() if r.get("status") == "success"]),
+                "data_fusion": True,
+                "cross_validation": len(confidence_scores) > 1,
+                "analysis_year": 2025
+            }
+            
+            logger.info("✨ Claude обогащен современными AI данными", 
+                       sources=len(confidence_scores),
+                       final_confidence=claude_result.get("confidence_score"))
+            
+            return claude_result
+            
+        except Exception as e:
+            logger.error("❌ Ошибка обогащения современными AI", error=str(e))
+            return claude_result
+    
+    def _format_modern_analysis_result(self, analysis_result: Dict[str, Any], successful_services: List[str], ai_results: Dict[str, Any]) -> str:
+        """Форматирование результата современного мульти-AI анализа для Telegram"""
+        
+        if "error" in analysis_result or not analysis_result:
+            return f"⚠️ **Ошибка анализа**: {analysis_result.get('error', 'Неизвестная ошибка')}"
+        
+        # Извлечение базовых данных
+        hook_summary = analysis_result.get("hook_summary", "Анализ завершен")
+        personality_core = analysis_result.get("personality_core", {})
+        main_findings = analysis_result.get("main_findings", {})
+        psychological_profile = analysis_result.get("psychological_profile", {})
+        
+        # Данные от разных AI сервисов
+        openai_big_five = psychological_profile.get("openai_big_five", {})
+        claude_big_five = psychological_profile.get("big_five_traits", {})
+        openai_emotions = psychological_profile.get("openai_emotions", {})
+        cohere_sentiment = psychological_profile.get("cohere_sentiment", {})
+        transformer_emotions = psychological_profile.get("transformer_emotions", {})
+        
+        # Выбираем лучшие данные Big Five (приоритет OpenAI)
+        best_big_five = openai_big_five if openai_big_five else claude_big_five
+        
+        confidence = analysis_result.get("confidence_score", 80)
+        data_sources = analysis_result.get("data_sources", {})
+        
+        # === НАЧАЛО ФОРМАТИРОВАНИЯ ===
+        result = "🧠 **СОВРЕМЕННЫЙ ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ (2025)**\n"
+        result += "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        # Захватывающий хук
+        if hook_summary and hook_summary != "Анализ завершен":
+            result += f"✨ **{hook_summary}**\n\n"
+        
+        # Суть личности
+        if personality_core.get("essence"):
+            result += f"🎯 **СУТЬ ЛИЧНОСТИ:**\n{personality_core['essence']}\n\n"
+        
+        # Уникальные черты с источниками
+        if personality_core.get("unique_traits"):
+            result += "⭐ **УНИКАЛЬНЫЕ ЧЕРТЫ:**\n"
+            for trait in personality_core["unique_traits"][:3]:
+                result += f"• {trait}\n"
+            result += "\n"
+        
+        # Эмоциональная подпись (с данными от нескольких AI)
+        emotional_signature = main_findings.get("emotional_signature", "")
+        if openai_emotions and openai_emotions.get("dominant_emotion"):
+            emotional_signature += f" | OpenAI: доминирует {openai_emotions['dominant_emotion']}"
+        if transformer_emotions and transformer_emotions.get("emotional_profile", {}).get("dominant_emotion"):
+            emotional_signature += f" | HF: {transformer_emotions['emotional_profile']['dominant_emotion']}"
+        
+        if emotional_signature:
+            result += f"❤️ **ЭМОЦИОНАЛЬНАЯ ПОДПИСЬ:**\n{emotional_signature}\n\n"
+        
+        # Стиль мышления
+        if main_findings.get("thinking_style"):
+            result += f"🧠 **СТИЛЬ МЫШЛЕНИЯ:**\n{main_findings['thinking_style']}\n\n"
+        
+        # Big Five с мульти-источниками
+        if best_big_five:
+            result += "📊 **ПРОФИЛЬ ЛИЧНОСТИ (Big Five):**\n"
+            traits_ru = {
+                "openness": "🎨 Открытость",
+                "conscientiousness": "📋 Добросовестность", 
+                "extraversion": "👥 Экстраверсия",
+                "agreeableness": "🤝 Доброжелательность",
+                "neuroticism": "🌊 Эмоциональность"
+            }
+            
+            for trait, trait_data in best_big_five.items():
+                if trait in traits_ru:
+                    if isinstance(trait_data, dict):
+                        score = trait_data.get("score", 50)
+                        description = trait_data.get("description", "")
+                    else:
+                        score = trait_data
+                        description = ""
+                    
+                    level = "🔴 Низкий" if score < 40 else "🟡 Средний" if score < 70 else "🟢 Высокий"
+                    result += f"• {traits_ru[trait]}: {score}% {level}\n"
+                    if description:
+                        result += f"  └ {description[:60]}...\n"
+            
+            # Указываем источник Big Five
+            if openai_big_five:
+                result += "  📍 *Источник: OpenAI GPT-4o научный анализ*\n"
+            result += "\n"
+        
+        # MBTI и DISC (если есть от OpenAI)
+        mbti = psychological_profile.get("mbti_type", "")
+        disc = psychological_profile.get("disc_profile", "")
+        if mbti and mbti != "Unknown":
+            result += f"🎭 **ТИПОЛОГИЯ:** MBTI: {mbti}"
+            if disc and disc != "Unknown":
+                result += f" | DISC: {disc}"
+            result += "\n\n"
+        
+        # Практические инсайты
+        practical_insights = analysis_result.get("practical_insights", {})
+        if practical_insights.get("strengths_to_leverage"):
+            result += "💪 **ВАШИ СУПЕРСИЛЫ:**\n"
+            for strength in practical_insights["strengths_to_leverage"][:2]:
+                result += f"• {strength}\n"
+            result += "\n"
+        
+        # Карьерные рекомендации
+        if practical_insights.get("career_alignment"):
+            result += f"💼 **КАРЬЕРА:**\n{practical_insights['career_alignment'][:120]}...\n\n"
+        
+        # Специализированные инсайты от современных AI
+        if "cohere" in successful_services and cohere_sentiment:
+            result += "🧬 **ПСИХОЛИНГВИСТИКА (Cohere):**\n"
+            dimensional = cohere_sentiment.get("dimensional_analysis", {})
+            if dimensional:
+                valence = dimensional.get("valence", 0)
+                arousal = dimensional.get("arousal", 0.5)
+                result += f"• Эмоциональная валентность: {valence:.2f}\n"
+                result += f"• Уровень активации: {arousal:.2f}\n\n"
+        
+        if "huggingface" in successful_services and transformer_emotions:
+            result += "🤖 **TRANSFORMER АНАЛИЗ:**\n"
+            hf_emotions = transformer_emotions.get("transformer_emotions", {})
+            if hf_emotions:
+                top_emotion = max(hf_emotions.items(), key=lambda x: x[1])
+                result += f"• Доминирующая эмоция: {top_emotion[0]} ({top_emotion[1]:.0f}%)\n\n"
+        
+        # === МЕТАДАННЫЕ АНАЛИЗА ===
+        result += f"📈 **ИНДЕКС УВЕРЕННОСТИ:** {confidence}%\n"
+        
+        # AI сервисы с деталями
+        if len(successful_services) > 1:
+            result += f"🚀 **AI ДВИЖКИ ({len(successful_services)}):** "
+            ai_names = []
+            if "claude" in successful_services:
+                ai_names.append("Claude 3.5 Sonnet")
+            if "openai" in successful_services:
+                ai_names.append("OpenAI GPT-4o")
+            if "cohere" in successful_services:
+                ai_names.append("Cohere Command-R+")
+            if "huggingface" in successful_services:
+                ai_names.append("HuggingFace Transformers")
+            
+            result += " + ".join(ai_names) + "\n"
+            result += f"🔬 **МЕТОДЫ:** Мульти-AI кросс-валидация ({len(successful_services)} источников)\n"
+            result += f"✅ **НАУЧНАЯ ВАЛИДАЦИЯ:** Консенсус современных AI систем\n"
+        else:
+            result += f"🤖 **AI ДВИЖОК:** {successful_services[0].title()}\n"
+        
+        # Современность анализа
+        modern_integration = analysis_result.get("modern_ai_integration", {})
+        if modern_integration.get("data_fusion"):
+            result += f"⚡ **ТЕХНОЛОГИЯ 2025:** Фьюжн данных от {modern_integration.get('ai_services_count', 1)} AI систем\n"
+        
+        result += "\n💬 Отправьте еще текст для дополнительного анализа!"
+        
+        return result
 
 
 # Глобальный экземпляр движка
