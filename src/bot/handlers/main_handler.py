@@ -1,12 +1,12 @@
 """
-Основные обработчики команд бота
+Обработчики команд бота (обновлено для python-telegram-bot v21+)
 """
+import structlog
 from telegram import Update
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, 
-    CallbackQueryHandler, ConversationHandler, filters
+    ConversationHandler, filters, ContextTypes
 )
-import structlog
 
 from src.bot.states.analysis_states import AnalysisStates
 from src.ai.analysis_engine import analysis_engine
@@ -14,151 +14,149 @@ from src.ai.analysis_engine import analysis_engine
 logger = structlog.get_logger()
 
 
-async def start_command(update: Update, context) -> int:
-    """Обработчик команды /start"""
+# ===== ПРОСТЫЕ ОБРАБОТЧИКИ (ОСНОВНЫЕ) =====
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Команда /start"""
     user = update.effective_user
-    logger.info("🎯 Вызван start_command", user_id=user.id, username=user.username)
+    logger.info("🎯 start_command вызван", user_id=user.id, username=user.username)
     
-    welcome_text = f"""
-🧠 **Добро пожаловать в Psychology AI Bot!**
+    try:
+        welcome_text = f"""
+🧠 **Psychology AI Bot**
 
 Привет, {user.first_name}! 
 
-Я помогу создать детальный психологический портрет на основе:
-• 📝 Текстовых данных
-• 📸 Фотографий
-• 🌐 Социальных сетей
+Я создаю детальные психологические портреты с помощью AI.
 
-**Мои возможности:**
-✅ Анализ личности через 8+ AI сервисов
-✅ Научно обоснованные результаты
-✅ Полная прозрачность источников
-✅ Кросс-валидация данных
+**Доступные команды:**
+• `/analyze` - Начать анализ
+• `/help` - Справка
+• `/test` - Проверка бота
 
-Нажми /menu чтобы начать анализ!
-    """
-    
-    await update.message.reply_text(
-        welcome_text,
-        parse_mode='Markdown'
-    )
-    
-    logger.info("✅ start_command завершен", user_id=user.id, next_state=AnalysisStates.MENU)
-    return AnalysisStates.MENU
+**Просто отправь текст** для быстрого анализа!
+        """
+        
+        await update.message.reply_text(welcome_text, parse_mode='Markdown')
+        logger.info("✅ start_command завершен", user_id=user.id)
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в start_command", error=str(e), exc_info=True)
 
 
-async def menu_command(update: Update, context) -> int:
-    """Обработчик команды /menu"""
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Команда /help"""
     user = update.effective_user
-    logger.info("🎯 Вызван menu_command", user_id=user.id)
-    
-    menu_text = """
-🎯 **Главное меню**
-
-Выберите действие:
-
-1️⃣ /analyze - Начать новый анализ
-2️⃣ /history - История анализов
-3️⃣ /settings - Настройки
-4️⃣ /help - Помощь
-
-Что хотите сделать?
-    """
-    
-    await update.message.reply_text(
-        menu_text,
-        parse_mode='Markdown'
-    )
-    
-    logger.info("✅ menu_command завершен", user_id=user.id)
-    return AnalysisStates.MENU
-
-
-async def analyze_command(update: Update, context) -> int:
-    """Начать новый анализ"""
-    user = update.effective_user
-    logger.info("🎯 Вызван analyze_command", user_id=user.id)
-    
-    analyze_text = """
-🔍 **Новый психологический анализ**
-
-Для точного анализа мне нужны данные:
-
-📝 **Текст** - сообщения, посты, письма
-📸 **Фото** - портреты для анализа эмоций
-🌐 **Соцсети** - профили, публикации
-
-Отправьте текст или загрузите изображение для начала анализа.
-
-💡 *Чем больше данных - тем точнее результат!*
-    """
-    
-    await update.message.reply_text(
-        analyze_text,
-        parse_mode='Markdown'
-    )
-    
-    logger.info("✅ analyze_command завершен", user_id=user.id)
-    return AnalysisStates.COLLECT_TEXT
-
-
-async def text_handler(update: Update, context) -> int:
-    """Обработчик текстовых сообщений"""
-    text = update.message.text
-    user = update.effective_user
-    
-    # Сохранение текста в контекст
-    if not context.user_data.get('collected_data'):
-        context.user_data['collected_data'] = {}
-    
-    context.user_data['collected_data']['text'] = text
-    
-    await update.message.reply_text(
-        f"✅ Получен текст ({len(text)} символов)\n\n"
-        f"Хотите добавить еще данных или начать анализ?\n\n"
-        f"/start_analysis - Начать анализ\n"
-        f"/add_image - Добавить фото\n"
-        f"/menu - Главное меню"
-    )
-    
-    logger.info("Получен текст от пользователя", 
-                user_id=user.id, text_length=len(text))
-    
-    return AnalysisStates.CONFIRM_DATA
-
-
-async def start_analysis_command(update: Update, context) -> int:
-    """Запуск анализа"""
-    user = update.effective_user
-    collected_data = context.user_data.get('collected_data', {})
-    
-    if not collected_data or not collected_data.get('text'):
-        await update.message.reply_text(
-            "❌ **Нет данных для анализа!**\n\n"
-            "Пожалуйста, отправьте текст для анализа.\n"
-            "Используйте /analyze чтобы начать заново."
-        )
-        return AnalysisStates.COLLECT_TEXT
-    
-    logger.info("🚀 Запускаю реальный AI анализ", 
-               user_id=user.id, 
-               text_length=len(collected_data['text']))
-    
-    # Показ процесса анализа
-    processing_message = await update.message.reply_text(
-        "🔄 **Запускаю AI анализ...**\n\n"
-        "📊 **Этапы обработки:**\n"
-        "🔄 Anthropic Claude - комплексный анализ\n"
-        "🔄 Валидация результатов\n"
-        "🔄 Генерация отчета\n\n"
-        "⏳ *Это займет 30-60 секунд...*",
-        parse_mode='Markdown'
-    )
+    logger.info("🎯 help_command вызван", user_id=user.id)
     
     try:
+        help_text = """
+📚 **Справка - Psychology AI Bot**
+
+**Команды:**
+• `/start` - Начать работу
+• `/analyze` - Запустить анализ
+• `/help` - Эта справка
+• `/test` - Проверка бота
+
+**Как пользоваться:**
+1. Отправьте любой текст боту
+2. Получите психологический анализ
+3. Увидите профиль личности и рекомендации
+
+**Что анализирует бот:**
+• Черты личности (Big Five)
+• Эмоциональное состояние  
+• Стиль общения
+• Поведенческие паттерны
+
+Просто отправьте текст для анализа!
+        """
+        
+        await update.message.reply_text(help_text, parse_mode='Markdown')
+        logger.info("✅ help_command завершен", user_id=user.id)
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в help_command", error=str(e), exc_info=True)
+
+
+async def test_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Команда /test"""
+    user = update.effective_user
+    logger.info("🧪 test_command вызван", user_id=user.id)
+    
+    try:
+        await update.message.reply_text(
+            f"✅ **Тест успешен!**\n\n"
+            f"Привет, {user.first_name}!\n"
+            f"Webhook работает корректно.\n"
+            f"User ID: `{user.id}`\n\n"
+            f"Используй `/start` для начала.",
+            parse_mode='Markdown'
+        )
+        
+        logger.info("✅ test_command завершен", user_id=user.id)
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в test_command", error=str(e), exc_info=True)
+
+
+async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Команда /analyze"""
+    user = update.effective_user
+    logger.info("🎯 analyze_command вызван", user_id=user.id)
+    
+    try:
+        analyze_text = """
+🔍 **Психологический анализ**
+
+Отправьте текст для анализа:
+• Сообщения из соцсетей
+• Письма или записи
+• Любой текст от 50+ символов
+
+Я проанализирую его через AI и создам психологический портрет.
+
+**Отправьте текст прямо сейчас!**
+        """
+        
+        await update.message.reply_text(analyze_text, parse_mode='Markdown')
+        logger.info("✅ analyze_command завершен", user_id=user.id)
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в analyze_command", error=str(e), exc_info=True)
+
+
+async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик текстовых сообщений - автоматический анализ"""
+    user = update.effective_user
+    text = update.message.text
+    
+    logger.info("📝 Получен текст для анализа", 
+               user_id=user.id, 
+               text_length=len(text),
+               first_50_chars=text[:50] + "..." if len(text) > 50 else text)
+    
+    if len(text) < 20:
+        await update.message.reply_text(
+            "📝 Для качественного анализа нужен текст от 20+ символов.\n\n"
+            "Отправьте более развернутое сообщение!"
+        )
+        return
+    
+    try:
+        # Показ процесса
+        processing_message = await update.message.reply_text(
+            "🔄 **Анализирую через AI...**\n\n"
+            "⏳ Это займет 30-60 секунд...",
+            parse_mode='Markdown'
+        )
+        
+        logger.info("🚀 Запускаю AI анализ", user_id=user.id, text_length=len(text))
+        
         # Реальный анализ через AI движок
         analysis_result = await analysis_engine.quick_analyze(
-            text=collected_data['text'],
+            text=text,
             user_id=user.id,
             telegram_id=user.id
         )
@@ -169,148 +167,238 @@ async def start_analysis_command(update: Update, context) -> int:
             parse_mode='Markdown'
         )
         
-        # Добавление кнопок действий
+        # Кнопки действий
         await update.message.reply_text(
             "🎯 **Что дальше?**\n\n"
-            "• `/analyze` - Новый анализ\n"
-            "• `/history` - История анализов\n"
-            "• `/menu` - Главное меню\n\n"
-            "💡 *Tip: Отправьте больше текста для более точного анализа*",
+            "• Отправьте еще текст для нового анализа\n"
+            "• `/help` - Справка\n"
+            "• `/start` - Главное меню\n\n"
+            "💡 *Больше текста = точнее анализ*",
             parse_mode='Markdown'
         )
-        
-        # Очистка собранных данных
-        context.user_data['collected_data'] = {}
         
         logger.info("✅ AI анализ завершен успешно", user_id=user.id)
         
     except Exception as e:
-        logger.error("❌ Ошибка AI анализа", user_id=user.id, error=str(e))
+        logger.error("❌ Ошибка в text_message_handler", 
+                    user_id=user.id, 
+                    error=str(e), 
+                    exc_info=True)
         
-        # Сообщение об ошибке
-        await processing_message.edit_text(
-            "❌ **Ошибка анализа**\n\n"
-            f"Произошла ошибка: {str(e)}\n\n"
-            "Пожалуйста, попробуйте позже или обратитесь к администратору.\n\n"
-            "Используйте /menu для возврата в главное меню.",
+        try:
+            await processing_message.edit_text(
+                f"❌ **Ошибка анализа**\n\n"
+                f"Произошла ошибка: {str(e)}\n\n"
+                f"Попробуйте позже или используйте `/help`",
+                parse_mode='Markdown'
+            )
+        except:
+            # Если не удалось отредактировать, отправим новое сообщение
+            await update.message.reply_text(
+                f"❌ **Ошибка анализа**\n\n"
+                f"Попробуйте еще раз или используйте `/help`",
+                parse_mode='Markdown'
+            )
+
+
+# ===== CONVERSATION HANDLER (ДОПОЛНИТЕЛЬНЫЙ) =====
+
+async def start_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Начало анализа через ConversationHandler"""
+    user = update.effective_user
+    logger.info("🎯 start_analysis вызван", user_id=user.id)
+    
+    try:
+        analyze_text = """
+🔍 **Детальный психологический анализ**
+
+Отправьте текст для комплексного анализа:
+• Посты из социальных сетей
+• Письма или сообщения
+• Записи в дневнике
+• Любой текст от 100+ символов
+
+Чем больше текста - тем точнее анализ!
+
+**Отправьте текст сейчас:**
+        """
+        
+        await update.message.reply_text(analyze_text, parse_mode='Markdown')
+        logger.info("✅ start_analysis завершен", user_id=user.id)
+        
+        return AnalysisStates.COLLECT_TEXT
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в start_analysis", error=str(e), exc_info=True)
+        return ConversationHandler.END
+
+
+async def collect_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Сбор текста для анализа"""
+    user = update.effective_user
+    text = update.message.text
+    
+    logger.info("📝 Получен текст в conversation", 
+               user_id=user.id, 
+               text_length=len(text))
+    
+    if len(text) < 50:
+        await update.message.reply_text(
+            "📝 Для детального анализа нужен текст от 50+ символов.\n\n"
+            "Отправьте более развернутое сообщение или `/cancel` для отмены."
+        )
+        return AnalysisStates.COLLECT_TEXT
+    
+    try:
+        # Сохранение текста
+        context.user_data['analysis_text'] = text
+        
+        await update.message.reply_text(
+            f"✅ **Текст получен** ({len(text)} символов)\n\n"
+            f"**Запустить анализ?**\n\n"
+            f"• `/process` - Начать анализ\n"
+            f"• Отправьте еще текст для объединения\n"
+            f"• `/cancel` - Отменить",
             parse_mode='Markdown'
         )
+        
+        return AnalysisStates.CONFIRM_DATA
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в collect_text", error=str(e), exc_info=True)
+        return ConversationHandler.END
+
+
+async def process_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработка анализа"""
+    user = update.effective_user
+    text = context.user_data.get('analysis_text', '')
     
-    return AnalysisStates.SHOW_RESULTS
+    if not text:
+        await update.message.reply_text(
+            "❌ Нет текста для анализа! Используйте `/start` для начала."
+        )
+        return ConversationHandler.END
+    
+    logger.info("🚀 Обработка анализа в conversation", 
+               user_id=user.id, 
+               text_length=len(text))
+    
+    try:
+        # Показ процесса
+        processing_message = await update.message.reply_text(
+            "🔄 **Запускаю детальный AI анализ...**\n\n"
+            "📊 **Этапы:**\n"
+            "🔄 Claude анализ личности\n"
+            "🔄 Генерация отчета\n"
+            "🔄 Финальная обработка\n\n"
+            "⏳ *Займет 60-90 секунд...*",
+            parse_mode='Markdown'
+        )
+        
+        # Анализ через AI движок
+        analysis_result = await analysis_engine.quick_analyze(
+            text=text,
+            user_id=user.id,
+            telegram_id=user.id
+        )
+        
+        # Отправка результата
+        await processing_message.edit_text(
+            analysis_result,
+            parse_mode='Markdown'
+        )
+        
+        # Действия после анализа
+        await update.message.reply_text(
+            "🎯 **Анализ завершен!**\n\n"
+            "• `/start` - Новый анализ\n"
+            "• `/help` - Справка\n\n"
+            "Спасибо за использование бота!",
+            parse_mode='Markdown'
+        )
+        
+        # Очистка данных
+        context.user_data.clear()
+        
+        logger.info("✅ Анализ через conversation завершен", user_id=user.id)
+        return ConversationHandler.END
+        
+    except Exception as e:
+        logger.error("❌ Ошибка в process_analysis", error=str(e), exc_info=True)
+        
+        await processing_message.edit_text(
+            f"❌ **Ошибка анализа**\n\n"
+            f"Попробуйте позже: {str(e)[:100]}...\n\n"
+            f"Используйте `/start` для повтора.",
+            parse_mode='Markdown'
+        )
+        
+        return ConversationHandler.END
 
 
-async def help_command(update: Update, context) -> int:
-    """Помощь"""
-    help_text = """
-📚 **Помощь - Psychology AI Bot**
-
-**Команды:**
-/start - Начать работу
-/menu - Главное меню  
-/analyze - Новый анализ
-/history - История анализов
-/help - Эта справка
-
-**Как работает анализ:**
-1. Загрузите данные (текст/фото)
-2. Подтвердите запуск анализа
-3. Получите детальный отчет
-
-**Типы анализа:**
-• Личностный профиль (Big5)
-• Эмоциональное состояние
-• Поведенческие паттерны
-• Когнитивные особенности
-
-**Источники данных:**
-• IBM Watson Personality Insights
-• Azure Cognitive Services
-• Google Cloud Natural Language
-• AWS Rekognition
-• Crystal API (DISC)
-• Receptiviti API
-
-Есть вопросы? Напишите /start
-    """
+async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Отмена conversation"""
+    user = update.effective_user
+    logger.info("❌ Отмена conversation", user_id=user.id)
     
     await update.message.reply_text(
-        help_text,
-        parse_mode='Markdown'
+        "❌ **Анализ отменен**\n\n"
+        "Используйте `/start` для нового анализа."
     )
     
-    return AnalysisStates.MENU
-
-
-async def cancel_handler(update: Update, context) -> int:
-    """Отмена разговора"""
-    await update.message.reply_text(
-        "❌ Операция отменена.\n"
-        "Используйте /start для начала работы."
-    )
-    
+    context.user_data.clear()
     return ConversationHandler.END
 
 
-async def test_command(update: Update, context):
-    """Простая команда для тестирования"""
-    user = update.effective_user
-    logger.info("🧪 Тест команда получена", user_id=user.id)
-    
-    await update.message.reply_text(
-        f"✅ **Тест успешен!**\n\n"
-        f"Привет, {user.first_name}!\n"
-        f"Webhook работает корректно.\n"
-        f"User ID: {user.id}"
-    )
-    
-    logger.info("✅ Тест команда отправлена", user_id=user.id)
-
-
-def setup_handlers(application: Application):
+def setup_handlers(application: Application) -> None:
     """Настройка всех обработчиков"""
     
-    # Простая команда для тестирования (БЕЗ ConversationHandler)
-    application.add_handler(CommandHandler("test", test_command))
-    logger.info("✅ Простой test handler добавлен")
+    logger.info("⚙️ Настройка обработчиков...")
     
-    # Создание ConversationHandler
-    conv_handler = ConversationHandler(
+    # ПРОСТЫЕ КОМАНДЫ (ПРИОРИТЕТ 1 - ВСЕГДА РАБОТАЮТ)
+    application.add_handler(CommandHandler("test", test_command))
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("analyze", analyze_command))
+    
+    logger.info("✅ Простые команды настроены")
+    
+    # CONVERSATION HANDLER (ПРИОРИТЕТ 2 - ДЕТАЛЬНЫЙ АНАЛИЗ)
+    conversation_handler = ConversationHandler(
         entry_points=[
-            CommandHandler("start", start_command),
-            CommandHandler("menu", menu_command),
+            CommandHandler("detailed", start_analysis),
         ],
         states={
-            AnalysisStates.MENU: [
-                CommandHandler("analyze", analyze_command),
-                CommandHandler("history", help_command),  # Заглушка
-                CommandHandler("settings", help_command),  # Заглушка
-                CommandHandler("help", help_command),
-            ],
             AnalysisStates.COLLECT_TEXT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler),
-                CommandHandler("add_image", help_command),  # Заглушка
-                CommandHandler("menu", menu_command),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_text),
+                CommandHandler("cancel", cancel_conversation),
             ],
             AnalysisStates.CONFIRM_DATA: [
-                CommandHandler("start_analysis", start_analysis_command),
-                CommandHandler("add_image", help_command),  # Заглушка
-                CommandHandler("menu", menu_command),
-            ],
-            AnalysisStates.SHOW_RESULTS: [
-                CommandHandler("menu", menu_command),
-                CommandHandler("analyze", analyze_command),
+                CommandHandler("process", process_analysis),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_text),
+                CommandHandler("cancel", cancel_conversation),
             ],
         },
         fallbacks=[
-            CommandHandler("cancel", cancel_handler),
-            CommandHandler("menu", menu_command),
+            CommandHandler("cancel", cancel_conversation),
         ],
         per_user=True,
         per_chat=True,
     )
     
-    # Добавление обработчиков
-    application.add_handler(conv_handler)
-    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(conversation_handler)
+    logger.info("✅ ConversationHandler настроен")
     
-    logger.info("✅ Все обработчики бота настроены") 
+    # ОБРАБОТЧИК ТЕКСТА (ПРИОРИТЕТ 3 - АВТОМАТИЧЕСКИЙ АНАЛИЗ)
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND, 
+            text_message_handler
+        )
+    )
+    
+    logger.info("✅ Обработчик текста настроен")
+    
+    logger.info("🎯 Все обработчики настроены успешно!")
+    logger.info("📋 Доступные команды: /start, /help, /test, /analyze, /detailed") 
