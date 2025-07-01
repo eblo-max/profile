@@ -13,9 +13,10 @@ from src.bot.states.analysis_states import AnalysisStates
 logger = structlog.get_logger()
 
 
-async def start_command(update: Update, context) -> str:
+async def start_command(update: Update, context) -> int:
     """Обработчик команды /start"""
     user = update.effective_user
+    logger.info("🎯 Вызван start_command", user_id=user.id, username=user.username)
     
     welcome_text = f"""
 🧠 **Добро пожаловать в Psychology AI Bot!**
@@ -41,12 +42,15 @@ async def start_command(update: Update, context) -> str:
         parse_mode='Markdown'
     )
     
-    logger.info("Пользователь запустил бота", user_id=user.id)
+    logger.info("✅ start_command завершен", user_id=user.id, next_state=AnalysisStates.MENU)
     return AnalysisStates.MENU
 
 
-async def menu_command(update: Update, context) -> str:
+async def menu_command(update: Update, context) -> int:
     """Обработчик команды /menu"""
+    user = update.effective_user
+    logger.info("🎯 Вызван menu_command", user_id=user.id)
+    
     menu_text = """
 🎯 **Главное меню**
 
@@ -65,11 +69,15 @@ async def menu_command(update: Update, context) -> str:
         parse_mode='Markdown'
     )
     
+    logger.info("✅ menu_command завершен", user_id=user.id)
     return AnalysisStates.MENU
 
 
-async def analyze_command(update: Update, context) -> str:
+async def analyze_command(update: Update, context) -> int:
     """Начать новый анализ"""
+    user = update.effective_user
+    logger.info("🎯 Вызван analyze_command", user_id=user.id)
+    
     analyze_text = """
 🔍 **Новый психологический анализ**
 
@@ -89,10 +97,11 @@ async def analyze_command(update: Update, context) -> str:
         parse_mode='Markdown'
     )
     
+    logger.info("✅ analyze_command завершен", user_id=user.id)
     return AnalysisStates.COLLECT_TEXT
 
 
-async def text_handler(update: Update, context) -> str:
+async def text_handler(update: Update, context) -> int:
     """Обработчик текстовых сообщений"""
     text = update.message.text
     user = update.effective_user
@@ -117,7 +126,7 @@ async def text_handler(update: Update, context) -> str:
     return AnalysisStates.CONFIRM_DATA
 
 
-async def start_analysis_command(update: Update, context) -> str:
+async def start_analysis_command(update: Update, context) -> int:
     """Запуск анализа"""
     collected_data = context.user_data.get('collected_data', {})
     
@@ -159,7 +168,7 @@ async def start_analysis_command(update: Update, context) -> str:
     return AnalysisStates.SHOW_RESULTS
 
 
-async def help_command(update: Update, context) -> str:
+async def help_command(update: Update, context) -> int:
     """Помощь"""
     help_text = """
 📚 **Помощь - Psychology AI Bot**
@@ -211,8 +220,27 @@ async def cancel_handler(update: Update, context) -> int:
     return ConversationHandler.END
 
 
+async def test_command(update: Update, context):
+    """Простая команда для тестирования"""
+    user = update.effective_user
+    logger.info("🧪 Тест команда получена", user_id=user.id)
+    
+    await update.message.reply_text(
+        f"✅ **Тест успешен!**\n\n"
+        f"Привет, {user.first_name}!\n"
+        f"Webhook работает корректно.\n"
+        f"User ID: {user.id}"
+    )
+    
+    logger.info("✅ Тест команда отправлена", user_id=user.id)
+
+
 def setup_handlers(application: Application):
     """Настройка всех обработчиков"""
+    
+    # Простая команда для тестирования (БЕЗ ConversationHandler)
+    application.add_handler(CommandHandler("test", test_command))
+    logger.info("✅ Простой test handler добавлен")
     
     # Создание ConversationHandler
     conv_handler = ConversationHandler(
@@ -254,4 +282,4 @@ def setup_handlers(application: Application):
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("help", help_command))
     
-    logger.info("✅ Обработчики бота настроены") 
+    logger.info("✅ Все обработчики бота настроены") 

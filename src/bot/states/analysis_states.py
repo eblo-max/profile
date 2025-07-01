@@ -8,27 +8,27 @@ class AnalysisStates:
     """Состояния анализа"""
     
     # Основные состояния
-    START = "start"
-    MENU = "menu"
+    START = 0
+    MENU = 1
     
     # Сбор данных
-    COLLECT_TEXT = "collect_text"
-    COLLECT_IMAGES = "collect_images"
-    COLLECT_SOCIAL = "collect_social"
+    COLLECT_TEXT = 10
+    COLLECT_IMAGES = 11
+    COLLECT_SOCIAL = 12
     
     # Подтверждение
-    CONFIRM_DATA = "confirm_data"
+    CONFIRM_DATA = 20
     
     # Обработка
-    PROCESSING = "processing"
+    PROCESSING = 30
     
     # Результаты
-    SHOW_RESULTS = "show_results"
-    DETAILED_VIEW = "detailed_view"
+    SHOW_RESULTS = 40
+    DETAILED_VIEW = 41
     
     # Дополнительные функции
-    HISTORY = "history"
-    SETTINGS = "settings"
+    HISTORY = 50
+    SETTINGS = 51
     
     # Завершение
     END = ConversationHandler.END
@@ -38,51 +38,51 @@ class DataCollectionStates:
     """Состояния сбора данных"""
     
     # Типы данных
-    TEXT_INPUT = "text_input"
-    TEXT_FILE = "text_file"
+    TEXT_INPUT = 100
+    TEXT_FILE = 101
     
-    IMAGE_UPLOAD = "image_upload"
-    IMAGE_URL = "image_url"
+    IMAGE_UPLOAD = 110
+    IMAGE_URL = 111
     
-    SOCIAL_PROFILE = "social_profile"
-    SOCIAL_POSTS = "social_posts"
+    SOCIAL_PROFILE = 120
+    SOCIAL_POSTS = 121
     
     # Дополнительная информация
-    PERSONAL_INFO = "personal_info"
-    CONTEXT_INFO = "context_info"
+    PERSONAL_INFO = 130
+    CONTEXT_INFO = 131
 
 
 class ProcessingStates:
     """Состояния обработки"""
     
     # Этапы анализа
-    WATSON_ANALYSIS = "watson_analysis"
-    AZURE_ANALYSIS = "azure_analysis"
-    GOOGLE_ANALYSIS = "google_analysis"
-    AWS_ANALYSIS = "aws_analysis"
+    WATSON_ANALYSIS = 200
+    AZURE_ANALYSIS = 201
+    GOOGLE_ANALYSIS = 202
+    AWS_ANALYSIS = 203
     
-    CRYSTAL_ANALYSIS = "crystal_analysis"
-    RECEPTIVITI_ANALYSIS = "receptiviti_analysis"
-    LEXALYTICS_ANALYSIS = "lexalytics_analysis"
-    MONKEYLEARN_ANALYSIS = "monkeylearn_analysis"
+    CRYSTAL_ANALYSIS = 210
+    RECEPTIVITI_ANALYSIS = 211
+    LEXALYTICS_ANALYSIS = 212
+    MONKEYLEARN_ANALYSIS = 213
     
     # Синтез
-    CLAUDE_SYNTHESIS = "claude_synthesis"
+    CLAUDE_SYNTHESIS = 220
     
     # Валидация
-    CROSS_VALIDATION = "cross_validation"
-    CONFIDENCE_SCORING = "confidence_scoring"
-    BIAS_DETECTION = "bias_detection"
+    CROSS_VALIDATION = 230
+    CONFIDENCE_SCORING = 231
+    BIAS_DETECTION = 232
     
     # Финализация
-    REPORT_GENERATION = "report_generation"
+    REPORT_GENERATION = 240
 
 
 class MenuStates:
     """Состояния меню"""
     
-    MAIN_MENU = "main_menu"
-    ANALYSIS_MENU = "analysis_menu"
-    HISTORY_MENU = "history_menu"
-    SETTINGS_MENU = "settings_menu"
-    HELP_MENU = "help_menu" 
+    MAIN_MENU = 300
+    ANALYSIS_MENU = 301
+    HISTORY_MENU = 302
+    SETTINGS_MENU = 303
+    HELP_MENU = 304 

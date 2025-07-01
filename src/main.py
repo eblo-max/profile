@@ -50,6 +50,11 @@ async def lifespan(app: FastAPI):
     # Настройка Telegram бота
     application = Application.builder().token(settings.telegram_bot_token).build()
     setup_handlers(application)
+    logger.info("✅ Обработчики бота настроены")
+    
+    # Инициализация приложения
+    await application.initialize()
+    logger.info("✅ Telegram application инициализирован")
     
     # Инициализация вебхука если URL указан
     if settings.webhook_url:
@@ -66,6 +71,12 @@ async def lifespan(app: FastAPI):
     
     # Очистка ресурсов
     logger.info("🔄 Завершение работы приложения")
+    
+    # Удаление webhook
+    if settings.webhook_url:
+        await application.bot.delete_webhook()
+        logger.info("🔗 Webhook удален")
+    
     await close_connections()
     await application.shutdown()
     logger.info("✅ Приложение завершено")
@@ -108,15 +119,18 @@ async def webhook(request: Request):
         
         # Получение JSON данных из запроса
         json_data = await request.json()
+        logger.info("Получен webhook", data=json_data)
         
         # Создание объекта Update из JSON
         update = Update.de_json(json_data, application.bot)
+        logger.info("Update создан", update_id=update.update_id if update else None)
         
         # Обработка обновления
         await application.process_update(update)
+        logger.info("Update обработан успешно")
         return {"status": "ok"}
     except Exception as e:
-        logger.error("Ошибка обработки webhook", error=str(e))
+        logger.error("Ошибка обработки webhook", error=str(e), exc_info=True)
         return {"status": "error", "message": str(e)}
 
 
