@@ -113,23 +113,36 @@ async def lifespan(app: FastAPI):
             logger.error("❌ Ошибка инициализации Telegram Application", error=str(init_error), exc_info=True)
             raise RuntimeError(f"Не удалось инициализировать Telegram Application: {init_error}") from init_error
         
-        # === ЭТАП 6: УСТАНОВКА WEBHOOK ===
+        # === ЭТАП 6: УСТАНОВКА И ПРОВЕРКА WEBHOOK ===
         if settings.webhook_url:
-            basic_logger.info(f"🔗 Установка webhook: {settings.webhook_url}")
+            basic_logger.info(f"🔗 Проверка и установка webhook: {settings.webhook_url}")
             
             try:
                 webhook_url = f"{settings.webhook_url.rstrip('/')}/webhook"
+                
+                # Сначала проверяем текущий webhook
+                current_webhook_info = await telegram_application.bot.get_webhook_info()
+                basic_logger.info(f"🔍 Текущий webhook: {current_webhook_info.url}")
+                
+                # Устанавливаем webhook (даже если он уже есть - для надежности)
                 await telegram_application.bot.set_webhook(
                     url=webhook_url,
                     allowed_updates=["message", "callback_query", "inline_query"]
                 )
-                basic_logger.info("✅ Webhook успешно установлен")
+                basic_logger.info("✅ Webhook установлен/обновлен")
                 logger.info("✅ Webhook настроен", webhook_url=webhook_url)
                 
-                # Проверка webhook
-                webhook_info = await telegram_application.bot.get_webhook_info()
-                basic_logger.info(f"🔍 Webhook проверен: {webhook_info.url}")
-                logger.info("🔍 Webhook статус", url=webhook_info.url, pending_updates=webhook_info.pending_update_count)
+                # Повторная проверка webhook
+                final_webhook_info = await telegram_application.bot.get_webhook_info()
+                basic_logger.info(f"🔍 Финальный webhook: {final_webhook_info.url}")
+                logger.info("🔍 Webhook финальный статус", 
+                           url=final_webhook_info.url, 
+                           pending_updates=final_webhook_info.pending_update_count,
+                           max_connections=final_webhook_info.max_connections)
+                
+                # Проверка что webhook действительно установлен
+                if not final_webhook_info.url or final_webhook_info.url != webhook_url:
+                    raise RuntimeError(f"Webhook не установлен корректно: ожидался {webhook_url}, получен {final_webhook_info.url}")
                 
             except Exception as webhook_error:
                 basic_logger.error(f"❌ ОШИБКА WEBHOOK: {webhook_error}")
@@ -173,16 +186,16 @@ async def lifespan(app: FastAPI):
         basic_logger.info("🔄 === НАЧАЛО ЗАВЕРШЕНИЯ РАБОТЫ ===")
         logger.info("🔄 Начинаю корректное завершение приложения")
         
-        # === УДАЛЕНИЕ WEBHOOK ===
+        # === НЕ УДАЛЯЕМ WEBHOOK ПРИ ПЕРЕЗАПУСКЕ ===
+        # Webhook НЕ удаляется при завершении, чтобы избежать проблем с Railway
+        # Railway может перезапускать приложение для деплоя, но webhook должен остаться
         if settings.webhook_url and telegram_application:
             try:
-                basic_logger.info("🔗 Удаление webhook...")
-                await telegram_application.bot.delete_webhook()
-                basic_logger.info("✅ Webhook удален")
-                logger.info("✅ Webhook успешно удален")
-            except Exception as webhook_cleanup_error:
-                basic_logger.error(f"❌ Ошибка удаления webhook: {webhook_cleanup_error}")
-                logger.error("❌ Ошибка удаления webhook", error=str(webhook_cleanup_error))
+                basic_logger.info("🔗 Webhook остается активным для Railway...")
+                logger.info("🔗 Webhook сохранен для непрерывной работы при перезапусках Railway")
+            except Exception as webhook_info_error:
+                basic_logger.error(f"❌ Ошибка проверки webhook: {webhook_info_error}")
+                logger.error("❌ Ошибка проверки webhook", error=str(webhook_info_error))
         
         # === ЗАКРЫТИЕ TELEGRAM APPLICATION ===
         if telegram_application:
