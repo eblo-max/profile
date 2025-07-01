@@ -187,63 +187,108 @@ class AnalysisEngine:
             return f"⚠️ **Ошибка анализа**: {str(e)}\n\nПопробуйте позже или обратитесь к администратору."
     
     def _format_quick_result(self, claude_result: Dict[str, Any]) -> str:
-        """Форматирование быстрого результата для Telegram"""
+        """Форматирование детального результата для Telegram"""
         
         if "error" in claude_result:
             return f"⚠️ **Ошибка анализа**: {claude_result['error']}"
         
-        # Извлечение данных
+        # Извлечение данных из новой структуры
+        hook_summary = claude_result.get("hook_summary", "")
+        personality_core = claude_result.get("personality_core", {})
         main_findings = claude_result.get("main_findings", {})
-        psychological_profile = claude_result.get("psychological_profile", {})
-        confidence = claude_result.get("confidence_score", 75)
+        big_five_detailed = claude_result.get("psychological_profile", {}).get("big_five_traits", {})
+        practical_insights = claude_result.get("practical_insights", {})
+        actionable_recommendations = claude_result.get("actionable_recommendations", {})
+        fascinating_details = claude_result.get("fascinating_details", {})
+        confidence = claude_result.get("confidence_score", 80)
         
-        # Форматирование
+        # Начало форматирования
         result = "🧠 **ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ**\n"
         result += "━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         
-        # Основные черты
-        if main_findings.get("personality_traits"):
-            result += "🎯 **ОСНОВНЫЕ ЧЕРТЫ ЛИЧНОСТИ:**\n"
-            for trait in main_findings["personality_traits"][:3]:
+        # Захватывающий хук
+        if hook_summary:
+            result += f"✨ **{hook_summary}**\n\n"
+        
+        # Суть личности
+        if personality_core.get("essence"):
+            result += f"🎯 **СУТЬ ЛИЧНОСТИ:**\n{personality_core['essence']}\n\n"
+        
+        # Уникальные черты
+        if personality_core.get("unique_traits"):
+            result += "⭐ **УНИКАЛЬНЫЕ ЧЕРТЫ:**\n"
+            for trait in personality_core["unique_traits"][:3]:
                 result += f"• {trait}\n"
             result += "\n"
         
-        # Эмоциональное состояние
-        if main_findings.get("emotional_state"):
-            result += f"😊 **ЭМОЦИОНАЛЬНОЕ СОСТОЯНИЕ:**\n{main_findings['emotional_state']}\n\n"
+        # Эмоциональная подпись
+        if main_findings.get("emotional_signature"):
+            result += f"❤️ **ЭМОЦИОНАЛЬНАЯ ПОДПИСЬ:**\n{main_findings['emotional_signature']}\n\n"
         
-        # Big Five (если есть)
-        big_five = psychological_profile.get("big_five_traits", {})
-        if big_five:
+        # Стиль мышления
+        if main_findings.get("thinking_style"):
+            result += f"🧠 **СТИЛЬ МЫШЛЕНИЯ:**\n{main_findings['thinking_style']}\n\n"
+        
+        # Big Five с деталями
+        if big_five_detailed:
             result += "📊 **ПРОФИЛЬ ЛИЧНОСТИ (Big Five):**\n"
             traits_ru = {
-                "openness": "Открытость опыту",
-                "conscientiousness": "Добросовестность", 
-                "extraversion": "Экстраверсия",
-                "agreeableness": "Доброжелательность",
-                "neuroticism": "Нейротизм"
+                "openness": "🎨 Открытость",
+                "conscientiousness": "📋 Добросовестность", 
+                "extraversion": "👥 Экстраверсия",
+                "agreeableness": "🤝 Доброжелательность",
+                "neuroticism": "🌊 Эмоциональность"
             }
             
-            for trait, value in big_five.items():
-                if isinstance(value, (int, float)) and trait in traits_ru:
-                    level = "🔴 Низкий" if value < 40 else "🟡 Средний" if value < 70 else "🟢 Высокий"
-                    result += f"• {traits_ru[trait]}: {value}% {level}\n"
+            for trait, trait_data in big_five_detailed.items():
+                if trait in traits_ru and isinstance(trait_data, dict):
+                    score = trait_data.get("score", 50)
+                    description = trait_data.get("description", "")
+                    level = "🔴 Низкий" if score < 40 else "🟡 Средний" if score < 70 else "🟢 Высокий"
+                    result += f"• {traits_ru[trait]}: {score}% {level}\n"
+                    if description:
+                        result += f"  └ {description[:80]}...\n"
             result += "\n"
         
-        # Рекомендации
-        recommendations = claude_result.get("recommendations", [])
-        if recommendations:
-            result += "💡 **РЕКОМЕНДАЦИИ:**\n"
-            for rec in recommendations[:2]:
-                result += f"• {rec}\n"
+        # Сильные стороны
+        if practical_insights.get("strengths_to_leverage"):
+            result += "💪 **ВАШИ СУПЕРСИЛЫ:**\n"
+            for strength in practical_insights["strengths_to_leverage"][:2]:
+                result += f"• {strength}\n"
             result += "\n"
+        
+        # Скрытые таланты
+        if fascinating_details.get("hidden_talents"):
+            result += "🎁 **СКРЫТЫЕ ТАЛАНТЫ:**\n"
+            for talent in fascinating_details["hidden_talents"][:2]:
+                result += f"• {talent}\n"
+            result += "\n"
+        
+        # Практические рекомендации
+        if actionable_recommendations.get("immediate_actions"):
+            result += "🚀 **ДЕЙСТВИЯ НА НЕДЕЛЮ:**\n"
+            for action in actionable_recommendations["immediate_actions"][:3]:
+                result += f"• {action}\n"
+            result += "\n"
+        
+        # Карьерные советы
+        if practical_insights.get("career_alignment"):
+            result += f"💼 **КАРЬЕРА:**\n{practical_insights['career_alignment']}\n\n"
+        
+        # Отношения
+        if practical_insights.get("relationship_style"):
+            result += f"💕 **ОТНОШЕНИЯ:**\n{practical_insights['relationship_style']}\n\n"
+        
+        # Скрытые глубины
+        if personality_core.get("hidden_depths"):
+            result += f"🔍 **ЗА ФАСАДОМ:**\n{personality_core['hidden_depths']}\n\n"
         
         # Метаинформация
         result += f"📈 **ИНДЕКС УВЕРЕННОСТИ:** {confidence}%\n"
-        result += f"🔬 **ИСТОЧНИК:** Anthropic Claude AI\n"
-        result += f"⚠️ **ПРИМЕЧАНИЕ:** Результат носит рекомендательный характер\n\n"
+        result += f"🤖 **AI ДВИЖОК:** Claude 3.5 Sonnet\n"
+        result += f"🔬 **МЕТОДЫ:** Big Five, лингвистический анализ\n\n"
         
-        result += "Для получения детального анализа используйте /analyze"
+        result += "💬 Отправьте еще текст для дополнительного анализа!"
         
         return result
     

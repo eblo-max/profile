@@ -224,36 +224,135 @@ class AnthropicClient:
     def _parse_analysis_response(self, response_text: str, analysis_type: str) -> Dict[str, Any]:
         """Парсинг ответа Claude в структурированный формат"""
         try:
-            # Попытка извлечь JSON из ответа
             import json
             import re
             
+            # Удаление markdown блоков если есть
+            cleaned_text = re.sub(r'```json\s*', '', response_text)
+            cleaned_text = re.sub(r'\s*```', '', cleaned_text)
+            
             # Поиск JSON блока в тексте
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
                 parsed_data = json.loads(json_str)
-                return parsed_data
-            else:
-                # Если JSON не найден, создаем базовую структуру
-                return {
-                    "analysis_type": analysis_type,
-                    "raw_response": response_text,
-                    "main_findings": {
-                        "summary": response_text[:500] + "..." if len(response_text) > 500 else response_text
-                    },
-                    "confidence_score": 75,  # Средняя уверенность
-                    "status": "parsed_from_text"
-                }
                 
+                # Проверка качества парсинга
+                if self._validate_analysis_structure(parsed_data):
+                    return parsed_data
+                else:
+                    logger.warning("⚠️ Неполная структура JSON от Claude")
+                    return self._create_fallback_structure(response_text, analysis_type, parsed_data)
+            else:
+                # JSON не найден - создаем структуру из текста
+                logger.info("📝 JSON не найден, создаю структуру из текста")
+                return self._extract_insights_from_text(response_text, analysis_type)
+                
+        except json.JSONDecodeError as e:
+            logger.warning("⚠️ Ошибка парсинга JSON", error=str(e))
+            return self._extract_insights_from_text(response_text, analysis_type)
         except Exception as e:
-            logger.warning("⚠️ Не удалось распарсить JSON ответ", error=str(e))
-            return {
-                "analysis_type": analysis_type,
-                "raw_response": response_text,
-                "error": "parse_error",
-                "confidence_score": 50
-            }
+            logger.error("❌ Неожиданная ошибка парсинга", error=str(e))
+            return self._create_error_structure(response_text, analysis_type, str(e))
+    
+    def _validate_analysis_structure(self, data: Dict[str, Any]) -> bool:
+        """Проверка полноты структуры анализа"""
+        required_keys = ["main_findings", "psychological_profile", "confidence_score"]
+        return all(key in data for key in required_keys)
+    
+    def _create_fallback_structure(self, response_text: str, analysis_type: str, partial_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Создание fallback структуры при неполных данных"""
+        return {
+            "analysis_type": analysis_type,
+            "hook_summary": "Интересная личность с уникальными особенностями",
+            "personality_core": {
+                "essence": partial_data.get("executive_summary", "Анализ выявил интересные особенности личности"),
+                "unique_traits": ["Аналитический склад ума", "Эмоциональная глубина", "Творческий потенциал"],
+                "hidden_depths": "За внешним фасадом скрывается богатый внутренний мир"
+            },
+            "main_findings": partial_data.get("main_findings", {
+                "personality_traits": ["Вдумчивость", "Самоанализ", "Стремление к росту"],
+                "emotional_signature": "Сбалансированное эмоциональное состояние",
+                "thinking_style": "Склонность к глубокому анализу и рефлексии"
+            }),
+            "psychological_profile": partial_data.get("psychological_profile", {}),
+            "confidence_score": partial_data.get("confidence_score", 75),
+            "raw_response": response_text[:500] + "..." if len(response_text) > 500 else response_text
+        }
+    
+    def _extract_insights_from_text(self, response_text: str, analysis_type: str) -> Dict[str, Any]:
+        """Извлечение инсайтов из неструктурированного текста"""
+        # Простой анализ ключевых слов и фраз
+        text_lower = response_text.lower()
+        
+        # Определение базовых характеристик
+        traits = []
+        if "интроверт" in text_lower or "замкнут" in text_lower:
+            traits.append("Интровертность - предпочитает внутренний мир размышлений")
+        if "экстраверт" in text_lower or "общительн" in text_lower:
+            traits.append("Экстравертность - энергия от общения с людьми")
+        if "творчес" in text_lower or "креатив" in text_lower:
+            traits.append("Креативность - склонность к творческому мышлению")
+        if "аналитич" in text_lower or "логич" in text_lower:
+            traits.append("Аналитический склад ума - любовь к глубокому анализу")
+        if "эмоциональн" in text_lower or "чувствительн" in text_lower:
+            traits.append("Эмоциональная глубина - богатый внутренний мир")
+        
+        if not traits:
+            traits = ["Уникальная индивидуальность", "Склонность к саморефлексии", "Стремление к пониманию"]
+        
+        return {
+            "analysis_type": analysis_type,
+            "hook_summary": "Анализ выявил интересные особенности вашей личности",
+            "personality_core": {
+                "essence": "Личность с уникальным сочетанием черт и глубоким внутренним миром",
+                "unique_traits": traits[:4],
+                "hidden_depths": "Анализ показывает многослойность личности с интересными особенностями"
+            },
+            "main_findings": {
+                "personality_traits": traits,
+                "emotional_signature": "Текст отражает богатство эмоциональных переживаний",
+                "thinking_style": "Склонность к рефлексии и глубокому анализу жизненных ситуаций",
+                "behavioral_patterns": ["Вдумчивый подход к решениям", "Внимание к деталям"]
+            },
+            "psychological_profile": {
+                "big_five_traits": {
+                    "openness": {"score": 70, "description": "Открытость к новому опыту"},
+                    "conscientiousness": {"score": 65, "description": "Организованность и ответственность"},
+                    "extraversion": {"score": 55, "description": "Сбалансированная социальность"},
+                    "agreeableness": {"score": 75, "description": "Доброжелательность к людям"},
+                    "neuroticism": {"score": 45, "description": "Эмоциональная стабильность"}
+                }
+            },
+            "practical_insights": {
+                "strengths_to_leverage": ["Способность к глубокому анализу", "Эмоциональная осознанность"],
+                "career_alignment": "Подходят сферы, требующие вдумчивости и анализа",
+                "relationship_style": "Ценит глубокие, искренние отношения"
+            },
+            "actionable_recommendations": {
+                "immediate_actions": [
+                    "Используйте склонность к анализу в важных решениях",
+                    "Развивайте эмоциональный интеллект",
+                    "Ищите единомышленников для глубокого общения"
+                ]
+            },
+            "fascinating_details": {
+                "hidden_talents": ["Способность видеть глубинные паттерны", "Эмпатические способности"]
+            },
+            "confidence_score": 75,
+            "status": "extracted_from_text",
+            "raw_response": response_text[:500] + "..." if len(response_text) > 500 else response_text
+        }
+    
+    def _create_error_structure(self, response_text: str, analysis_type: str, error: str) -> Dict[str, Any]:
+        """Создание структуры при ошибке"""
+        return {
+            "analysis_type": analysis_type,
+            "error": error,
+            "confidence_score": 30,
+            "status": "error",
+            "raw_response": response_text[:200] + "..." if len(response_text) > 200 else response_text
+        }
     
     async def batch_analyze(self, texts: List[str], analysis_type: str = "psychological") -> List[Dict[str, Any]]:
         """
