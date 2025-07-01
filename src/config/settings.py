@@ -3,40 +3,38 @@
 """
 import os
 from typing import Optional
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Настройки приложения"""
     
-    # Основные
+    # Основные - обязательные
     telegram_bot_token: str = Field(..., env="TELEGRAM_BOT_TOKEN")
     anthropic_api_key: str = Field(..., env="ANTHROPIC_API_KEY")
     database_url: str = Field(..., env="DATABASE_URL")
-    redis_url: str = Field(..., env="REDIS_URL")
+    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
     
-    # IBM Watson
-    ibm_watson_api_key: str = Field(..., env="IBM_WATSON_API_KEY")
-    ibm_watson_url: str = Field(..., env="IBM_WATSON_URL")
+    # AI API ключи - необязательные для первого запуска
+    ibm_watson_api_key: Optional[str] = Field(default=None, env="IBM_WATSON_API_KEY")
+    ibm_watson_url: Optional[str] = Field(default=None, env="IBM_WATSON_URL")
     
-    # Microsoft Azure
-    azure_cognitive_key: str = Field(..., env="AZURE_COGNITIVE_KEY")
-    azure_cognitive_endpoint: str = Field(..., env="AZURE_COGNITIVE_ENDPOINT")
+    azure_cognitive_key: Optional[str] = Field(default=None, env="AZURE_COGNITIVE_KEY")
+    azure_cognitive_endpoint: Optional[str] = Field(default=None, env="AZURE_COGNITIVE_ENDPOINT")
     
-    # Google Cloud
-    google_cloud_project_id: str = Field(..., env="GOOGLE_CLOUD_PROJECT_ID")
-    google_application_credentials: str = Field(..., env="GOOGLE_APPLICATION_CREDENTIALS")
+    google_cloud_project_id: Optional[str] = Field(default=None, env="GOOGLE_CLOUD_PROJECT_ID")
+    google_application_credentials: Optional[str] = Field(default=None, env="GOOGLE_APPLICATION_CREDENTIALS")
     
-    # AWS
-    aws_access_key_id: str = Field(..., env="AWS_ACCESS_KEY_ID")
-    aws_secret_access_key: str = Field(..., env="AWS_SECRET_ACCESS_KEY")
+    aws_access_key_id: Optional[str] = Field(default=None, env="AWS_ACCESS_KEY_ID")
+    aws_secret_access_key: Optional[str] = Field(default=None, env="AWS_SECRET_ACCESS_KEY")
     aws_region: str = Field(default="us-east-1", env="AWS_REGION")
     
-    # Специализированные API
-    crystal_api_key: str = Field(..., env="CRYSTAL_API_KEY")
-    receptiviti_api_key: str = Field(..., env="RECEPTIVITI_API_KEY")
-    lexalytics_api_key: str = Field(..., env="LEXALYTICS_API_KEY")
-    monkeylearn_api_key: str = Field(..., env="MONKEYLEARN_API_KEY")
+    # Специализированные API - необязательные
+    crystal_api_key: Optional[str] = Field(default=None, env="CRYSTAL_API_KEY")
+    receptiviti_api_key: Optional[str] = Field(default=None, env="RECEPTIVITI_API_KEY")
+    lexalytics_api_key: Optional[str] = Field(default=None, env="LEXALYTICS_API_KEY")
+    monkeylearn_api_key: Optional[str] = Field(default=None, env="MONKEYLEARN_API_KEY")
     
     # Настройки приложения
     debug: bool = Field(default=False, env="DEBUG")
@@ -44,10 +42,15 @@ class Settings(BaseSettings):
     max_requests_per_minute: int = Field(default=60, env="MAX_REQUESTS_PER_MINUTE")
     cache_ttl: int = Field(default=3600, env="CACHE_TTL")
     
-    # FastAPI
-    fastapi_host: str = Field(default="0.0.0.0", env="FASTAPI_HOST")
-    fastapi_port: int = Field(default=8000, env="FASTAPI_PORT")
+    # FastAPI - Railway автоматически устанавливает PORT
+    fastapi_host: str = Field(default="0.0.0.0", env="HOST")
+    fastapi_port: int = Field(default=8000, env="PORT")
     webhook_url: Optional[str] = Field(default=None, env="WEBHOOK_URL")
+    
+    # Railway специфичные
+    railway_environment: Optional[str] = Field(default=None, env="RAILWAY_ENVIRONMENT")
+    railway_project_id: Optional[str] = Field(default=None, env="RAILWAY_PROJECT_ID")
+    railway_service_id: Optional[str] = Field(default=None, env="RAILWAY_SERVICE_ID")
     
     class Config:
         env_file = ".env"

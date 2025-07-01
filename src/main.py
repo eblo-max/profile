@@ -6,7 +6,8 @@ import logging
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from telegram import Update
 from telegram.ext import Application
 
 from src.config.settings import settings
@@ -100,12 +101,19 @@ async def health():
 
 
 @app.post("/webhook")
-async def webhook(request: dict):
+async def webhook(request: Request):
     """Обработчик вебхуков Telegram"""
     try:
         application = app.state.telegram_app
+        
+        # Получение JSON данных из запроса
+        json_data = await request.json()
+        
+        # Создание объекта Update из JSON
+        update = Update.de_json(json_data, application.bot)
+        
         # Обработка обновления
-        await application.process_update(request)
+        await application.process_update(update)
         return {"status": "ok"}
     except Exception as e:
         logger.error("Ошибка обработки webhook", error=str(e))
