@@ -18,7 +18,14 @@ import json
 import re
 from urllib.parse import urljoin, quote
 
-from serpapi import GoogleScholarSearch
+# Опциональный импорт serpapi
+try:
+    from serpapi import GoogleScholarSearch
+    SERPAPI_AVAILABLE = True
+except ImportError:
+    SERPAPI_AVAILABLE = False
+    GoogleScholarSearch = None
+    
 import anthropic
 
 from ..config.settings import Settings
@@ -584,11 +591,16 @@ class GoogleScholarResearcher:
     
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.api_key = settings.SERPAPI_KEY if hasattr(settings, 'SERPAPI_KEY') else None
+        self.api_key = settings.serpapi_api_key if hasattr(settings, 'serpapi_api_key') else None
         
     async def search_academic_papers(self, queries: List[str]) -> List[ScientificSource]:
         """Поиск академических статей"""
         all_results = []
+        
+        # Проверяем доступность serpapi
+        if not SERPAPI_AVAILABLE:
+            logger.warning("⚠️ SerpAPI не установлен. Google Scholar поиск недоступен.")
+            return []
         
         if not self.api_key:
             logger.warning("⚠️ SERPAPI ключ не настроен для Google Scholar поиска")
