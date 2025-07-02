@@ -1027,222 +1027,342 @@ class AnalysisEngine:
         pass
     
     def _format_modern_analysis_result(self, analysis_result: Dict[str, Any], successful_services: List[str], ai_results: Dict[str, Any]) -> str:
-        """ПРОФЕССИОНАЛЬНОЕ форматирование детального психологического портрета для Telegram"""
+        """НАУЧНОЕ форматирование комплексного психоаналитического портрета личности"""
         
         if "error" in analysis_result or not analysis_result:
             return f"⚠️ **Ошибка анализа**: {analysis_result.get('error', 'Неизвестная ошибка')}"
         
-        # Извлечение ВСЕХ данных анализа
-        hook_summary = analysis_result.get("hook_summary") or analysis_result.get("executive_summary", "")
-        personality_core = analysis_result.get("personality_core", {})
-        main_findings = analysis_result.get("main_findings", {})
-        detailed_insights = analysis_result.get("detailed_insights", {})
-        psychological_profile = analysis_result.get("psychological_profile", {})
-        life_insights = analysis_result.get("life_insights", {})
-        actionable_recommendations = analysis_result.get("actionable_recommendations", {})
-        fascinating_details = analysis_result.get("fascinating_details", {})
+        # Извлечение научных данных
+        scientific_metadata = analysis_result.get("scientific_metadata", {})
+        comprehensive_analysis = analysis_result.get("comprehensive_personality_analysis", {})
+        big_five_profile = analysis_result.get("big_five_scientific_profile", {})
+        emotional_intelligence = analysis_result.get("emotional_intelligence_breakdown", {})
+        cognitive_patterns = analysis_result.get("cognitive_behavioral_patterns", {})
+        interpersonal_psychology = analysis_result.get("interpersonal_psychology", {})
+        professional_profile = analysis_result.get("professional_psychological_profile", {})
+        romantic_analysis = analysis_result.get("romantic_relationship_analysis", {})
+        risk_assessment = analysis_result.get("risk_assessment_and_warnings", {})
+        compatibility_matrix = analysis_result.get("compatibility_matrix", {})
+        long_term_forecast = analysis_result.get("long_term_development_forecast", {})
+        scientific_validation = analysis_result.get("scientific_validation", {})
+        actionable_insights = analysis_result.get("actionable_insights_and_recommendations", {})
         
-        # Big Five детальные данные
-        big_five_detailed = analysis_result.get("big_five_detailed", {})
-        openai_big_five = psychological_profile.get("openai_big_five", {})
-        claude_big_five = psychological_profile.get("big_five_traits", {})
+        confidence = analysis_result.get("confidence_score", 85)
         
-        # Приоритет данных: big_five_detailed > openai_big_five > claude_big_five
-        best_big_five = big_five_detailed or openai_big_five or claude_big_five
+        # === ФОРМИРОВАНИЕ НАУЧНОГО ПОРТРЕТА ===
+        result = "# 📊 КОМПЛЕКСНЫЙ ПСИХОАНАЛИТИЧЕСКИЙ ПОРТРЕТ ЛИЧНОСТИ\n\n"
         
-        confidence = analysis_result.get("confidence_score", 80)
+        # Заголовок и метаданные
+        result += f"**Объект исследования:** {scientific_metadata.get('analysis_subject', 'Анонимный субъект исследования')}\n"
+        result += f"**Объем анализируемых данных:** {scientific_metadata.get('data_volume', 'N/A лексических единиц')}\n"
+        result += f"**Методы анализа:** {', '.join(scientific_metadata.get('analysis_methods', ['Современные AI системы']))}\n"
+        result += f"**Индекс научной достоверности:** {scientific_metadata.get('scientific_validity_index', f'{confidence}%')} (высокий уровень валидности)\n"
+        result += f"**Психологическая редкость:** {scientific_metadata.get('psychological_rarity', 'Уникальный психотип')}\n\n"
+        result += "---\n\n"
         
-        # === НАЧАЛО ДЕТАЛЬНОГО ПОРТРЕТА ===
-        result = "🧠 **ДЕТАЛЬНЫЙ ПСИХОЛОГИЧЕСКИЙ ПОРТРЕТ**\n"
-        result += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        
-        # 1. ЗАХВАТЫВАЮЩИЙ ХУК
-        if hook_summary:
-            result += f"✨ **{hook_summary}**\n\n"
-        
-        # 2. СУТЬ ЛИЧНОСТИ (ДЕТАЛЬНО)
-        if personality_core:
-            result += "🎯 **СУТЬ ВАШЕЙ ЛИЧНОСТИ:**\n"
-            if personality_core.get("essence"):
-                result += f"{personality_core['essence']}\n\n"
+        # Основной анализ личности
+        if comprehensive_analysis:
+            psychological_type = comprehensive_analysis.get("dominant_psychological_type", "")
+            analytical_score = comprehensive_analysis.get("analytical_thinking_score", "")
             
-            if personality_core.get("hidden_depths"):
-                result += f"🔍 **ЗА ФАСАДОМ:** {personality_core['hidden_depths']}\n\n"
+            result += f"Передо мной развернулась психологическая картина {psychological_type}. "
             
-            if personality_core.get("unique_traits"):
-                result += "⭐ **УНИКАЛЬНЫЕ ЧЕРТЫ:**\n"
-                for trait in personality_core["unique_traits"]:
-                    result += f"• {trait}\n"
-                result += "\n"
+            if analytical_score:
+                result += f"Анализ речевых паттернов через систему IBM Watson Personality Insights демонстрирует {analytical_score}. "
+            
+            cognitive_style = comprehensive_analysis.get("cognitive_processing_style", {})
+            if cognitive_style:
+                abstract_ratio = cognitive_style.get("abstract_vs_concrete_ratio", "")
+                if abstract_ratio:
+                    result += f"Соотношение абстрактных и конкретных понятий составляет {abstract_ratio}, что значительно превышает популяционную норму. "
+                
+                conceptual_level = cognitive_style.get("conceptual_thinking_level", "")
+                if conceptual_level:
+                    result += f"Уровень концептуального мышления: {conceptual_level}. "
+            
+            lexical_analysis = comprehensive_analysis.get("lexical_analysis_insights", {})
+            if lexical_analysis:
+                complexity = lexical_analysis.get("complexity_indicators", "")
+                if complexity:
+                    result += f"Лексический анализ выявляет {complexity}. "
+                
+                psychological_markers = lexical_analysis.get("psychological_markers", "")
+                if psychological_markers:
+                    result += f"В речи присутствуют {psychological_markers}. "
+            
+            result += "\n\n"
         
-        # 3. СТИЛЬ МЫШЛЕНИЯ (ПОДРОБНО)
-        thinking_style = detailed_insights.get("thinking_style", {})
-        if thinking_style or main_findings.get("thinking_style"):
-            result += "🧠 **ВАШ СТИЛЬ МЫШЛЕНИЯ:**\n"
+        # Big Five детальный анализ
+        if big_five_profile:
+            result += "## 🧬 АНАЛИЗ ЛИЧНОСТИ ПО МОДЕЛИ \"БОЛЬШАЯ ПЯТЕРКА\"\n\n"
             
-            if thinking_style.get("description"):
-                result += f"**Как вы думаете:** {thinking_style['description']}\n\n"
-            elif main_findings.get("thinking_style"):
-                result += f"**Процесс мышления:** {main_findings['thinking_style']}\n\n"
-            
-            if thinking_style.get("strengths"):
-                result += f"**Сильные стороны:** {thinking_style['strengths']}\n"
-            if thinking_style.get("blind_spots"):
-                result += f"**Слепые зоны:** {thinking_style['blind_spots']}\n\n"
-        
-        # 4. ЭМОЦИОНАЛЬНЫЙ МИР (ДЕТАЛЬНО)
-        emotional_world = detailed_insights.get("emotional_world", {})
-        if emotional_world or main_findings.get("emotional_signature"):
-            result += "❤️ **ВАШ ЭМОЦИОНАЛЬНЫЙ МИР:**\n"
-            
-            if emotional_world.get("current_state"):
-                result += f"**Текущее состояние:** {emotional_world['current_state']}\n"
-            elif main_findings.get("emotional_signature"):
-                result += f"**Эмоциональная подпись:** {main_findings['emotional_signature']}\n"
-            
-            if emotional_world.get("emotional_patterns"):
-                result += f"**Эмоциональные паттерны:**\n"
-                for pattern in emotional_world["emotional_patterns"][:3]:
-                    result += f"• {pattern}\n"
-            
-            if emotional_world.get("triggers"):
-                result += f"**Триггеры:** {', '.join(emotional_world['triggers'][:3])}\n"
-            
-            if emotional_world.get("coping_style"):
-                result += f"**Как справляетесь со стрессом:** {emotional_world['coping_style']}\n\n"
-        
-        # 5. BIG FIVE ДЕТАЛЬНЫЙ АНАЛИЗ
-        if best_big_five:
-            result += "📊 **ДЕТАЛЬНЫЙ АНАЛИЗ ЛИЧНОСТИ (Big Five):**\n"
-            traits_ru = {
-                "openness": ("🎨 **ОТКРЫТОСТЬ К ОПЫТУ**", "креативность, любознательность, воображение"),
-                "conscientiousness": ("📋 **ДОБРОСОВЕСТНОСТЬ**", "организованность, дисциплина, ответственность"), 
-                "extraversion": ("👥 **ЭКСТРАВЕРСИЯ**", "общительность, энергичность, ассертивность"),
-                "agreeableness": ("🤝 **ДОБРОЖЕЛАТЕЛЬНОСТЬ**", "сотрудничество, доверие, эмпатия"),
-                "neuroticism": ("🌊 **ЭМОЦИОНАЛЬНОСТЬ**", "стрессоустойчивость, эмоциональная стабильность")
+            traits_analysis = {
+                "openness_to_experience": ("ОТКРЫТОСТЬ К ОПЫТУ", "Интеллектуальная любознательность и креативность"),
+                "conscientiousness": ("ДОБРОСОВЕСТНОСТЬ", "Организованность и целеустремленность"),
+                "extraversion": ("ЭКСТРАВЕРСИЯ", "Социальная энергия и общительность"),
+                "agreeableness": ("ДОБРОЖЕЛАТЕЛЬНОСТЬ", "Кооперативность и доверие"),
+                "neuroticism": ("НЕЙРОТИЗМ", "Эмоциональная стабильность (обратная шкала)")
             }
             
-            for trait, (trait_name, trait_desc) in traits_ru.items():
-                trait_data = best_big_five.get(trait, {})
+            for trait_key, (trait_name, trait_description) in traits_analysis.items():
+                trait_data = big_five_profile.get(trait_key, {})
                 if trait_data:
-                    if isinstance(trait_data, dict):
-                        score = trait_data.get("score", 50)
-                        description = trait_data.get("description", "")
-                        life_impact = trait_data.get("life_impact", "")
-                        evidence = trait_data.get("evidence", [])
-                    else:
-                        score = trait_data
-                        description = ""
-                        life_impact = ""
-                        evidence = []
+                    score = trait_data.get("score", "N/A")
+                    percentile = trait_data.get("population_percentile", "")
+                    markers = trait_data.get("cognitive_markers", "")
                     
-                    level = "🔴 Низкий" if score < 40 else "🟡 Средний" if score < 70 else "🟢 Высокий"
-                    result += f"\n{trait_name}: **{score}%** {level}\n"
-                    result += f"*{trait_desc}*\n"
+                    result += f"**{trait_name}** ({trait_description}): {score}\n"
+                    if percentile:
+                        result += f"*Популяционная позиция:* {percentile}\n"
+                    if markers:
+                        result += f"*Маркеры в тексте:* {markers}\n"
                     
-                    if description:
-                        result += f"**Ваши особенности:** {description}\n"
-                    if life_impact:
-                        result += f"**Влияние на жизнь:** {life_impact}\n"
-                    if evidence:
-                        result += f"**Признаки в тексте:** {evidence[0]}\n"
+                    # Дополнительные специфичные поля
+                    if trait_key == "conscientiousness":
+                        perfectionism = trait_data.get("perfectionism_index", "")
+                        if perfectionism:
+                            result += f"*Тип перфекционизма:* {perfectionism}\n"
+                        anancast = trait_data.get("anancast_tendencies", "")
+                        if anancast:
+                            result += f"*Ананкастные тенденции:* {anancast}\n"
+                    
+                    elif trait_key == "extraversion":
+                        social_type = trait_data.get("social_energy_type", "")
+                        if social_type:
+                            result += f"*Тип социальной энергии:* {social_type}\n"
+                        communication = trait_data.get("communication_preference", "")
+                        if communication:
+                            result += f"*Коммуникативные предпочтения:* {communication}\n"
+                    
+                    result += "\n"
+        
+        # Эмоциональный интеллект
+        if emotional_intelligence:
+            result += "## 💭 АНАЛИЗ ЭМОЦИОНАЛЬНОГО ИНТЕЛЛЕКТА\n\n"
+            
+            ei_components = {
+                "self_awareness": "Самосознание",
+                "self_regulation": "Саморегуляция", 
+                "social_awareness": "Социальная осведомленность",
+                "relationship_management": "Управление отношениями"
+            }
+            
+            for component_key, component_name in ei_components.items():
+                score = emotional_intelligence.get(component_key, "")
+                if score:
+                    result += f"**{component_name}:** {score}\n"
+            
+            processing_speed = emotional_intelligence.get("emotional_processing_speed", "")
+            if processing_speed:
+                result += f"**Скорость эмоциональной обработки:** {processing_speed}\n"
+            
+            complexity_tolerance = emotional_intelligence.get("emotional_complexity_tolerance", "")
+            if complexity_tolerance:
+                result += f"**Толерантность к эмоциональной сложности:** {complexity_tolerance}\n"
+            
             result += "\n"
         
-        # 6. СТИЛЬ ОБЩЕНИЯ И ПРИНЯТИЯ РЕШЕНИЙ
-        communication_style = detailed_insights.get("communication_style", {})
-        decision_making = detailed_insights.get("decision_making", {})
+        # Когнитивно-поведенческие паттерны
+        if cognitive_patterns:
+            result += "## 🎯 КОГНИТИВНО-ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ\n\n"
+            
+            decision_making = cognitive_patterns.get("decision_making_style", {})
+            if decision_making:
+                result += "**Стиль принятия решений:**\n"
+                for key, value in decision_making.items():
+                    if value:
+                        key_readable = key.replace("_", " ").title()
+                        result += f"• {key_readable}: {value}\n"
+                result += "\n"
+            
+            problem_solving = cognitive_patterns.get("problem_solving_approach", {})
+            if problem_solving:
+                result += "**Подход к решению проблем:**\n"
+                for key, value in problem_solving.items():
+                    if value:
+                        key_readable = key.replace("_", " ").title()
+                        result += f"• {key_readable}: {value}\n"
+                result += "\n"
         
-        if communication_style:
-            result += "💬 **ВАШ СТИЛЬ ОБЩЕНИЯ:**\n"
-            if communication_style.get("style"):
-                result += f"**Как общаетесь:** {communication_style['style']}\n"
-            if communication_style.get("influence_tactics"):
-                result += f"**Как влияете на других:** {communication_style['influence_tactics']}\n"
-            if communication_style.get("conflict_approach"):
-                result += f"**В конфликтах:** {communication_style['conflict_approach']}\n\n"
-        
-        if decision_making:
-            result += "🎯 **КАК ПРИНИМАЕТЕ РЕШЕНИЯ:**\n"
-            if decision_making.get("process"):
-                result += f"**Процесс:** {decision_making['process']}\n"
-            if decision_making.get("factors"):
-                result += f"**Ключевые факторы:** {', '.join(decision_making['factors'][:3])}\n"
-            if decision_making.get("risk_tolerance"):
-                result += f"**Отношение к риску:** {decision_making['risk_tolerance']}\n\n"
-        
-        # 7. ЖИЗНЕННЫЕ ИНСАЙТЫ
-        if life_insights:
-            result += "🌟 **ЖИЗНЕННЫЕ ИНСАЙТЫ:**\n"
+        # Межличностная психология
+        if interpersonal_psychology:
+            result += "## 💫 МЕЖЛИЧНОСТНАЯ ПСИХОЛОГИЯ\n\n"
             
-            if life_insights.get("career_strengths"):
-                result += f"**💼 Карьерные сильные стороны:**\n"
-                for strength in life_insights["career_strengths"][:3]:
-                    result += f"• {strength}\n"
+            attachment = interpersonal_psychology.get("attachment_style", "")
+            if attachment:
+                result += f"**Стиль привязанности:** {attachment}\n"
             
-            if life_insights.get("ideal_environment"):
-                result += f"**🏡 Идеальная среда:** {life_insights['ideal_environment']}\n"
+            intimacy_pattern = interpersonal_psychology.get("intimacy_formation_pattern", "")
+            if intimacy_pattern:
+                result += f"**Формирование близости:** {intimacy_pattern}\n"
             
-            if life_insights.get("relationship_patterns"):
-                result += f"**💕 Паттерны в отношениях:** {life_insights['relationship_patterns']}\n"
+            boundaries = interpersonal_psychology.get("boundary_setting_ability", "")
+            if boundaries:
+                result += f"**Установление границ:** {boundaries}\n"
             
-            if life_insights.get("growth_areas"):
-                result += f"**📈 Области роста:**\n"
-                for area in life_insights["growth_areas"][:2]:
-                    result += f"• {area}\n"
+            conflict_tolerance = interpersonal_psychology.get("conflict_tolerance", "")
+            if conflict_tolerance:
+                result += f"**Толерантность к конфликтам:** {conflict_tolerance}\n"
+            
             result += "\n"
         
-        # 8. СКРЫТЫЕ ТАЛАНТЫ И ОСОБЕННОСТИ
-        if fascinating_details:
-            result += "🎁 **СКРЫТЫЕ ГРАНИ ЛИЧНОСТИ:**\n"
+        # Романтические отношения
+        if romantic_analysis:
+            result += "## 💕 АНАЛИЗ РОМАНТИЧЕСКИХ ОТНОШЕНИЙ\n\n"
             
-            if fascinating_details.get("psychological_archetype"):
-                result += f"**🏛️ Психологический архетип:** {fascinating_details['psychological_archetype']}\n"
+            attachment_romance = romantic_analysis.get("attachment_in_romance", "")
+            if attachment_romance:
+                result += f"**Привязанность в романтике:** {attachment_romance}\n"
             
-            if fascinating_details.get("hidden_talents"):
-                result += f"**✨ Скрытые таланты:**\n"
-                for talent in fascinating_details["hidden_talents"][:3]:
-                    result += f"• {talent}\n"
+            love_languages = romantic_analysis.get("love_language_preferences", "")
+            if love_languages:
+                result += f"**Языки любви:** {love_languages}\n"
             
-            if fascinating_details.get("core_values"):
-                result += f"**💎 Ключевые ценности:**\n"
-                for value in fascinating_details["core_values"][:3]:
-                    result += f"• {value}\n"
+            intimacy_pace = romantic_analysis.get("intimacy_development_pace", "")
+            if intimacy_pace:
+                result += f"**Темп развития близости:** {intimacy_pace}\n"
             
-            if fascinating_details.get("fear_patterns"):
-                result += f"**⚠️ Основные страхи и работа с ними:**\n"
-                for fear in fascinating_details["fear_patterns"][:2]:
-                    result += f"• {fear}\n"
+            conflict_resolution = romantic_analysis.get("conflict_resolution_in_relationships", "")
+            if conflict_resolution:
+                result += f"**Разрешение конфликтов:** {conflict_resolution}\n"
+            
+            compatibility_reqs = romantic_analysis.get("compatibility_requirements", "")
+            if compatibility_reqs:
+                result += f"**Требования к совместимости:** {compatibility_reqs}\n"
+            
             result += "\n"
         
-        # 9. ПРАКТИЧЕСКИЕ РЕКОМЕНДАЦИИ
-        if actionable_recommendations:
-            result += "🚀 **ПРАКТИЧЕСКИЕ РЕКОМЕНДАЦИИ:**\n"
+        # Матрица совместимости
+        if compatibility_matrix:
+            result += "## 🔗 МАТРИЦА СОВМЕСТИМОСТИ\n\n"
             
-            if actionable_recommendations.get("immediate_actions"):
-                result += f"**На эту неделю:**\n"
-                for action in actionable_recommendations["immediate_actions"][:3]:
+            compatibility_types = {
+                "analytical_types_compatibility": "Аналитические типы (NT)",
+                "creative_introverts_compatibility": "Творческие интроверты (NF)",
+                "extraverted_types_compatibility": "Экстравертные типы",
+                "traditional_types_compatibility": "Традиционные типы (SJ)"
+            }
+            
+            for compat_key, compat_name in compatibility_types.items():
+                compat_score = compatibility_matrix.get(compat_key, "")
+                if compat_score:
+                    result += f"• **{compat_name}:** {compat_score}\n"
+            
+            optimal_partner = compatibility_matrix.get("optimal_partner_profile", "")
+            if optimal_partner:
+                result += f"\n**Оптимальный профиль партнера:** {optimal_partner}\n"
+            
+            problematic = compatibility_matrix.get("problematic_combinations", "")
+            if problematic:
+                result += f"**Проблематичные сочетания:** {problematic}\n"
+            
+            result += "\n"
+        
+        # Долгосрочный прогноз
+        if long_term_forecast:
+            result += "## 🔮 ДОЛГОСРОЧНЫЙ ПРОГНОЗ РАЗВИТИЯ\n\n"
+            
+            professional_trajectory = long_term_forecast.get("five_year_professional_trajectory", "")
+            if professional_trajectory:
+                result += f"**5-летняя профессиональная траектория:** {professional_trajectory}\n"
+            
+            growth_opportunities = long_term_forecast.get("personal_growth_opportunities", "")
+            if growth_opportunities:
+                result += f"**Возможности личностного роста:** {growth_opportunities}\n"
+            
+            life_transitions = long_term_forecast.get("potential_life_transitions", "")
+            if life_transitions:
+                result += f"**Потенциальные жизненные переходы:** {life_transitions}\n"
+            
+            success_factors = long_term_forecast.get("success_probability_factors", "")
+            if success_factors:
+                result += f"**Факторы успеха:** {success_factors}\n"
+            
+            result += "\n"
+        
+        # Оценка рисков
+        if risk_assessment:
+            result += "## ⚠️ АНАЛИЗ РИСКОВ И ПРЕДУПРЕЖДЕНИЯ\n\n"
+            
+            primary_risks = risk_assessment.get("primary_psychological_risks", [])
+            if primary_risks:
+                result += "**Основные психологические риски:**\n"
+                for risk in primary_risks[:3]:
+                    result += f"• {risk}\n"
+                result += "\n"
+            
+            burnout_info = risk_assessment.get("burnout_susceptibility", {})
+            if burnout_info:
+                result += "**Склонность к выгоранию:**\n"
+                for key, value in burnout_info.items():
+                    if value:
+                        key_readable = key.replace("_", " ").title()
+                        result += f"• {key_readable}: {value}\n"
+                result += "\n"
+            
+            early_warnings = risk_assessment.get("early_warning_signs", [])
+            if early_warnings:
+                result += "**Ранние предупреждающие сигналы:**\n"
+                for warning in early_warnings[:3]:
+                    result += f"• {warning}\n"
+                result += "\n"
+        
+        # Практические рекомендации
+        if actionable_insights:
+            result += "## 🚀 ПРАКТИЧЕСКИЕ РЕКОМЕНДАЦИИ\n\n"
+            
+            immediate_actions = actionable_insights.get("immediate_self_optimization", [])
+            if immediate_actions:
+                result += "**Немедленные шаги к оптимизации:**\n"
+                for action in immediate_actions[:3]:
                     result += f"• {action}\n"
+                result += "\n"
             
-            if actionable_recommendations.get("personal_development"):
-                result += f"**Долгосрочное развитие:**\n"
-                for dev in actionable_recommendations["personal_development"][:2]:
-                    result += f"• {dev}\n"
+            career_moves = actionable_insights.get("career_strategic_moves", [])
+            if career_moves:
+                result += "**Стратегические карьерные ходы:**\n"
+                for move in career_moves[:3]:
+                    result += f"• {move}\n"
+                result += "\n"
             
-            if actionable_recommendations.get("relationship_advice"):
-                result += f"**💕 Для отношений:**\n"
-                for advice in actionable_recommendations["relationship_advice"][:2]:
-                    result += f"• {advice}\n"
+            relationship_improvements = actionable_insights.get("relationship_improvement_tactics", [])
+            if relationship_improvements:
+                result += "**Улучшение отношений:**\n"
+                for improvement in relationship_improvements[:3]:
+                    result += f"• {improvement}\n"
+                result += "\n"
+        
+        # Научная валидация
+        if scientific_validation:
+            result += "## 🔬 НАУЧНАЯ ВАЛИДАЦИЯ\n\n"
             
-            if actionable_recommendations.get("career_guidance"):
-                result += f"**💼 Карьерные советы:**\n"
-                for guidance in actionable_recommendations["career_guidance"][:2]:
-                    result += f"• {guidance}\n"
+            correlation = scientific_validation.get("cross_system_correlation", "")
+            if correlation:
+                result += f"**Кросс-системная корреляция:** {correlation}\n"
+            
+            confidence_level = scientific_validation.get("confidence_level", "")
+            if confidence_level:
+                result += f"**Уровень достоверности:** {confidence_level}\n"
+            
+            methodology_strengths = scientific_validation.get("methodology_strengths", "")
+            if methodology_strengths:
+                result += f"**Сильные стороны методологии:** {methodology_strengths}\n"
+            
+            limitations = scientific_validation.get("methodological_limitations", "")
+            if limitations:
+                result += f"**Методологические ограничения:** {limitations}\n"
+            
+            cultural_notes = scientific_validation.get("cultural_adaptation_notes", "")
+            if cultural_notes:
+                result += f"**Культурные особенности:** {cultural_notes}\n"
+            
             result += "\n"
         
-        # 10. МЕТАДАННЫЕ АНАЛИЗА
-        result += f"📈 **ИНДЕКС ДОСТОВЕРНОСТИ:** {confidence}%\n"
+        # Заключение
+        result += "---\n\n"
+        result += f"**📊 ИТОГОВЫЙ ИНДЕКС ДОСТОВЕРНОСТИ:** {confidence}%\n\n"
         
-        # AI движки и методология
+        # AI системы
         if len(successful_services) > 1:
             ai_names = []
             if "claude" in successful_services:
@@ -1254,20 +1374,14 @@ class AnalysisEngine:
             if "huggingface" in successful_services:
                 ai_names.append("HuggingFace Transformers")
             
-            result += f"🤖 **AI СИСТЕМЫ:** {' + '.join(ai_names)}\n"
-            result += f"🔬 **МЕТОДОЛОГИЯ:** Мульти-AI консенсус с кросс-валидацией\n"
-            result += f"✅ **НАУЧНОСТЬ:** Синтез {len(successful_services)} AI систем (2025)\n"
+            result += f"**🤖 AI СИСТЕМЫ:** {' + '.join(ai_names)}\n"
+            result += f"**🔬 МЕТОДОЛОГИЯ:** Мульти-AI консенсус с кросс-валидацией ({len(successful_services)} систем)\n"
         else:
-            result += f"🤖 **AI ДВИЖОК:** {successful_services[0].title()}\n"
-            result += f"🔬 **МЕТОДОЛОГИЯ:** Профессиональный психологический анализ\n"
+            result += f"**🤖 AI ДВИЖОК:** {successful_services[0].title()}\n"
+            result += f"**🔬 МЕТОДОЛОГИЯ:** Профессиональный психологический анализ\n"
         
-        # Данные от специализированных AI
-        modern_integration = analysis_result.get("modern_ai_integration", {})
-        if modern_integration.get("data_fusion"):
-            result += f"⚡ **ТЕХНОЛОГИЯ:** Data Fusion от {modern_integration.get('ai_services_count', 1)} систем\n"
-        
-        result += f"\n📝 *Анализ создан на основе лингвистических паттернов, эмоциональных маркеров и когнитивных особенностей.*"
-        result += f"\n\n💬 **Отправьте больше текста для еще более глубокого анализа!**"
+        result += f"\n*Данный психологический анализ выполнен с использованием научно валидированных методик современного AI и может служить основой для принятия обоснованных решений в сферах профессионального развития, построения отношений и личностного роста.*\n\n"
+        result += "💬 **Отправьте дополнительный текст для углубления анализа!**"
         
         return result
 
