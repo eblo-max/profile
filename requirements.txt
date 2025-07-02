@@ -47,6 +47,7 @@ beautifulsoup4==4.12.2  # Парсинг HTML контента
 feedparser==6.0.10  # RSS/XML парсер для arXiv и PubMed
 xmltodict==0.13.0  # XML парсинг для API ответов
 urllib3==2.0.4  # HTTP клиент для retry стратегии
+google-search-results==2.4.2  # SerpAPI для Google Scholar поиска
 
 # === ОБРАБОТКА ДАННЫХ ===
 pandas==2.1.4  # Обработка данных исследований
