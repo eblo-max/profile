@@ -421,11 +421,32 @@ async def handle_research_data(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         
         # Парсинг данных о человеке из текста
-        person_data = parse_person_data_from_text(text)
+        person_data_dict = parse_person_data_from_text(text)
+        
+        # Импортируем PersonData для создания объекта
+        from src.ai.scientific_research_engine import PersonData
+        
+        # Создаем объект PersonData
+        person_data = PersonData(
+            name=person_data_dict.get("name", "Неизвестно"),
+            age=person_data_dict.get("age"),
+            gender=person_data_dict.get("gender"),
+            occupation=person_data_dict.get("occupation", ""),
+            behavior_description=person_data_dict.get("behavior_description", ""),
+            text_samples=person_data_dict.get("text_samples", []),
+            emotional_markers=person_data_dict.get("emotional_markers", []),
+            social_patterns=person_data_dict.get("social_patterns", []),
+            cognitive_traits=person_data_dict.get("cognitive_traits", []),
+            suspected_personality_type=person_data_dict.get("suspected_personality_type", ""),
+            country=person_data_dict.get("country", "Russia"),
+            cultural_context=person_data_dict.get("cultural_context", "Российский")
+        )
         
         logger.info("🧠 Запускаю научно-обоснованный анализ", 
                    user_id=user.id, 
-                   person_name=person_data.get("name", "Unknown"))
+                   person_name=person_data.name,
+                   person_occupation=person_data.occupation,
+                   person_age=person_data.age)
         
         # Запуск научно-обоснованного анализа
         analysis_result = await analysis_engine.scientific_research_analysis(
@@ -547,18 +568,47 @@ def parse_person_data_from_text(text: str) -> dict:
             person_data["age"] = int(match.group(1))
             break
     
-    # Поиск профессии
+    # Поиск профессии (расширенные паттерны для IT)
     occupation_patterns = [
-        r'[Пп]рофессия[:\s]*([А-Яа-яA-Za-z\-\s]+?)(?:[.\n]|$)',
-        r'[Рр]аботаю?[:\s]*([А-Яа-яA-Za-z\-\s]+?)(?:[.\n]|$)',
-        r'[Дд]олжность[:\s]*([А-Яа-яA-Za-z\-\s]+?)(?:[.\n]|$)',
+        r'[Пп]рофессия[:\s]*([А-Яа-яA-Za-z0-9\-\s\.\/]+?)(?:[.\n]|$)',
+        r'[Рр]аботаю?[:\s]*([А-Яа-яA-Za-z0-9\-\s\.\/]+?)(?:[.\n]|$)',
+        r'[Дд]олжность[:\s]*([А-Яа-яA-Za-z0-9\-\s\.\/]+?)(?:[.\n]|$)',
+        r'(?:IT|айти|АйТи|программист|разработчик|девелопер|developer)[а-я\-\s]*',
+        r'[Сс]пециальность[:\s]*([А-Яа-яA-Za-z0-9\-\s\.\/]+?)(?:[.\n]|$)',
     ]
     
     for pattern in occupation_patterns:
-        match = re.search(pattern, text)
+        match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            person_data["occupation"] = match.group(1).strip()
+            if len(pattern) > 50:  # Для IT паттерна берем полное совпадение
+                occupation = match.group(0).strip()
+            else:
+                occupation = match.group(1).strip()
+            
+            # Очищаем от лишних слов "Профессия:", "Работаю:" и т.д.
+            cleaned_occupation = re.sub(r'^[Пп]рофессия[:\s]*', '', occupation)
+            cleaned_occupation = re.sub(r'^[Рр]аботаю?[:\s]*', '', cleaned_occupation)
+            cleaned_occupation = re.sub(r'^[Дд]олжность[:\s]*', '', cleaned_occupation)
+            cleaned_occupation = re.sub(r'^[Сс]пециальность[:\s]*', '', cleaned_occupation)
+            
+            person_data["occupation"] = cleaned_occupation.strip()
             break
+    
+    # Дополнительная проверка на IT-термины
+    it_terms = [
+        "разработчик", "developer", "программист", "IT", "айти", "АйТи",
+        "frontend", "backend", "fullstack", "веб-разработчик", "мобильный разработчик"
+    ]
+    
+    if not person_data["occupation"]:
+        for term in it_terms:
+            if term.lower() in text.lower():
+                # Ищем контекст вокруг IT-термина
+                pattern = rf'([А-Яа-яA-Za-z0-9\-\s]*{re.escape(term)}[А-Яа-яA-Za-z0-9\-\s]*)'
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    person_data["occupation"] = match.group(1).strip()
+                    break
     
     # Поиск примеров текстов в кавычках
     text_samples = re.findall(r'[""\'](.*?)[""\'"]', text)

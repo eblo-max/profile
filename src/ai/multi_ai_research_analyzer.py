@@ -118,12 +118,44 @@ class MultiAIResearchAnalyzer:
             ai_analyses = await asyncio.gather(*analysis_tasks, return_exceptions=True)
             
             # Фильтруем успешные результаты
-            successful_analyses = [
-                result for result in ai_analyses 
-                if isinstance(result, AIAnalysisResult)
-            ]
+            successful_analyses = []
+            failed_analyses = []
             
-            logger.info(f"✅ Завершено {len(successful_analyses)} AI анализов")
+            for result in ai_analyses:
+                if isinstance(result, AIAnalysisResult):
+                    if result.findings.get("status") != "failed":
+                        successful_analyses.append(result)
+                    else:
+                        failed_analyses.append(result)
+                elif isinstance(result, Exception):
+                    failed_analyses.append({"error": str(result), "type": "exception"})
+                    
+            logger.info(f"✅ Завершено {len(successful_analyses)} успешных AI анализов")
+            logger.warning(f"⚠️ Неудачных анализов: {len(failed_analyses)}")
+            
+            # Логируем ошибки для отладки
+            for failure in failed_analyses:
+                if isinstance(failure, AIAnalysisResult):
+                    logger.error(f"❌ AI анализ {failure.ai_model} неудачен: {failure.findings.get('error', 'Unknown error')}")
+                else:
+                    logger.error(f"❌ Исключение в AI анализе: {failure}")
+                    
+            # Если нет успешных результатов, создаем fallback
+            if not successful_analyses:
+                logger.warning("⚠️ Нет успешных AI анализов, создаю fallback результат")
+                fallback_result = AIAnalysisResult(
+                    ai_model="Fallback-Analysis",
+                    analysis_type="basic_fallback",
+                    confidence_score=0.3,
+                    findings={
+                        "personality_summary": f"Базовый анализ для {person_data.name}",
+                        "note": "AI анализы недоступны, используется базовая логика",
+                        "errors": [str(f) for f in failed_analyses]
+                    },
+                    scientific_references=[],
+                    timestamp=datetime.now()
+                )
+                successful_analyses = [fallback_result]
             
             # Этап 2: Синтез результатов
             final_synthesis = await self._synthesize_ai_results(
@@ -156,7 +188,13 @@ class MultiAIResearchAnalyzer:
     ) -> AIAnalysisResult:
         """Claude: Общий психологический анализ и синтез"""
         try:
+            if not self.claude_client:
+                logger.error("❌ Claude клиент не инициализирован")
+                raise Exception("Claude клиент недоступен - проверьте ANTHROPIC_API_KEY")
+            
             prompt = self._create_claude_prompt(person_data, sources)
+            
+            logger.info(f"🧠 Отправляю запрос к Claude для {person_data.name}")
             
             response = await self.claude_client.messages.create(
                 model="claude-3-5-sonnet-20241022",
@@ -165,6 +203,8 @@ class MultiAIResearchAnalyzer:
             )
             
             analysis_text = response.content[0].text
+            
+            logger.info(f"✅ Claude ответил, анализирую {len(analysis_text)} символов")
             
             # Извлекаем структурированные данные из анализа
             findings = self._parse_claude_analysis(analysis_text)
@@ -180,7 +220,15 @@ class MultiAIResearchAnalyzer:
             
         except Exception as e:
             logger.error(f"❌ Ошибка Claude анализа: {e}")
-            raise
+            # Возвращаем детальную ошибку вместо raise для отладки
+            return AIAnalysisResult(
+                ai_model="Claude-3.5-Sonnet",
+                analysis_type="general_synthesis",
+                confidence_score=0.0,
+                findings={"error": str(e), "status": "failed"},
+                scientific_references=[],
+                timestamp=datetime.now()
+            )
     
     def _create_claude_prompt(
         self, 

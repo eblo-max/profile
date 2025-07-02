@@ -169,6 +169,11 @@ class ScientificResearchEngine:
         """Генерация релевантных научных запросов"""
         base_queries = []
         
+        logger.info(f"🔍 Генерирую запросы для {person_data.name}", 
+                   occupation=person_data.occupation,
+                   age=person_data.age,
+                   suspected_type=person_data.suspected_personality_type)
+        
         # Основные психологические запросы
         if person_data.suspected_personality_type:
             base_queries.extend([
@@ -177,13 +182,17 @@ class ScientificResearchEngine:
                 f"{person_data.suspected_personality_type} personality traits psychological research"
             ])
         
-        # Поведенческие паттерны
+        # Поведенческие паттерны (используем ключевые слова, а не весь текст)
         if person_data.behavior_description:
-            base_queries.extend([
-                f"behavioral patterns psychology {person_data.behavior_description}",
-                f"personality assessment {person_data.behavior_description} research",
-                f"psychological profiling {person_data.behavior_description} studies"
-            ])
+            # Извлекаем ключевые черты из описания
+            behavior_keywords = self._extract_behavior_keywords(person_data.behavior_description)
+            
+            for keyword in behavior_keywords[:5]:  # Топ 5 ключевых слов
+                base_queries.extend([
+                    f"behavioral patterns psychology {keyword}",
+                    f"personality assessment {keyword} research",
+                    f"psychological profiling {keyword} studies"
+                ])
         
         # Эмоциональные маркеры
         if person_data.emotional_markers:
@@ -202,15 +211,35 @@ class ScientificResearchEngine:
         
         # Профессиональные аспекты
         if person_data.occupation:
-            base_queries.extend([
-                f"occupational psychology {person_data.occupation} personality",
-                f"workplace behavior {person_data.occupation} psychological studies"
-            ])
+            # Специальные запросы для IT-сферы
+            if any(term in person_data.occupation.lower() for term in ['it', 'разработчик', 'programmer', 'developer', 'айти']):
+                base_queries.extend([
+                    f"software developer personality psychology research",
+                    f"IT professionals personality traits psychological studies",
+                    f"programmer personality type psychology research",
+                    f"computer science personality psychology",
+                    f"technology workers psychological profile",
+                    f"analytical thinking personality psychology",
+                    f"introversion programming psychology research"
+                ])
+            else:
+                base_queries.extend([
+                    f"occupational psychology {person_data.occupation} personality",
+                    f"workplace behavior {person_data.occupation} psychological studies"
+                ])
         
         # Возрастные особенности
         if person_data.age:
             age_group = self._get_age_group(person_data.age)
             base_queries.append(f"personality development {age_group} psychology research")
+            
+            # Специфичные запросы для молодых взрослых (25-30)
+            if 25 <= person_data.age <= 30:
+                base_queries.extend([
+                    "young adult personality development psychology",
+                    "emerging adulthood personality psychology research",
+                    "quarter life personality traits psychology"
+                ])
         
         # Культурно-специфичные запросы для России
         if person_data.country == "Russia" or "russia" in person_data.cultural_context.lower():
@@ -233,6 +262,9 @@ class ScientificResearchEngine:
         # Удаляем дубликаты и пустые запросы
         unique_queries = list(set([q.strip() for q in base_queries if q.strip()]))
         
+        logger.info(f"📊 Сгенерировано {len(unique_queries)} уникальных запросов", 
+                   first_5_queries=unique_queries[:5])
+        
         return unique_queries[:25]  # Ограничиваем до 25 запросов
     
     def _get_age_group(self, age: int) -> str:
@@ -247,6 +279,50 @@ class ScientificResearchEngine:
             return "older adult"
         else:
             return "elderly"
+    
+    def _extract_behavior_keywords(self, behavior_description: str) -> List[str]:
+        """Извлечение ключевых поведенческих терминов"""
+        import re
+        
+        # Определяем психологически значимые термины
+        behavioral_terms = [
+            # Организационные черты
+            "организованный", "systematic", "orderly", "structured", "планирование",
+            # Социальные черты  
+            "интроверт", "экстраверт", "замкнутый", "общительный", "социальный", "одиночка",
+            # Эмоциональные черты
+            "спокойный", "тревожный", "эмоциональный", "сдержанный", "импульсивный",
+            # Когнитивные черты
+            "аналитический", "логический", "творческий", "детальный", "системный", "критический",
+            # Рабочие черты
+            "перфекционист", "ответственный", "дисциплинированный", "методичный",
+            # Коммуникативные черты
+            "дружелюбный", "прямой", "тактичный", "открытый", "скрытный"
+        ]
+        
+        found_keywords = []
+        text_lower = behavior_description.lower()
+        
+        # Поиск прямых совпадений
+        for term in behavioral_terms:
+            if term.lower() in text_lower:
+                found_keywords.append(term)
+        
+        # Поиск через regex для вариаций
+        additional_patterns = [
+            r'любит?\s+(\w+)', r'предпочитает?\s+(\w+)', r'часто\s+(\w+)',
+            r'склонен\s+к\s+(\w+)', r'имеет\s+тенденцию\s+(\w+)'
+        ]
+        
+        for pattern in additional_patterns:
+            matches = re.findall(pattern, text_lower)
+            for match in matches:
+                if len(match) > 3:  # Исключаем слишком короткие слова
+                    found_keywords.append(match)
+        
+        # Удаляем дубликаты и возвращаем топ-10
+        unique_keywords = list(dict.fromkeys(found_keywords))
+        return unique_keywords[:10]
     
     async def _parallel_database_search(
         self, 
@@ -562,26 +638,87 @@ class PubMedResearcher:
     
     def _parse_pubmed_xml(self, xml_data: str) -> List[ScientificSource]:
         """Парсинг XML ответа от PubMed"""
-        # Упрощенный парсинг - в реальной системе используйте xml.etree.ElementTree
+        import xml.etree.ElementTree as ET
         results = []
         
-        # Простое извлечение данных через регулярные выражения
-        # В продакшене следует использовать полноценный XML парсер
-        
-        title_pattern = r'<ArticleTitle>(.*?)</ArticleTitle>'
-        titles = re.findall(title_pattern, xml_data, re.DOTALL)
-        
-        for title in titles[:5]:  # Максимум 5 результатов
-            source = ScientificSource(
-                title=title.strip(),
-                authors=["PubMed Author"],  # Упрощено
-                publication="PubMed Database",
-                year=2024,  # Упрощено
-                url="https://pubmed.ncbi.nlm.nih.gov/",
-                source_type="medical",
-                quality_score=85.0  # PubMed имеет высокое качество
-            )
-            results.append(source)
+        try:
+            # Парсим XML
+            root = ET.fromstring(xml_data)
+            
+            # Ищем все статьи
+            for article in root.findall('.//PubmedArticle'):
+                try:
+                    # Заголовок
+                    title_elem = article.find('.//ArticleTitle')
+                    title = title_elem.text if title_elem is not None else "Untitled Study"
+                    
+                    # Авторы
+                    authors = []
+                    for author in article.findall('.//Author'):
+                        lastname = author.find('LastName')
+                        forename = author.find('ForeName')
+                        if lastname is not None:
+                            name = lastname.text
+                            if forename is not None:
+                                name += f" {forename.text}"
+                            authors.append(name)
+                    
+                    if not authors:
+                        authors = ["Unknown Author"]
+                    
+                    # Журнал
+                    journal_elem = article.find('.//Title')
+                    journal = journal_elem.text if journal_elem is not None else "PubMed Database"
+                    
+                    # Год
+                    year_elem = article.find('.//PubDate/Year')
+                    year = int(year_elem.text) if year_elem is not None else 2024
+                    
+                    # PMID
+                    pmid_elem = article.find('.//PMID')
+                    pmid = pmid_elem.text if pmid_elem is not None else None
+                    
+                    # Abstract
+                    abstract_elem = article.find('.//AbstractText')
+                    abstract = abstract_elem.text if abstract_elem is not None else ""
+                    
+                    # URL
+                    url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "https://pubmed.ncbi.nlm.nih.gov/"
+                    
+                    source = ScientificSource(
+                        title=title.strip(),
+                        authors=authors[:3],  # Топ 3 автора
+                        publication=journal,
+                        year=year,
+                        pmid=pmid,
+                        url=url,
+                        abstract=abstract[:500] if abstract else "",
+                        source_type="medical",
+                        quality_score=60.0  # Базовый скор для PubMed
+                    )
+                    results.append(source)
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Ошибка парсинга статьи PubMed: {e}")
+                    continue
+                    
+        except ET.ParseError as e:
+            logger.warning(f"⚠️ Ошибка парсинга XML PubMed: {e}")
+            # Fallback на regex парсинг
+            title_pattern = r'<ArticleTitle>(.*?)</ArticleTitle>'
+            titles = re.findall(title_pattern, xml_data, re.DOTALL)
+            
+            for title in titles[:5]:
+                source = ScientificSource(
+                    title=title.strip(),
+                    authors=["PubMed Research"],
+                    publication="PubMed Database",
+                    year=2024,
+                    url="https://pubmed.ncbi.nlm.nih.gov/",
+                    source_type="medical",
+                    quality_score=60.0
+                )
+                results.append(source)
         
         return results
 
