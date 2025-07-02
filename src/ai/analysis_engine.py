@@ -2048,21 +2048,44 @@ class AnalysisEngine:
             # Fallback к стандартному анализу при ошибке
             return await self._fallback_to_standard_analysis(person_data, user_id, telegram_id)
     
-    def _convert_to_person_data(self, data: Dict[str, Any]) -> PersonData:
-        """Преобразование словаря в объект PersonData"""
+    def _convert_to_person_data(self, data) -> PersonData:
+        """Преобразование словаря в объект PersonData или возврат существующего объекта"""
+        # Если уже объект PersonData, возвращаем как есть
+        if isinstance(data, PersonData):
+            return data
+        
+        # Если словарь, конвертируем в PersonData
+        if isinstance(data, dict):
+            return PersonData(
+                name=data.get("name", "Неизвестно"),
+                age=data.get("age"),
+                gender=data.get("gender"),
+                occupation=data.get("occupation", ""),
+                behavior_description=data.get("behavior_description", ""),
+                text_samples=data.get("text_samples", []),
+                emotional_markers=data.get("emotional_markers", []),
+                social_patterns=data.get("social_patterns", []),
+                cognitive_traits=data.get("cognitive_traits", []),
+                suspected_personality_type=data.get("suspected_personality_type", ""),
+                country=data.get("country", "Russia"),
+                cultural_context=data.get("cultural_context", "")
+            )
+        
+        # Если неожиданный тип, создаем базовый объект
+        logger.warning(f"⚠️ Неожиданный тип данных для PersonData: {type(data)}")
         return PersonData(
-            name=data.get("name", "Неизвестно"),
-            age=data.get("age"),
-            gender=data.get("gender"),
-            occupation=data.get("occupation", ""),
-            behavior_description=data.get("behavior_description", ""),
-            text_samples=data.get("text_samples", []),
-            emotional_markers=data.get("emotional_markers", []),
-            social_patterns=data.get("social_patterns", []),
-            cognitive_traits=data.get("cognitive_traits", []),
-            suspected_personality_type=data.get("suspected_personality_type", ""),
-            country=data.get("country", "Russia"),
-            cultural_context=data.get("cultural_context", "")
+            name="Неизвестно",
+            age=None,
+            gender=None,
+            occupation="",
+            behavior_description=str(data) if data else "",
+            text_samples=[],
+            emotional_markers=[],
+            social_patterns=[],
+            cognitive_traits=[],
+            suspected_personality_type="",
+            country="Russia",
+            cultural_context=""
         )
     
     def _format_scientific_analysis_result(
