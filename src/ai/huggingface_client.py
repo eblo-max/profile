@@ -21,13 +21,13 @@ class HuggingFaceClient:
         self.is_available = False
         self.base_url = "https://api-inference.huggingface.co"
         
-        # Модели для разных типов анализа
+        # Модели для разных типов анализа (рабочие)
         self.models = {
-            "emotion": "j-hartmann/emotion-english-distilroberta-base",
-            "personality": "martin-ha/toxic-comment-model",  # можно заменить на специализированную
-            "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
-            "stress": "michellejieli/emotion_text_classifier",
-            "mental_health": "mental/mental-bert-base-uncased"
+            "emotion": "cardiffnlp/twitter-roberta-base-emotion",
+            "personality": "cardiffnlp/twitter-roberta-base-emotion",  # используем emotion модель
+            "sentiment": "cardiffnlp/twitter-roberta-base-sentiment",
+            "stress": "cardiffnlp/twitter-roberta-base-emotion",  # используем emotion модель
+            "mental_health": "cardiffnlp/twitter-roberta-base-sentiment"  # fallback на sentiment
         }
         
         if settings.huggingface_api_key:

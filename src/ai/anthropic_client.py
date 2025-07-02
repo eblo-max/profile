@@ -230,38 +230,69 @@ class AnthropicClient:
             yield f"Ошибка анализа: {str(e)}"
     
     def _parse_analysis_response(self, response_text: str, analysis_type: str) -> Dict[str, Any]:
-        """Парсинг ответа Claude в структурированный формат"""
+        """Улучшенный парсинг ответа Claude"""
         try:
             import json
             import re
             
-            # Удаление markdown блоков если есть
+            logger.info("🔍 Парсинг ответа Claude", text_length=len(response_text))
+            
+            # Удаление markdown блоков
             cleaned_text = re.sub(r'```json\s*', '', response_text)
             cleaned_text = re.sub(r'\s*```', '', cleaned_text)
+            cleaned_text = cleaned_text.strip()
             
-            # Поиск JSON блока в тексте
+            # Попытка 1: Поиск полного JSON объекта
+            json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+            json_matches = re.findall(json_pattern, cleaned_text, re.DOTALL)
+            
+            for json_str in json_matches:
+                try:
+                    parsed_data = json.loads(json_str)
+                    if isinstance(parsed_data, dict) and len(parsed_data) > 3:
+                        logger.info("✅ JSON успешно распарсен", keys=list(parsed_data.keys()))
+                        return parsed_data
+                except json.JSONDecodeError:
+                    continue
+            
+            # Попытка 2: Поиск JSON с более гибким regex
             json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
             if json_match:
-                json_str = json_match.group()
-                parsed_data = json.loads(json_str)
-                
-                # Проверка качества парсинга
-                if self._validate_analysis_structure(parsed_data):
+                try:
+                    json_str = json_match.group()
+                    # Удаление лишнего текста после JSON
+                    json_str = self._clean_json_string(json_str)
+                    parsed_data = json.loads(json_str)
+                    
+                    logger.info("✅ JSON найден и распарсен (попытка 2)")
                     return parsed_data
-                else:
-                    logger.warning("⚠️ Неполная структура JSON от Claude")
-                    return self._create_fallback_structure(response_text, analysis_type, parsed_data)
-            else:
-                # JSON не найден - создаем структуру из текста
-                logger.info("📝 JSON не найден, создаю структуру из текста")
-                return self._extract_insights_from_text(response_text, analysis_type)
-                
-        except json.JSONDecodeError as e:
-            logger.warning("⚠️ Ошибка парсинга JSON", error=str(e))
+                except json.JSONDecodeError as e:
+                    logger.warning("⚠️ Ошибка парсинга JSON (попытка 2)", error=str(e))
+            
+            # Попытка 3: Если JSON вообще не найден
+            logger.info("📝 JSON не найден, создаю структуру из текста")
             return self._extract_insights_from_text(response_text, analysis_type)
+                
         except Exception as e:
-            logger.error("❌ Неожиданная ошибка парсинга", error=str(e))
+            logger.error("❌ Критическая ошибка парсинга", error=str(e))
             return self._create_error_structure(response_text, analysis_type, str(e))
+    
+    def _clean_json_string(self, json_str: str) -> str:
+        """Очистка JSON строки от лишнего текста"""
+        # Подсчет скобок для корректного завершения JSON
+        open_braces = 0
+        clean_json = ""
+        
+        for char in json_str:
+            clean_json += char
+            if char == '{':
+                open_braces += 1
+            elif char == '}':
+                open_braces -= 1
+                if open_braces == 0:
+                    break
+        
+        return clean_json
     
     def _validate_analysis_structure(self, data: Dict[str, Any]) -> bool:
         """Проверка полноты структуры анализа"""

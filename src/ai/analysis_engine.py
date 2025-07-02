@@ -305,16 +305,28 @@ class AnalysisEngine:
                 user_context=user_context
             )
             
+            # DEBUG: Логируем что получили от Claude
+            logger.info("🔍 Claude вернул результат", 
+                       keys=list(detailed_result.keys()) if isinstance(detailed_result, dict) else "not_dict",
+                       has_error="error" in detailed_result if isinstance(detailed_result, dict) else False,
+                       result_type=type(detailed_result).__name__)
+            
+            # Проверяем наличие ошибки
+            if "error" in detailed_result:
+                logger.error("❌ Claude вернул ошибку", error=detailed_result["error"])
+                return self._enhance_incomplete_analysis({}, text)
+            
             # Проверяем качество результата
             if self._validate_detailed_analysis_structure(detailed_result):
                 logger.info("✅ Детальный Claude анализ успешен")
                 return detailed_result
             else:
-                logger.warning("⚠️ Структура детального анализа неполная, исправляем...")
+                logger.warning("⚠️ Структура детального анализа неполная, исправляем...", 
+                              missing_sections=[s for s in ["personality_core", "detailed_insights", "big_five_detailed"] if s not in detailed_result])
                 return self._enhance_incomplete_analysis(detailed_result, text)
                 
         except Exception as e:
-            logger.error("❌ Ошибка детального Claude анализа", error=str(e))
+            logger.error("❌ Ошибка детального Claude анализа", error=str(e), exc_info=True)
             return {
                 "error": str(e),
                 "status": "failed",
