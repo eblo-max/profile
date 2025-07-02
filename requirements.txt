@@ -24,12 +24,7 @@ boto3==1.35.39
 # HTTP Client
 httpx==0.27.2
 
-# NLP Processing
-nltk==3.9.1
-spacy==3.7.6
-textblob==0.18.0
-
-# Image Processing
+# Image Processing  
 pillow==10.4.0
 aiofiles==24.1.0
 
@@ -51,8 +46,7 @@ requests==2.31.0  # HTTP клиент для API запросов
 beautifulsoup4==4.12.2  # Парсинг HTML контента
 feedparser==6.0.10  # RSS/XML парсер для arXiv и PubMed
 xmltodict==0.13.0  # XML парсинг для API ответов
-urllib3==2.0.4  # HTTP клиент (уже есть)
-certifi==2023.5.7  # SSL сертификаты (уже есть)
+urllib3==2.0.4  # HTTP клиент для retry стратегии
 
 # === ОБРАБОТКА ДАННЫХ ===
 pandas==2.1.4  # Обработка данных исследований
@@ -65,13 +59,6 @@ aiolimiter==1.1.0  # Rate limiting для API
 langdetect==1.0.9  # Определение языка публикаций
 chardet==5.2.0  # Определение кодировки
 
-# === ОСНОВНЫЕ ЗАВИСИМОСТИ (УЖЕ ЕСТЬ) ===
-flask==2.3.2
-charset-normalizer==3.2.0
-idna==3.4
-itsdangerous==2.1.2
-jinja2==3.1.2
-markupsafe==2.1.3
-werkzeug==2.3.6
-click==8.1.6
-blinker==1.6.2 
+# === УСТРАНЕНИЕ КОНФЛИКТОВ ЗАВИСИМОСТЕЙ ===
+# Удалены дублирующие пакеты - они будут установлены автоматически
+# с правильными версиями через основные зависимости 
