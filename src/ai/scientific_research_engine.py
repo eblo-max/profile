@@ -101,8 +101,8 @@ class ScientificResearchEngine:
         self.russian_client = RussianAcademicSearcher(settings)
         self.source_validator = SourceQualityValidator()
         self.anthropic_client = anthropic.AsyncAnthropic(
-            api_key=settings.ANTHROPIC_API_KEY
-        ) if settings.ANTHROPIC_API_KEY else None
+            api_key=settings.anthropic_api_key
+        ) if settings.anthropic_api_key else None
         
     async def research_personality_profile(
         self, 

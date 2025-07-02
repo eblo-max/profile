@@ -53,12 +53,12 @@ class MultiAIResearchAnalyzer:
         
         # Инициализация AI клиентов
         self.claude_client = anthropic.AsyncAnthropic(
-            api_key=settings.ANTHROPIC_API_KEY
-        ) if settings.ANTHROPIC_API_KEY else None
+            api_key=settings.anthropic_api_key
+        ) if settings.anthropic_api_key else None
         
         self.openai_client = openai.AsyncOpenAI(
-            api_key=settings.OPENAI_API_KEY
-        ) if hasattr(settings, 'OPENAI_API_KEY') and settings.OPENAI_API_KEY else None
+            api_key=settings.openai_api_key
+        ) if hasattr(settings, 'openai_api_key') and settings.openai_api_key else None
         
         # Gemini и Cohere будут добавлены при получении ключей
         self.gemini_client = None
