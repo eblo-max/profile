@@ -2237,24 +2237,39 @@ class AnalysisEngine:
 - Попробуйте повторить запрос позже
 """
     
-    def _extract_text_from_person_data(self, person_data: Dict[str, Any]) -> str:
-        """Извлечение текста для анализа из данных о человеке"""
+    def _extract_text_from_person_data(self, person_data) -> str:
+        """Извлечение текста для анализа из данных о человеке (поддерживает и dict, и PersonData)"""
         text_parts = []
         
-        if person_data.get("behavior_description"):
-            text_parts.append(f"Поведение: {person_data['behavior_description']}")
+        # Функция для безопасного получения значения
+        def safe_get(data, key, default=None):
+            if isinstance(data, PersonData):
+                return getattr(data, key, default)
+            elif isinstance(data, dict):
+                return data.get(key, default)
+            else:
+                return default
         
-        if person_data.get("text_samples"):
-            text_parts.append(f"Образцы текста: {' '.join(person_data['text_samples'])}")
+        # Извлекаем данные безопасно
+        behavior_description = safe_get(person_data, "behavior_description")
+        if behavior_description:
+            text_parts.append(f"Поведение: {behavior_description}")
         
-        if person_data.get("emotional_markers"):
-            text_parts.append(f"Эмоциональные особенности: {', '.join(person_data['emotional_markers'])}")
+        text_samples = safe_get(person_data, "text_samples", [])
+        if text_samples:
+            text_parts.append(f"Образцы текста: {' '.join(text_samples)}")
         
-        if person_data.get("social_patterns"):
-            text_parts.append(f"Социальные паттерны: {', '.join(person_data['social_patterns'])}")
+        emotional_markers = safe_get(person_data, "emotional_markers", [])
+        if emotional_markers:
+            text_parts.append(f"Эмоциональные особенности: {', '.join(emotional_markers)}")
         
-        if person_data.get("cognitive_traits"):
-            text_parts.append(f"Когнитивные особенности: {', '.join(person_data['cognitive_traits'])}")
+        social_patterns = safe_get(person_data, "social_patterns", [])
+        if social_patterns:
+            text_parts.append(f"Социальные паттерны: {', '.join(social_patterns)}")
+        
+        cognitive_traits = safe_get(person_data, "cognitive_traits", [])
+        if cognitive_traits:
+            text_parts.append(f"Когнитивные особенности: {', '.join(cognitive_traits)}")
         
         return ". ".join(text_parts) if text_parts else "Недостаточно данных для анализа."
 
