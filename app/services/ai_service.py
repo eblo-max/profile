@@ -360,16 +360,24 @@ class AIService:
         """Parse text analysis response"""
         try:
             data = safe_json_loads(response, {})
-            
+            toxicity_score = float(data.get("toxicity_score", 0))
+            if not (0 <= toxicity_score <= 10):
+                raise AIServiceError("toxicity_score вне диапазона 0-10")
+            sentiment_score = data.get("sentiment_score")
+            if sentiment_score is not None:
+                sentiment_score = float(sentiment_score)
+                if not (-1 <= sentiment_score <= 1):
+                    raise AIServiceError("sentiment_score вне диапазона -1..1")
             return {
-                "toxicity_score": float(data.get("toxicity_score", 0)),
+                "toxicity_score": toxicity_score,
                 "urgency_level": data.get("urgency_level", "low"),
                 "red_flags": data.get("red_flags", []),
                 "patterns_detected": data.get("patterns_detected", []),
                 "analysis": data.get("analysis", ""),
                 "recommendation": data.get("recommendation", ""),
                 "keywords": data.get("keywords", []),
-                "confidence_score": float(data.get("confidence_score", 0.5))
+                "confidence_score": float(data.get("confidence_score", 0.5)),
+                "sentiment_score": sentiment_score,
             }
         except Exception as e:
             logger.error(f"Failed to parse analysis response: {e}")
@@ -379,10 +387,17 @@ class AIService:
         """Parse partner profile response"""
         try:
             data = safe_json_loads(response, {})
-            
+            manipulation_risk = float(data.get("manipulation_risk", 5.0))
+            if not (0 <= manipulation_risk <= 10):
+                raise AIServiceError("manipulation_risk вне диапазона 0-10")
+            overall_compatibility = data.get("overall_compatibility")
+            if overall_compatibility is not None:
+                overall_compatibility = float(overall_compatibility)
+                if not (0 <= overall_compatibility <= 1):
+                    raise AIServiceError("overall_compatibility вне диапазона 0-1")
             return {
                 "personality_type": data.get("personality_type", ""),
-                "manipulation_risk": float(data.get("manipulation_risk", 5.0)),
+                "manipulation_risk": manipulation_risk,
                 "urgency_level": data.get("urgency_level", "medium"),
                 "red_flags": data.get("red_flags", []),
                 "positive_traits": data.get("positive_traits", []),
@@ -390,7 +405,8 @@ class AIService:
                 "psychological_profile": data.get("psychological_profile", ""),
                 "relationship_advice": data.get("relationship_advice", ""),
                 "communication_tips": data.get("communication_tips", ""),
-                "trust_indicators": data.get("trust_indicators", [])
+                "trust_indicators": data.get("trust_indicators", []),
+                "overall_compatibility": overall_compatibility,
             }
         except Exception as e:
             logger.error(f"Failed to parse profile response: {e}")
@@ -400,9 +416,11 @@ class AIService:
         """Parse compatibility analysis response"""
         try:
             data = safe_json_loads(response, {})
-            
+            overall_compatibility = float(data.get("overall_compatibility", 5.0))
+            if not (0 <= overall_compatibility <= 1):
+                raise AIServiceError("overall_compatibility вне диапазона 0-1")
             return {
-                "overall_compatibility": float(data.get("overall_compatibility", 5.0)),
+                "overall_compatibility": overall_compatibility,
                 "communication_compatibility": float(data.get("communication_compatibility", 5.0)),
                 "values_compatibility": float(data.get("values_compatibility", 5.0)),
                 "lifestyle_compatibility": float(data.get("lifestyle_compatibility", 5.0)),
@@ -424,14 +442,13 @@ class AIService:
     async def _check_rate_limit(self, user_id: int) -> None:
         """Check rate limiting for user"""
         now = time.time()
-        
-        # Simple rate limiting - max 1 request per 3 seconds per user
+        rate_limit = getattr(settings, 'AI_RATE_LIMIT_SECONDS', 3.0)
+        # Simple rate limiting - max 1 request per N seconds per user
         if user_id in self._last_requests:
             time_since_last = now - self._last_requests[user_id]
-            if time_since_last < 3.0:
-                wait_time = 3.0 - time_since_last
+            if time_since_last < rate_limit:
+                wait_time = rate_limit - time_since_last
                 await asyncio.sleep(wait_time)
-        
         self._last_requests[user_id] = now
     
     def _get_last_model_used(self) -> str:

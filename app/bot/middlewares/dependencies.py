@@ -5,7 +5,7 @@ from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery
 
-from app.core.database import get_db
+from app.core.database import get_session
 from app.services.user_service import UserService
 from app.services.ai_service import AIService
 
@@ -21,8 +21,8 @@ class DependencyMiddleware(BaseMiddleware):
     ) -> Any:
         """Inject dependencies into handler"""
         
-        # Get database session
-        async for db_session in get_db():
+        # Get database session using proper async context manager
+        async with get_session() as db_session:
             try:
                 # Create services
                 user_service = UserService(db_session)
@@ -44,8 +44,4 @@ class DependencyMiddleware(BaseMiddleware):
             except Exception:
                 # Rollback on error
                 await db_session.rollback()
-                raise
-            
-            finally:
-                # Session will be closed by get_db() context manager
-                pass 
+                raise 

@@ -2,9 +2,9 @@
 
 from sqlalchemy import (
     Column, Integer, String, Text, Float, ForeignKey, 
-    Boolean, JSON, Enum as SQLAEnum
+    Boolean, JSON, Enum as SQLAEnum, CheckConstraint
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 from app.models.base import BaseModel
 from app.utils.enums import AnalysisType, UrgencyLevel
@@ -14,18 +14,22 @@ class TextAnalysis(BaseModel):
     """Text analysis model"""
     
     __tablename__ = "text_analyses"
+    __table_args__ = (
+        CheckConstraint('toxicity_score >= 0 AND toxicity_score <= 10', name='ck_toxicity_score_range'),
+        CheckConstraint('sentiment_score >= -1 AND sentiment_score <= 1', name='ck_sentiment_score_range'),
+    )
     
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     # Analysis data
-    analysis_type = Column(SQLAEnum(AnalysisType), default=AnalysisType.TEXT_ANALYSIS)
+    analysis_type = Column(SQLAEnum(AnalysisType, validate_strings=True, create_constraint=True), default=AnalysisType.TEXT_ANALYSIS)
     original_text = Column(Text, nullable=False)
     text_hash = Column(String(64), nullable=False, index=True)  # For deduplication
     
     # Analysis results
     toxicity_score = Column(Float, nullable=False)
-    urgency_level = Column(SQLAEnum(UrgencyLevel), nullable=False)
+    urgency_level = Column(SQLAEnum(UrgencyLevel, validate_strings=True, create_constraint=True), nullable=False)
     red_flags = Column(JSON, nullable=True)  # List of detected red flags
     patterns_detected = Column(JSON, nullable=True)  # List of manipulation patterns
     analysis_text = Column(Text, nullable=True)  # AI analysis description
@@ -82,4 +86,15 @@ class TextAnalysis(BaseModel):
             "patterns_count": len(self.patterns_detected or []),
             "created_at": self.created_at.isoformat(),
             "is_high_risk": self.is_high_risk
-        } 
+        }
+
+    @validates("toxicity_score")
+    def validate_toxicity(self, key, value):
+        assert 0 <= value <= 10, "toxicity_score должен быть в диапазоне 0-10"
+        return value
+
+    @validates("sentiment_score")
+    def validate_sentiment(self, key, value):
+        if value is not None:
+            assert -1 <= value <= 1, "sentiment_score должен быть в диапазоне -1..1"
+        return value 

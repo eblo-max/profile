@@ -5,24 +5,20 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from typing import List, Optional
 
 
+def build_inline_kb(rows: List[List[tuple]]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for row in rows:
+        builder.row(*[InlineKeyboardButton(text=btn[0], callback_data=btn[1]) for btn in row])
+    return builder.as_markup()
+
+
 def main_menu_kb() -> InlineKeyboardMarkup:
     """Main menu keyboard"""
-    builder = InlineKeyboardBuilder()
-    
-    builder.row(
-        InlineKeyboardButton(text="📝 Анализ текста", callback_data="analysis_menu"),
-        InlineKeyboardButton(text="👤 Профиль партнера", callback_data="profiler_menu")
-    )
-    builder.row(
-        InlineKeyboardButton(text="💕 Совместимость", callback_data="compatibility_menu"),
-        InlineKeyboardButton(text="📅 Ежедневные советы", callback_data="daily_menu")
-    )
-    builder.row(
-        InlineKeyboardButton(text="⚙️ Профиль", callback_data="profile_menu"),
-        InlineKeyboardButton(text="💎 Подписка", callback_data="subscription_menu")
-    )
-    
-    return builder.as_markup()
+    return build_inline_kb([
+        [("📝 Анализ текста", "analysis_menu"), ("👤 Профиль партнера", "profiler_menu")],
+        [("💕 Совместимость", "compatibility_menu"), ("📅 Ежедневные советы", "daily_menu")],
+        [("⚙️ Профиль", "profile_menu"), ("💎 Подписка", "subscription_menu")],
+    ])
 
 
 def analysis_menu_kb() -> InlineKeyboardMarkup:

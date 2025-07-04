@@ -7,6 +7,7 @@ from aiogram.types import TelegramObject, Message, CallbackQuery
 from app.models.user import User
 from app.utils.enums import SubscriptionType
 from app.core.logging import logger
+from app.core.config import settings
 
 
 class SubscriptionMiddleware(BaseMiddleware):
@@ -109,11 +110,18 @@ class SubscriptionMiddleware(BaseMiddleware):
         
         try:
             if isinstance(event, CallbackQuery):
-                await event.message.edit_text(
-                    message_text,
-                    reply_markup=subscription_plans_kb(),
-                    parse_mode="Markdown"
-                )
+                try:
+                    await event.message.edit_text(
+                        message_text,
+                        reply_markup=subscription_plans_kb(),
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    await event.message.answer(
+                        message_text,
+                        reply_markup=subscription_plans_kb(),
+                        parse_mode="Markdown"
+                    )
                 await event.answer(f"Требуется подписка {required_tier}")
             elif isinstance(event, Message):
                 await event.answer(

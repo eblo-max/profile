@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     AI_REQUEST_TIMEOUT: int = Field(30, env="AI_REQUEST_TIMEOUT")
     AI_RETRY_ATTEMPTS: int = Field(3, env="AI_RETRY_ATTEMPTS")
     AI_RETRY_DELAY: float = Field(1.0, env="AI_RETRY_DELAY")
+    AI_RATE_LIMIT_SECONDS: float = Field(3.0, env="AI_RATE_LIMIT_SECONDS")
     
     # Database
     DATABASE_URL: str = Field(..., env="DATABASE_URL")

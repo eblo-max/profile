@@ -2,9 +2,9 @@
 
 from sqlalchemy import (
     Column, Integer, String, Text, Float, ForeignKey, 
-    Boolean, JSON, Enum as SQLAEnum
+    Boolean, JSON, Enum as SQLAEnum, CheckConstraint
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 
 from app.models.base import BaseModel
 from app.utils.enums import UrgencyLevel
@@ -14,6 +14,10 @@ class PartnerProfile(BaseModel):
     """Partner profile model"""
     
     __tablename__ = "partner_profiles"
+    __table_args__ = (
+        CheckConstraint('manipulation_risk >= 0 AND manipulation_risk <= 10', name='ck_manipulation_risk_range'),
+        CheckConstraint('overall_compatibility >= 0 AND overall_compatibility <= 1', name='ck_overall_compatibility_range'),
+    )
     
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -38,7 +42,7 @@ class PartnerProfile(BaseModel):
     communication_tips = Column(Text, nullable=True)  # Communication advice
     
     # Risk assessment
-    urgency_level = Column(SQLAEnum(UrgencyLevel), nullable=False)
+    urgency_level = Column(SQLAEnum(UrgencyLevel, validate_strings=True, create_constraint=True), nullable=False)
     overall_compatibility = Column(Float, nullable=True)  # Compatibility score
     trust_indicators = Column(JSON, nullable=True)  # Trust/distrust indicators
     
@@ -103,4 +107,15 @@ class PartnerProfile(BaseModel):
             "created_at": self.created_at.isoformat(),
             "is_high_risk": self.is_high_risk,
             "safety_summary": self.safety_summary
-        } 
+        }
+
+    @validates("manipulation_risk")
+    def validate_manipulation_risk(self, key, value):
+        assert 0 <= value <= 10, "manipulation_risk должен быть в диапазоне 0-10"
+        return value
+
+    @validates("overall_compatibility")
+    def validate_overall_compatibility(self, key, value):
+        if value is not None:
+            assert 0 <= value <= 1, "overall_compatibility должен быть в диапазоне 0-1"
+        return value 
