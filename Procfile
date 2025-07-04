@@ -1,2 +1,2 @@
-web: python test_startup.py
+web: python -m app.main
 release: alembic upgrade head 

@@ -19,17 +19,42 @@ async def telegram_webhook(request: Request):
         bot = request.app.state.bot
         dp = request.app.state.dp
         
+        # Debug app state
+        logger.info(f"WEBHOOK: Bot object: {type(bot)} - {bot}")
+        logger.info(f"WEBHOOK: Dispatcher object: {type(dp)} - {dp}")
+        
         # Get update data
         body = await request.json()
         update = Update(**body)
         
-        # Process update
+        # Log basic info
+        if update.message:
+            logger.info(f"WEBHOOK: Processing message '{update.message.text}' from user {update.message.from_user.id}")
+        elif update.callback_query:
+            logger.info(f"WEBHOOK: Processing callback '{update.callback_query.data}' from user {update.callback_query.from_user.id}")
+        
+        # Test if bot can send messages
+        if update.message:
+            logger.info("WEBHOOK: Testing direct bot message send")
+            try:
+                await bot.send_message(
+                    chat_id=update.message.chat.id,
+                    text="🔧 TEST: Прямая отправка от бота работает!"
+                )
+                logger.info("WEBHOOK: Direct message sent successfully")
+            except Exception as bot_error:
+                logger.error(f"WEBHOOK: Bot send error: {bot_error}")
+        
+        # Process update through dispatcher
+        logger.info("WEBHOOK: Processing through dispatcher")
         await dp.feed_update(bot, update)
+        logger.info("WEBHOOK: Update processed, returning OK")
         
         return {"status": "ok"}
         
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")
+        logger.exception("WEBHOOK: Full error traceback:")
         raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 

@@ -20,6 +20,7 @@ router = Router()
 @handle_errors
 async def start_command(message: Message, state: FSMContext) -> None:
     """Handle /start command"""
+    logger.info(f"START: Handler called for user {message.from_user.id}")
     try:
         async with get_session() as session:
             user_service = UserService(session)
@@ -31,12 +32,15 @@ async def start_command(message: Message, state: FSMContext) -> None:
                 first_name=message.from_user.first_name,
                 last_name=message.from_user.last_name
             )
+            logger.info(f"START: User created/found: {user.id}")
             
             # Always show onboarding for /start command
             await start_onboarding(message, state)
+            logger.info("START: Onboarding called")
                 
     except Exception as e:
         logger.error(f"Error in start command: {e}")
+        logger.exception("START: Full error traceback:")
         await message.answer(
             "😔 Произошла ошибка при запуске бота. Попробуйте снова.",
             reply_markup=back_to_main_kb()
@@ -97,6 +101,7 @@ async def show_main_menu(message_or_query, state: FSMContext = None) -> None:
 
 async def start_onboarding(message: Message, state: FSMContext) -> None:
     """Start user onboarding process"""
+    logger.info("ONBOARDING: Starting")
     await state.set_state(OnboardingStates.welcome)
     
     onboarding_text = """
@@ -125,11 +130,13 @@ async def start_onboarding(message: Message, state: FSMContext) -> None:
         InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
     )
     
+    logger.info("ONBOARDING: Sending message")
     await message.answer(
         onboarding_text,
         reply_markup=builder.as_markup(),
         parse_mode="Markdown"
     )
+    logger.info("ONBOARDING: Message sent")
 
 
 @router.callback_query(F.data == "confirm_onboarding_start")
