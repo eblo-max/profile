@@ -16,18 +16,8 @@ async def telegram_webhook(request: Request):
     
     try:
         # Get bot and dispatcher from app state
-        # Note: In actual implementation, these would be injected
-        # For now, we'll create them here
-        
-        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-        dp = Dispatcher()
-        
-        # Import and register handlers
-        from app.bot.handlers import register_all_handlers
-        from app.bot.middlewares import register_all_middlewares
-        
-        register_all_middlewares(dp)
-        register_all_handlers(dp)
+        bot = request.app.state.bot
+        dp = request.app.state.dp
         
         # Get update data
         body = await request.json()
@@ -35,9 +25,6 @@ async def telegram_webhook(request: Request):
         
         # Process update
         await dp.feed_update(bot, update)
-        
-        # Close bot session
-        await bot.session.close()
         
         return {"status": "ok"}
         
@@ -47,13 +34,12 @@ async def telegram_webhook(request: Request):
 
 
 @router.get("/webhook")
-async def webhook_info():
+async def webhook_info(request: Request):
     """Get webhook information"""
     
     try:
-        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        bot = request.app.state.bot
         webhook_info = await bot.get_webhook_info()
-        await bot.session.close()
         
         return {
             "url": webhook_info.url,
@@ -71,22 +57,20 @@ async def webhook_info():
 
 
 @router.post("/webhook/set")
-async def set_webhook():
+async def set_webhook(request: Request):
     """Set webhook URL"""
     
     if not settings.WEBHOOK_URL:
         raise HTTPException(status_code=400, detail="WEBHOOK_URL not configured")
     
     try:
-        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        bot = request.app.state.bot
         
         webhook_url = f"{settings.WEBHOOK_URL}/webhook"
         success = await bot.set_webhook(
             url=webhook_url,
             drop_pending_updates=True
         )
-        
-        await bot.session.close()
         
         if success:
             return {
@@ -102,15 +86,13 @@ async def set_webhook():
 
 
 @router.delete("/webhook")
-async def delete_webhook():
+async def delete_webhook(request: Request):
     """Delete webhook (switch to polling)"""
     
     try:
-        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        bot = request.app.state.bot
         
         success = await bot.delete_webhook(drop_pending_updates=True)
-        
-        await bot.session.close()
         
         if success:
             return {"status": "webhook deleted"}
