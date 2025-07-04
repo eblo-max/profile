@@ -21,15 +21,19 @@ async def telegram_webhook(request: Request):
         
         # Get update data
         body = await request.json()
+        logger.info(f"Received webhook update: {body}")
         update = Update(**body)
         
         # Process update
+        logger.info(f"Processing update type: {update.event_type}, message: {update.message.text if update.message else 'None'}")
         await dp.feed_update(bot, update)
+        logger.info("Update processed successfully")
         
         return {"status": "ok"}
         
     except Exception as e:
         logger.error(f"Webhook processing error: {e}")
+        logger.exception("Full webhook error traceback:")
         raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 
