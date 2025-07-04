@@ -89,7 +89,11 @@ class Settings(BaseSettings):
         """Parse comma-separated admin user IDs"""
         if isinstance(v, str):
             return [int(x.strip()) for x in v.split(",") if x.strip()]
-        return v or []
+        elif isinstance(v, int):
+            return [v]
+        elif isinstance(v, list):
+            return v
+        return []
     
     @property
     def is_production(self) -> bool:
