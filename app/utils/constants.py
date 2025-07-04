@@ -1,28 +1,8 @@
-"""Application constants and enums"""
+"""Application constants"""
 
+# Import enums from dedicated enums module
 from enum import Enum
-
-
-class SubscriptionType(str, Enum):
-    """Subscription type enumeration"""
-    FREE = "free"
-    PREMIUM = "premium"
-    VIP = "vip"
-
-
-class AnalysisType(str, Enum):
-    """Analysis type enumeration"""
-    TEXT_ANALYSIS = "text_analysis"
-    VOICE_ANALYSIS = "voice_analysis"
-    IMAGE_ANALYSIS = "image_analysis"
-
-
-class UrgencyLevel(str, Enum):
-    """Urgency level for analysis results"""
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
+from app.utils.enums import SubscriptionType, AnalysisType, UrgencyLevel, ActivityType, ContentType, PaymentStatus
 
 
 class PersonalityType(str, Enum):
@@ -32,33 +12,6 @@ class PersonalityType(str, Enum):
     DEFENDER = "Защитник"
     HARMONIZER = "Гармонизатор"
     ADAPTIVE = "Адаптивный тип"
-
-
-class ActivityType(str, Enum):
-    """User activity type enumeration"""
-    REGISTRATION = "registration"
-    ANALYSIS_COMPLETED = "analysis_completed"
-    PROFILE_CREATED = "profile_created"
-    COMPATIBILITY_TEST = "compatibility_test"
-    SUBSCRIPTION_PURCHASED = "subscription_purchased"
-    DAILY_CONTENT_VIEWED = "daily_content_viewed"
-    ACHIEVEMENT_EARNED = "achievement_earned"
-
-
-class ContentType(str, Enum):
-    """Daily content type enumeration"""
-    TIP = "tip"
-    CASE_STUDY = "case"
-    EXERCISE = "exercise"
-    QUOTE = "quote"
-
-
-class PaymentStatus(str, Enum):
-    """Payment status enumeration"""
-    PENDING = "pending"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    REFUNDED = "refunded"
 
 
 # Bot configuration constants

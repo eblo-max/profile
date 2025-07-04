@@ -114,6 +114,8 @@ def handle_errors(
                         await event.answer(ERROR_MESSAGES["unknown_error"])
                     elif isinstance(event, CallbackQuery):
                         await event.answer(ERROR_MESSAGES["unknown_error"], show_alert=True)
+                
+                return  # Добавляем return после обработки ошибки
         
         return wrapper
     return decorator

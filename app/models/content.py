@@ -7,7 +7,7 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 
 from app.models.base import BaseModel
-from app.utils.constants import ContentType
+from app.utils.enums import ContentType
 
 
 class DailyContent(BaseModel):

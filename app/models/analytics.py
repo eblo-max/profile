@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.models.base import BaseModel
-from app.utils.constants import ActivityType
+from app.utils.enums import ActivityType
 
 
 class UserActivity(BaseModel):

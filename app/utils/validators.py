@@ -342,7 +342,7 @@ def validate_subscription_type(subscription_type: str) -> str:
     Raises:
         ValidationError: If subscription type is invalid
     """
-    from app.utils.constants import SubscriptionType
+    from app.utils.enums import SubscriptionType
     
     valid_types = [s.value for s in SubscriptionType]
     
@@ -365,7 +365,7 @@ def validate_urgency_level(urgency: str) -> str:
     Raises:
         ValidationError: If urgency level is invalid
     """
-    from app.utils.constants import UrgencyLevel
+    from app.utils.enums import UrgencyLevel
     
     valid_levels = [u.value for u in UrgencyLevel]
     

@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.models.base import BaseModel
-from app.utils.constants import SubscriptionType, PaymentStatus
+from app.utils.enums import SubscriptionType, PaymentStatus
 
 
 class Subscription(BaseModel):

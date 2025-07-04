@@ -10,7 +10,7 @@ from app.core.database import get_db, get_session
 from app.services.user_service import UserService
 from app.bot.keyboards.inline import main_menu_kb, back_to_main_kb
 from app.bot.states import OnboardingStates, UserProfileStates
-from app.utils.exceptions import handle_errors
+from app.utils.decorators import handle_errors
 from app.core.logging import logger
 
 router = Router()
@@ -116,7 +116,8 @@ async def start_onboarding(message: Message, state: FSMContext) -> None:
 💡 *Или используйте команду /menu для перехода в главное меню*
 """
     
-    from app.bot.keyboards.inline import InlineKeyboardBuilder, InlineKeyboardButton
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    from aiogram.types import InlineKeyboardButton
     
     builder = InlineKeyboardBuilder()
     builder.row(

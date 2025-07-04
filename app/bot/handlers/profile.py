@@ -3,7 +3,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
-from app.utils.exceptions import handle_errors
+from app.utils.decorators import handle_errors
 from app.bot.keyboards.inline import (
     profile_menu_kb, subscription_menu_kb, back_to_main_kb, 
     profile_edit_kb, back_to_profile_kb
@@ -38,46 +38,52 @@ async def show_profile_menu(callback: CallbackQuery):
     await callback.answer()
 
 @router.callback_query(F.data == "edit_profile")
-async def edit_profile(callback: CallbackQuery, user_service: UserService) -> None:
+@handle_errors
+async def edit_profile(callback: CallbackQuery) -> None:
     """Show profile editing menu"""
     try:
-        # Get user data from database
-        user = await user_service.get_user_by_telegram_id(callback.from_user.id)
-        if not user:
-            await callback.message.edit_text(
-                "❌ Пользователь не найден",
-                reply_markup=back_to_profile_kb()
-            )
-            return
+        from app.core.database import get_session
         
-        # Get subscription info
-        subscription = None
-        if user.subscriptions:
-            subscription = user.subscriptions[0]  # Get the latest subscription
-        
-        # Format gender display
-        gender_display = "Не указан"
-        if user.gender == "male":
-            gender_display = "Мужской"
-        elif user.gender == "female":
-            gender_display = "Женский"
-        elif user.gender:
-            gender_display = user.gender.capitalize()
-        
-        # Format age group display
-        age_display = user.age_group or "Не указана"
-        
-        # Format interests
-        interests_text = "Не указаны"
-        if user.interests_list:
-            interests_text = ", ".join(user.interests_list)
-        
-        # Format goals
-        goals_text = "Не указаны"
-        if user.goals_list:
-            goals_text = ", ".join(user.goals_list)
-        
-        profile_text = f"""📝 **Редактирование профиля**
+        async with get_session() as session:
+            user_service = UserService(session)
+            # Get user data from database
+            user = await user_service.get_user_by_telegram_id(callback.from_user.id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден",
+                    reply_markup=back_to_profile_kb()
+                )
+                return
+            
+            # Get subscription info
+            subscription = None
+            if user.subscriptions:
+                subscription = user.subscriptions[0]  # Get the latest subscription
+            
+            # Format gender display
+            gender_display = "Не указан"
+            if user.gender == "male":
+                gender_display = "Мужской"
+            elif user.gender == "female":
+                gender_display = "Женский"
+            elif user.gender:
+                gender_display = user.gender.capitalize()
+            
+            # Format age group display
+            age_display = user.age_group or "Не указана"
+            
+            # Format interests
+            interests_text = "Не указаны"
+            if user.interests_list:
+                interests_text = ", ".join(user.interests_list)
+            
+            # Format goals
+            goals_text = "Не указаны"
+            if user.goals_list:
+                goals_text = ", ".join(user.goals_list)
+            
+            profile_text = f"""📝 **Редактирование профиля**
 
 👤 **Имя:** {user.display_name or 'Не указано'}
 🚻 **Пол:** {gender_display}
@@ -91,11 +97,12 @@ async def edit_profile(callback: CallbackQuery, user_service: UserService) -> No
 
 Для изменения профиля используйте команду /start"""
 
-        await callback.message.edit_text(
-            profile_text,
-            reply_markup=profile_edit_kb(),
-            parse_mode="Markdown"
-        )
+            await callback.message.edit_text(
+                profile_text,
+                reply_markup=profile_edit_kb(),
+                parse_mode="Markdown"
+            )
+            await callback.answer()
         
     except Exception as e:
         logger.error(f"Error in edit_profile: {e}")

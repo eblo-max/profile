@@ -3,7 +3,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
-from app.utils.exceptions import handle_errors
+from app.utils.decorators import handle_errors
 from app.bot.keyboards.inline import profiler_menu_kb, back_to_main_kb
 
 router = Router()

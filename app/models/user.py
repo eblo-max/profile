@@ -11,7 +11,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.models.base import BaseModel
-from app.utils.constants import SubscriptionType
+from app.utils.enums import SubscriptionType
 
 
 class User(BaseModel):

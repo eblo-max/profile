@@ -7,7 +7,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseModel
-from app.utils.constants import UrgencyLevel
+from app.utils.enums import UrgencyLevel
 
 
 class PartnerProfile(BaseModel):
