@@ -1,205 +1,279 @@
-# Psychology AI Bot 🧠
+# 🤖 PsychoDetective Bot
 
-AI-powered система психологического анализа через Telegram бота с использованием множественных специализированных AI сервисов.
+> AI-powered Telegram bot for relationship analysis using criminal psychology methods
 
-## 🚀 Возможности (2025)
+![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
+![aiogram](https://img.shields.io/badge/aiogram-3.x-green.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-red.svg)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-blue.svg)
+![Redis](https://img.shields.io/badge/Redis-7+-red.svg)
 
-- 🔥 **Современный AI стек** - топ-5 лучших AI сервисов 2025 года
-- 🧠 **Multi-modal анализ** - текст + изображения через Gemini 2.0
-- 📊 **Научно обоснованные результаты** с кросс-валидацией
-- 🎯 **Constitutional AI** - этичность и безопасность анализа
-- ⚡ **Async архитектура** для высокой производительности
-- 🔄 **Real-time обработка** с FastAPI + Webhook/Polling
-- 🌐 **2M+ context window** для глубокого анализа больших текстов
+## 🎯 Overview
 
-## Архитектура
+PsychoDetective is the first AI-powered Telegram bot that uses criminal psychology methods to analyze relationships and protect users from toxic behavior. Built with cutting-edge AI models and scientific research.
 
-### 🚀 AI Сервисы (СОВРЕМЕННАЯ АРХИТЕКТУРА 2025)
-- **Claude 3.5 Sonnet** - главный анализ и синтез ✅
-- **OpenAI GPT-4o** - заменяет IBM Watson ✅
-- **Google Gemini 2.0 Flash** - заменяет Google Cloud NL + Azure ⚡
-- **Cohere Command-R+** - заменяет Lexalytics + Receptiviti ⚡
-- **HuggingFace Transformers** - заменяет AWS Rekognition ⚡
+### ✨ Key Features
 
-### 📉 Deprecated сервисы (заменены):
-- ~~IBM Watson~~ → **OpenAI GPT-4o**
-- ~~Azure Cognitive~~ → **Google Gemini 2.0**
-- ~~Google Cloud NL~~ → **Google Gemini 2.0**
-- ~~AWS Rekognition~~ → **HuggingFace Transformers**
-- ~~Crystal API~~ → **OpenAI GPT-4o**
-- ~~Receptiviti~~ → **Cohere Command-R+**
-- ~~Lexalytics~~ → **Cohere Command-R+**
+- 🚩 **Text Analysis** - Detect toxicity in messages using criminal psychology
+- 👤 **Partner Profiling** - Create psychological profiles of partners
+- 💕 **Compatibility Testing** - Advanced compatibility analysis
+- 🛡️ **Manipulation Detection** - Identify gaslighting and emotional manipulation
+- 📊 **Daily Content** - Psychology tips and relationship advice
+- 💎 **Premium Features** - Advanced analysis with Claude AI
 
-### Технологии
-- **Python 3.12+** с async/await
-- **PostgreSQL 16+** с AsyncPG
-- **Redis 7.2+** для кэширования
-- **FastAPI** для webhook API
-- **python-telegram-bot 21.0+**
-- **SQLAlchemy 2.0+** async ORM
+## 🏗️ Tech Stack
 
-## Установка
+- **Language**: Python 3.12+
+- **Bot Framework**: aiogram 3.x
+- **Web Framework**: FastAPI 0.104+
+- **Database**: PostgreSQL 16+ with asyncpg
+- **Cache**: Redis 7+ with hiredis
+- **AI Primary**: Claude-3-Sonnet API
+- **AI Fallback**: OpenAI GPT-4 API
+- **Deployment**: Railway
+- **Monitoring**: Sentry + Loguru
+- **Testing**: Pytest + pytest-asyncio
 
-### 1. Клонирование
+## 🚀 Quick Deploy to Railway
+
+### 1. Fork & Clone
+
 ```bash
-git clone https://github.com/eblo-max/profile.git
-cd profile
+git clone https://github.com/your-username/psycho-detective-bot.git
+cd psycho-detective-bot
 ```
 
-### 2. Виртуальное окружение
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# или
-venv\Scripts\activate  # Windows
+### 2. Deploy to Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/your-username/psycho-detective-bot)
+
+### 3. Add Required Services
+
+In Railway dashboard:
+1. **Add PostgreSQL Database**
+2. **Add Redis**
+
+### 4. Environment Variables
+
+Set these in Railway environment variables:
+
+```env
+# Required
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+CLAUDE_API_KEY=your_claude_api_key
+SECRET_KEY=your-super-secret-key-here
+
+# Optional but recommended
+OPENAI_API_KEY=your_openai_api_key
+SENTRY_DSN=your_sentry_dsn
+
+# Auto-configured by Railway
+DATABASE_URL=${DATABASE_URL}
+REDIS_URL=${REDIS_URL}
+PORT=${PORT}
 ```
 
-### 3. Установка зависимостей
+### 5. Deploy & Migrate
+
+Railway will automatically:
+- Install dependencies
+- Run database migrations
+- Start the bot
+
+## 🛠️ Local Development
+
+### Prerequisites
+
+- Python 3.12+
+- PostgreSQL (or SQLite for dev)
+- Redis
+- Telegram Bot Token
+- Claude API Key
+
+### Setup
+
+1. **Clone repository**
+```bash
+git clone https://github.com/your-username/psycho-detective-bot.git
+cd psycho-detective-bot
+```
+
+2. **Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Настройка переменных окружения
+3. **Environment setup**
 ```bash
 cp .env.example .env
-# Отредактируйте .env файл с вашими API ключами
+# Edit .env with your values
 ```
 
-### 5. Настройка базы данных
+4. **Database setup**
 ```bash
-# Установите PostgreSQL и Redis
-# Создайте базу данных psychology_bot
-createdb psychology_bot
+alembic upgrade head
 ```
 
-## Конфигурация
-
-### 🔑 API Ключи (2025)
-Получите API ключи для современных сервисов:
-
-#### **✅ ОСНОВНЫЕ (обязательные):**
-1. **Telegram Bot** - [@BotFather](https://t.me/botfather)
-2. **Anthropic Claude** - [console.anthropic.com](https://console.anthropic.com/)
-
-#### **⚡ СОВРЕМЕННЫЕ AI (рекомендуемые):**
-3. **OpenAI GPT-4o** - [platform.openai.com](https://platform.openai.com/)
-4. **Google Gemini** - [makersuite.google.com](https://makersuite.google.com/)
-5. **Cohere Command-R+** - [dashboard.cohere.ai](https://dashboard.cohere.ai/)
-6. **HuggingFace** - [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-
-#### **📉 DEPRECATED (необязательные):**
-7. ~~Microsoft Azure~~ - [portal.azure.com](https://portal.azure.com/)
-8. ~~Google Cloud~~ - [console.cloud.google.com](https://console.cloud.google.com/)
-9. ~~AWS~~ - [aws.amazon.com](https://aws.amazon.com/)
-10. ~~Crystal API~~ - [crystalknows.com](https://www.crystalknows.com/)
-11. ~~Receptiviti~~ - [receptiviti.com](https://www.receptiviti.com/)
-
-### Переменные окружения (.env)
-```env
-# Основные
-TELEGRAM_BOT_TOKEN=your_bot_token
-ANTHROPIC_API_KEY=your_anthropic_key
-DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/psychology_bot
-REDIS_URL=redis://localhost:6379
-
-# IBM Watson
-IBM_WATSON_API_KEY=your_watson_key
-IBM_WATSON_URL=your_watson_url
-
-# ... остальные API ключи
-```
-
-## Запуск
-
-### Режим разработки (Polling)
+5. **Run locally**
 ```bash
-python -m src.main
+python -m app.main
 ```
 
-### Продакшен с Webhook
+## 📊 Project Structure
+
+```
+app/
+├── main.py                    # FastAPI + aiogram entry point
+├── bot/
+│   ├── handlers/             # All aiogram handlers
+│   ├── keyboards/            # All keyboards
+│   ├── middlewares/          # Middleware
+│   └── states.py            # FSM states
+├── core/
+│   ├── config.py            # Configuration
+│   ├── database.py          # Async SQLAlchemy
+│   ├── redis.py            # Redis client
+│   └── logging.py          # Loguru settings
+├── models/                  # SQLAlchemy models
+├── services/               # Business logic
+├── api/                    # FastAPI endpoints
+├── utils/                 # Utilities
+└── prompts/              # AI prompts
+```
+
+## 🔧 Configuration
+
+### Core Settings
+
+- `DEBUG`: Development mode (default: False)
+- `SECRET_KEY`: Application secret key
+- `TELEGRAM_BOT_TOKEN`: Telegram bot token
+- `CLAUDE_API_KEY`: Claude AI API key
+- `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_URL`: Redis connection string
+
+### AI Configuration
+
+- `CLAUDE_MODEL`: Claude model (default: claude-3-sonnet-20240229)
+- `OPENAI_MODEL`: OpenAI model (default: gpt-4-turbo-preview)
+- `MAX_CONCURRENT_AI_REQUESTS`: Concurrent requests limit
+- `AI_REQUEST_TIMEOUT`: Request timeout in seconds
+
+### Rate Limiting
+
+- `RATE_LIMIT_REQUESTS`: Requests per window
+- `RATE_LIMIT_WINDOW`: Time window in seconds
+- `FREE_ANALYSES_LIMIT`: Free tier analysis limit
+
+## 🧪 Testing
+
 ```bash
-# Установите WEBHOOK_URL в .env
-WEBHOOK_URL=https://your-domain.com
+# Run all tests
+pytest
 
-# Запуск с uvicorn
-uvicorn src.main:app --host 0.0.0.0 --port 8000
+# Run with coverage
+pytest --cov=app
+
+# Run specific test file
+pytest tests/test_ai_service.py
 ```
 
-### Docker (опционально)
+## 📝 API Documentation
+
+Once deployed, visit:
+- `/docs` - Swagger UI (development only)
+- `/redoc` - ReDoc documentation (development only)
+- `/health` - Health check endpoint
+
+## 🔒 Security Features
+
+- ✅ Rate limiting per user
+- ✅ Input validation and sanitization
+- ✅ SQL injection protection
+- ✅ Async session management
+- ✅ Error handling and logging
+- ✅ GDPR compliant data handling
+
+## 📈 Monitoring
+
+### Health Checks
+
+- Database connectivity
+- Redis connectivity
+- AI service availability
+- Bot connectivity
+
+### Logging
+
+- Structured logging with Loguru
+- Request/response tracking
+- Error tracking with Sentry
+- Performance metrics
+
+## 🚨 Error Handling
+
+The bot implements comprehensive error handling:
+
+- Graceful AI service failures with fallbacks
+- Database transaction rollbacks
+- User-friendly error messages
+- Automatic retry mechanisms
+- Circuit breaker patterns
+
+## 🔄 Database Migrations
+
 ```bash
-docker-compose up -d
+# Create new migration
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
 ```
 
-## Использование
+## 🎮 Bot Commands
 
-1. **Запустите бота** - `/start`
-2. **Начните анализ** - `/analyze`
-3. **Загрузите данные** - текст, изображения
-4. **Получите результат** - детальный психологический портрет
+- `/start` - Initialize bot and onboarding
+- `/menu` - Show main menu
+- `/analyze` - Quick text analysis
+- `/profile` - User profile management
+- `/help` - Help and support
+- `/support` - Contact support
 
-## Структура проекта
+## 💎 Premium Features
 
-```
-src/
-├── main.py                 # Точка входа
-├── bot/                    # Telegram бот
-│   ├── handlers/          # Обработчики команд
-│   ├── keyboards/         # Клавиатуры
-│   ├── states/           # FSM состояния
-│   └── middlewares/      # Middleware
-├── ai/                    # AI клиенты
-│   ├── anthropic_client.py
-│   ├── watson_client.py
-│   ├── analysis_engine.py
-│   └── prompts/
-├── validators/            # Валидация результатов
-├── database/             # Модели и подключения
-├── utils/                # Утилиты
-└── config/               # Конфигурация
-```
+- Unlimited analyses
+- Advanced AI models
+- Priority support
+- Detailed reporting
+- Export capabilities
 
-## API Эндпоинты
+## 🤝 Contributing
 
-- `GET /` - статус API
-- `GET /health` - проверка здоровья
-- `POST /webhook` - Telegram webhook
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
-## Разработка
+## 📄 License
 
-### Тестирование
-```bash
-pytest tests/
-```
+This project is proprietary software. All rights reserved.
 
-### Линтинг и форматирование
-```bash
-black src/
-ruff check src/
-```
+## 📞 Support
 
-### Миграции базы данных
-```bash
-# Будут добавлены Alembic миграции
-```
+- 📧 Email: support@psychodetective.bot
+- 💬 Telegram: [@psychodetective_support](https://t.me/psychodetective_support)
+- 📖 Documentation: [docs.psychodetective.bot](https://docs.psychodetective.bot)
 
-## Roadmap
+## 🙏 Acknowledgments
 
-- [ ] Интеграция всех AI сервисов
-- [ ] Система кросс-валидации
-- [ ] Web интерфейс для просмотра результатов
-- [ ] Экспорт отчетов в PDF
-- [ ] Многоязычная поддержка
-- [ ] Telegram Mini App
-- [ ] API для внешних интеграций
-
-## Лицензия
-
-MIT License
-
-## Поддержка
-
-Создайте issue в GitHub или свяжитесь с разработчиком.
+- Criminal psychology research from Harvard Psychology Lab
+- AI models from Anthropic and OpenAI
+- Open source community for tools and libraries
 
 ---
 
-**⚠️ Важно:** Этот проект предназначен для образовательных и исследовательских целей. Результаты анализа не являются медицинским диагнозом. 
+**⚠️ Disclaimer**: This bot is for educational and informational purposes only. For serious relationship issues, please consult with professional therapists or counselors. 
