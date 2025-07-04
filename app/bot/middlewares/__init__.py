@@ -10,9 +10,9 @@ from .dependencies import DependencyMiddleware
 
 def register_all_middlewares(dp: Dispatcher) -> None:
     """Register all middlewares"""
-    # Temporarily disable DependencyMiddleware to test
-    # dp.message.middleware(DependencyMiddleware())
-    # dp.callback_query.middleware(DependencyMiddleware())
+    # Re-enable DependencyMiddleware to provide UserService
+    dp.message.middleware(DependencyMiddleware())
+    dp.callback_query.middleware(DependencyMiddleware())
     
     dp.message.middleware(AuthMiddleware())
     dp.callback_query.middleware(AuthMiddleware())
@@ -20,6 +20,14 @@ def register_all_middlewares(dp: Dispatcher) -> None:
     dp.message.middleware(LoggingMiddleware())
     dp.callback_query.middleware(LoggingMiddleware())
     
+    # Temporarily disable problematic middlewares for testing
+    # dp.message.middleware(RateLimitMiddleware())
+    # dp.callback_query.middleware(RateLimitMiddleware())
+    
+    # dp.message.middleware(SubscriptionMiddleware())
+    # dp.callback_query.middleware(SubscriptionMiddleware())
+    
+    # Enable only essential middlewares for now
     dp.message.middleware(RateLimitMiddleware())
     dp.callback_query.middleware(RateLimitMiddleware())
     

@@ -43,30 +43,34 @@ class RateLimitMiddleware(BaseMiddleware):
         user: User = data.get("user")
         user_service: UserService = data.get("user_service")
         
-        if not user or not user_service:
+        if not user:
             return await handler(event, data)
         
-        # Basic commands that should never be rate limited
+        # Basic commands and callbacks that should NEVER be rate limited
         BASIC_COMMANDS = {'start', 'help', 'menu', 'support', 'settings'}
+        BASIC_CALLBACKS = {'main_menu', 'back', 'cancel', 'help', 'profile_menu', 'subscription_menu'}
         
         # Get action from callback data or message
         action = None
+        should_rate_limit = True
         
         if isinstance(event, CallbackQuery) and event.data:
             # Basic callbacks should not be rate limited
-            if event.data in ['main_menu', 'back', 'cancel', 'help']:
-                action = None
+            if event.data in BASIC_CALLBACKS:
+                should_rate_limit = False
             else:
                 action = event.data
         elif isinstance(event, Message) and event.text:
             if event.text.startswith('/'):
                 command = event.text[1:].split()[0]
                 # Don't rate limit basic commands
-                if command not in BASIC_COMMANDS:
+                if command in BASIC_COMMANDS:
+                    should_rate_limit = False
+                else:
                     action = command
         
         # Check if action should be rate limited
-        if action and action in self.RATE_LIMITED_ACTIONS:
+        if should_rate_limit and action and action in self.RATE_LIMITED_ACTIONS and user_service:
             # Get rate limit type
             limit_type = self._get_limit_type(action)
             if limit_type:
@@ -77,7 +81,7 @@ class RateLimitMiddleware(BaseMiddleware):
                 
                 if not allowed:
                     await self._send_rate_limit_message(event, limit_type, user.subscription_type)
-                    return
+                    return  # Block only rate-limited actions
                 
                 # Add remaining uses to data
                 data["rate_limit_remaining"] = remaining

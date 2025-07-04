@@ -340,4 +340,15 @@ async def support_command(message: Message) -> None:
         support_text,
         reply_markup=back_to_main_kb(),
         parse_mode="Markdown"
-    ) 
+    )
+
+
+@router.message(Command("test"))
+async def test_command(message: Message) -> None:
+    """Simple test command without decorators"""
+    logger.info(f"TEST: Handler called for user {message.from_user.id}")
+    try:
+        await message.answer("✅ Тест успешен! Бот работает.")
+        logger.info("TEST: Response sent successfully")
+    except Exception as e:
+        logger.error(f"TEST: Error sending response: {e}") 

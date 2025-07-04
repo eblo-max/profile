@@ -42,16 +42,18 @@ class SubscriptionMiddleware(BaseMiddleware):
         if not user:
             return await handler(event, data)
         
-        # Basic commands that should always work
+        # Basic commands and callbacks that should ALWAYS work
         BASIC_COMMANDS = {'start', 'help', 'menu', 'support', 'settings'}
+        BASIC_CALLBACKS = {'main_menu', 'back', 'cancel', 'help', 'profile_menu', 'subscription_menu'}
         
         # Get callback data or command to check feature access
         feature = None
+        should_check = True
         
         if isinstance(event, CallbackQuery) and event.data:
-            # Basic callbacks that should always work
-            if event.data in ['main_menu', 'back', 'cancel', 'help']:
-                feature = None
+            # Don't check subscription for basic callbacks
+            if event.data in BASIC_CALLBACKS:
+                should_check = False
             else:
                 feature = event.data
         elif isinstance(event, Message) and event.text:
@@ -59,21 +61,24 @@ class SubscriptionMiddleware(BaseMiddleware):
             if event.text.startswith('/'):
                 command = event.text[1:].split()[0]
                 # Don't check subscription for basic commands
-                if command not in BASIC_COMMANDS:
+                if command in BASIC_COMMANDS:
+                    should_check = False
+                else:
                     feature = command
         
-        if feature:
+        # Only check subscription for non-basic features
+        if should_check and feature:
             # Check if feature requires premium
             if feature in self.PREMIUM_FEATURES:
                 if user.subscription_type == SubscriptionType.FREE:
                     await self._send_subscription_required(event, "Premium")
-                    return
+                    return  # Block only premium features
             
             # Check if feature requires VIP
             elif feature in self.VIP_FEATURES:
                 if user.subscription_type in [SubscriptionType.FREE, SubscriptionType.PREMIUM]:
                     await self._send_subscription_required(event, "VIP")
-                    return
+                    return  # Block only VIP features
         
         # Add subscription info to data
         data["subscription_type"] = user.subscription_type

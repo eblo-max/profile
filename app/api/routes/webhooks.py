@@ -25,6 +25,8 @@ async def telegram_webhook(request: Request):
         
         # Get update data
         body = await request.json()
+        logger.info(f"WEBHOOK: Received body: {body}")
+        
         update = Update(**body)
         
         # Log basic info
@@ -35,8 +37,8 @@ async def telegram_webhook(request: Request):
         
         # Process update through dispatcher
         logger.info("WEBHOOK: Processing through dispatcher")
-        await dp.feed_update(bot, update)
-        logger.info("WEBHOOK: Update processed, returning OK")
+        result = await dp.feed_update(bot, update)
+        logger.info(f"WEBHOOK: Update processed successfully, result: {result}")
         
         return {"status": "ok"}
         
