@@ -171,14 +171,14 @@ def run_webhook():
     # Create FastAPI app
     app = create_app()
     
-    # Run with uvicorn
+    # Run with uvicorn (single worker to avoid import string requirement)
     uvicorn.run(
         app,
         host=settings.HOST,
         port=settings.PORT,
         log_config=None,  # Use our custom logging
         access_log=False,
-        workers=1 if settings.DEBUG else 2
+        workers=1  # Single worker
     )
 
 
