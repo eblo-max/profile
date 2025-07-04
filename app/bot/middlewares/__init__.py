@@ -10,9 +10,9 @@ from .dependencies import DependencyMiddleware
 
 def register_all_middlewares(dp: Dispatcher) -> None:
     """Register all middlewares"""
-    # Order matters - dependency injection should be first
-    dp.message.middleware(DependencyMiddleware())
-    dp.callback_query.middleware(DependencyMiddleware())
+    # Temporarily disable DependencyMiddleware to test
+    # dp.message.middleware(DependencyMiddleware())
+    # dp.callback_query.middleware(DependencyMiddleware())
     
     dp.message.middleware(AuthMiddleware())
     dp.callback_query.middleware(AuthMiddleware())

@@ -46,14 +46,24 @@ class RateLimitMiddleware(BaseMiddleware):
         if not user or not user_service:
             return await handler(event, data)
         
+        # Basic commands that should never be rate limited
+        BASIC_COMMANDS = {'start', 'help', 'menu', 'support', 'settings'}
+        
         # Get action from callback data or message
         action = None
         
         if isinstance(event, CallbackQuery) and event.data:
-            action = event.data
+            # Basic callbacks should not be rate limited
+            if event.data in ['main_menu', 'back', 'cancel', 'help']:
+                action = None
+            else:
+                action = event.data
         elif isinstance(event, Message) and event.text:
             if event.text.startswith('/'):
-                action = event.text[1:].split()[0]
+                command = event.text[1:].split()[0]
+                # Don't rate limit basic commands
+                if command not in BASIC_COMMANDS:
+                    action = command
         
         # Check if action should be rate limited
         if action and action in self.RATE_LIMITED_ACTIONS:
