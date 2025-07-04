@@ -18,7 +18,7 @@ class DailyContent(BaseModel):
     # Content details
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    content_type = Column(SQLAEnum(ContentType), nullable=False)
+    content_type = Column(SQLAEnum(ContentType, validate_strings=True, create_constraint=True), nullable=False)
     
     # Metadata
     author = Column(String(255), nullable=True)

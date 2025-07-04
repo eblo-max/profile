@@ -21,7 +21,7 @@ class Subscription(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     # Subscription details
-    subscription_type = Column(SQLAEnum(SubscriptionType), nullable=False)
+    subscription_type = Column(SQLAEnum(SubscriptionType, validate_strings=True, create_constraint=True), nullable=False)
     price = Column(Float, nullable=False)  # Price paid
     currency = Column(String(3), default="RUB")
     
@@ -33,7 +33,7 @@ class Subscription(BaseModel):
     # Payment details
     payment_id = Column(String(255), nullable=True)  # External payment ID
     payment_method = Column(String(50), nullable=True)  # Payment method used
-    payment_status = Column(SQLAEnum(PaymentStatus), default=PaymentStatus.PENDING)
+    payment_status = Column(SQLAEnum(PaymentStatus, validate_strings=True, create_constraint=True), default=PaymentStatus.PENDING)
     payment_date = Column(DateTime(timezone=True), nullable=True)
     
     # Status

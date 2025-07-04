@@ -15,8 +15,8 @@ class TextAnalysis(BaseModel):
     
     __tablename__ = "text_analyses"
     __table_args__ = (
-        CheckConstraint('toxicity_score >= 0 AND toxicity_score <= 10', name='ck_toxicity_score_range'),
-        CheckConstraint('sentiment_score >= -1 AND sentiment_score <= 1', name='ck_sentiment_score_range'),
+        CheckConstraint('toxicity_score IS NULL OR (toxicity_score >= 0 AND toxicity_score <= 10)', name='ck_toxicity_score_range'),
+        CheckConstraint('sentiment_score IS NULL OR (sentiment_score >= -1 AND sentiment_score <= 1)', name='ck_sentiment_score_range'),
     )
     
     # Foreign key to user

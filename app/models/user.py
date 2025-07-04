@@ -35,8 +35,8 @@ class User(BaseModel):
     bio = Column(Text, nullable=True)
     personality_type = Column(String(100), nullable=True)
     subscription_type = Column(
-        String(20),
-        default="FREE",
+        SQLAEnum(SubscriptionType, validate_strings=True, create_constraint=True),
+        default=SubscriptionType.FREE,
         nullable=False
     )
     

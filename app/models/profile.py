@@ -15,8 +15,8 @@ class PartnerProfile(BaseModel):
     
     __tablename__ = "partner_profiles"
     __table_args__ = (
-        CheckConstraint('manipulation_risk >= 0 AND manipulation_risk <= 10', name='ck_manipulation_risk_range'),
-        CheckConstraint('overall_compatibility >= 0 AND overall_compatibility <= 1', name='ck_overall_compatibility_range'),
+        CheckConstraint('manipulation_risk IS NULL OR (manipulation_risk >= 0 AND manipulation_risk <= 10)', name='ck_manipulation_risk_range'),
+        CheckConstraint('overall_compatibility IS NULL OR (overall_compatibility >= 0 AND overall_compatibility <= 1)', name='ck_overall_compatibility_range'),
     )
     
     # Foreign key to user

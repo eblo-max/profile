@@ -20,7 +20,7 @@ class UserActivity(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
     # Activity details
-    activity_type = Column(SQLAEnum(ActivityType), nullable=False)
+    activity_type = Column(SQLAEnum(ActivityType, validate_strings=True, create_constraint=True), nullable=False)
     activity_name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     
