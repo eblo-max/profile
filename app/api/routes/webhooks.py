@@ -33,18 +33,6 @@ async def telegram_webhook(request: Request):
         elif update.callback_query:
             logger.info(f"WEBHOOK: Processing callback '{update.callback_query.data}' from user {update.callback_query.from_user.id}")
         
-        # Test if bot can send messages
-        if update.message:
-            logger.info("WEBHOOK: Testing direct bot message send")
-            try:
-                await bot.send_message(
-                    chat_id=update.message.chat.id,
-                    text="🔧 TEST: Прямая отправка от бота работает!"
-                )
-                logger.info("WEBHOOK: Direct message sent successfully")
-            except Exception as bot_error:
-                logger.error(f"WEBHOOK: Bot send error: {bot_error}")
-        
         # Process update through dispatcher
         logger.info("WEBHOOK: Processing through dispatcher")
         await dp.feed_update(bot, update)

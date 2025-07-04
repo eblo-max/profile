@@ -42,15 +42,25 @@ class SubscriptionMiddleware(BaseMiddleware):
         if not user:
             return await handler(event, data)
         
+        # Basic commands that should always work
+        BASIC_COMMANDS = {'start', 'help', 'menu', 'support', 'settings'}
+        
         # Get callback data or command to check feature access
         feature = None
         
         if isinstance(event, CallbackQuery) and event.data:
-            feature = event.data
+            # Basic callbacks that should always work
+            if event.data in ['main_menu', 'back', 'cancel', 'help']:
+                feature = None
+            else:
+                feature = event.data
         elif isinstance(event, Message) and event.text:
             # Extract feature from text commands
             if event.text.startswith('/'):
-                feature = event.text[1:].split()[0]
+                command = event.text[1:].split()[0]
+                # Don't check subscription for basic commands
+                if command not in BASIC_COMMANDS:
+                    feature = command
         
         if feature:
             # Check if feature requires premium
