@@ -125,8 +125,8 @@ def create_webhook_app() -> web.Application:
             logger.error(f"Webhook error: {e}")
             return web.Response(status=500)
     
-    # Setup FastAPI integration
-    setup_application(aiohttp_app, dp, bot=app.state.bot)
+    # Note: setup_application would be called after bot/dp are initialized
+    # This function is primarily for structure, actual setup happens in main()
     
     return aiohttp_app
 
@@ -171,14 +171,13 @@ def run_webhook():
     # Create FastAPI app
     app = create_app()
     
-    # Run with uvicorn (single worker to avoid import string requirement)
+    # Run with uvicorn
     uvicorn.run(
         app,
         host=settings.HOST,
         port=settings.PORT,
         log_config=None,  # Use our custom logging
-        access_log=False,
-        workers=1  # Single worker
+        access_log=False
     )
 
 
