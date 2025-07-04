@@ -43,11 +43,11 @@ def get_database_url():
     # Try to get from environment first (for Railway deployment)
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Convert postgres:// to postgresql+asyncpg://
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
-        elif database_url.startswith("postgresql://"):
-            database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Convert async drivers to sync for alembic migrations
+        if database_url.startswith("postgresql+asyncpg://"):
+            database_url = database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        elif database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
         return database_url
     
     # Fallback to config file
