@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Import models to ensure they are registered
-from app.models.base import BaseModel
+# Import Base and models to ensure they are registered
+from app.core.database import Base
 from app.models.user import User
 from app.models.analysis import TextAnalysis
 from app.models.profile import PartnerProfile
@@ -29,7 +29,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = BaseModel.metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
