@@ -103,6 +103,9 @@ def handle_errors(
                     elif isinstance(event, CallbackQuery):
                         await event.answer(error_message, show_alert=True)
                 
+                # Don't return None, let the handler complete normally
+                return None
+                
             except Exception as e:
                 if log_errors:
                     logger.error(f"Unexpected error in {func.__name__}: {e}")
@@ -115,7 +118,8 @@ def handle_errors(
                     elif isinstance(event, CallbackQuery):
                         await event.answer(ERROR_MESSAGES["unknown_error"], show_alert=True)
                 
-                return  # Добавляем return после обработки ошибки
+                # Don't return here - let the exception propagate or re-raise it
+                raise
         
         return wrapper
     return decorator
