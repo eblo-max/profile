@@ -545,4 +545,64 @@ def confirm_clear_data_kb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="❌ Отмена", callback_data="settings_menu")
     )
     
+    return builder.as_markup()
+
+
+def profile_edit_fields_kb() -> InlineKeyboardMarkup:
+    """Profile editing fields selection keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(
+        InlineKeyboardButton(text="👤 Имя", callback_data="edit_field_name"),
+        InlineKeyboardButton(text="🎂 Возрастная группа", callback_data="edit_field_age")
+    )
+    builder.row(
+        InlineKeyboardButton(text="💫 Интересы", callback_data="edit_field_interests"),
+        InlineKeyboardButton(text="🎯 Цели", callback_data="edit_field_goals")
+    )
+    builder.row(
+        InlineKeyboardButton(text="📋 О себе", callback_data="edit_field_bio")
+    )
+    builder.row(
+        InlineKeyboardButton(text="✅ Сохранить изменения", callback_data="confirm_profile_save")
+    )
+    builder.row(
+        InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def confirm_profile_changes_kb() -> InlineKeyboardMarkup:
+    """Confirm profile changes keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(
+        InlineKeyboardButton(text="✅ Сохранить изменения", callback_data="confirm_profile_save"),
+        InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit")
+    )
+    
+    return builder.as_markup()
+
+
+def profile_edit_navigation_kb(can_edit: bool, days_until_edit: int = 0) -> InlineKeyboardMarkup:
+    """Profile edit navigation with restriction info"""
+    builder = InlineKeyboardBuilder()
+    
+    if can_edit:
+        builder.row(
+            InlineKeyboardButton(text="✏️ Изменить данные", callback_data="start_profile_edit")
+        )
+    else:
+        remaining_text = f"🔒 Следующее редактирование через {days_until_edit} дн."
+        builder.row(
+            InlineKeyboardButton(text=remaining_text, callback_data="edit_restriction_info")
+        )
+    
+    builder.row(
+        InlineKeyboardButton(text="👤 Профиль", callback_data="profile_menu"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
     return builder.as_markup() 

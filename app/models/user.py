@@ -49,6 +49,7 @@ class User(BaseModel):
     registration_date = Column(DateTime(timezone=True), server_default=func.now())
     last_activity = Column(DateTime(timezone=True), server_default=func.now())
     last_analysis_date = Column(DateTime(timezone=True), nullable=True)
+    last_profile_edit = Column(DateTime(timezone=True), nullable=True)
     
     # Status
     is_active = Column(Boolean, default=True)
@@ -151,4 +152,33 @@ class User(BaseModel):
     
     def update_activity(self) -> None:
         """Update last activity timestamp"""
-        self.last_activity = datetime.utcnow() 
+        self.last_activity = datetime.utcnow()
+    
+    @property
+    def can_edit_profile(self) -> bool:
+        """Check if user can edit profile (once per month)"""
+        if not self.last_profile_edit:
+            return True
+        
+        # Calculate time difference
+        now = datetime.utcnow()
+        time_diff = now - self.last_profile_edit
+        
+        # Allow editing if more than 30 days have passed
+        return time_diff.days >= 30
+    
+    @property
+    def days_until_next_edit(self) -> int:
+        """Get days until next profile edit is allowed"""
+        if not self.last_profile_edit:
+            return 0
+        
+        now = datetime.utcnow()
+        time_diff = now - self.last_profile_edit
+        days_passed = time_diff.days
+        
+        return max(0, 30 - days_passed)
+    
+    def update_profile_edit_time(self) -> None:
+        """Update last profile edit timestamp"""
+        self.last_profile_edit = datetime.utcnow() 

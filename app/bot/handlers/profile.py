@@ -3,19 +3,23 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardButton
+
 from app.utils.decorators import handle_errors
+from app.bot.states import ProfileEditStates
 from app.bot.keyboards.inline import (
     profile_menu_kb, subscription_menu_kb, back_to_main_kb, 
     profile_edit_kb, back_to_profile_kb, settings_menu_kb,
     notification_settings_detailed_kb, notification_time_kb,
-    timezone_kb, confirm_clear_data_kb
+    timezone_kb, confirm_clear_data_kb, profile_edit_fields_kb,
+    confirm_profile_changes_kb, profile_edit_navigation_kb,
+    age_group_kb, gender_kb
 )
 from app.services.user_service import UserService
 from app.core.logging import logger
 from app.core.database import get_session
-from aiogram.fsm.context import FSMContext
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardButton
 
 router = Router()
 
@@ -46,50 +50,58 @@ async def show_profile_menu(callback: CallbackQuery):
 @router.callback_query(F.data == "edit_profile")
 @handle_errors
 async def edit_profile(callback: CallbackQuery) -> None:
-    """Show profile editing menu"""
-    try:
-        async with get_session() as session:
-            user_service = UserService(session)
-            # Get user data from database
-            user = await user_service.get_user_by_telegram_id(callback.from_user.id)
-            
-            if not user:
-                await callback.message.edit_text(
-                    "❌ Пользователь не найден",
-                    reply_markup=back_to_profile_kb()
-                )
-                return
-            
-            # Get subscription info
-            subscription = None
-            if user.subscriptions:
-                subscription = user.subscriptions[0]  # Get the latest subscription
-            
-            # Format gender display
-            gender_display = "Не указан"
-            if user.gender == "male":
-                gender_display = "Мужской"
-            elif user.gender == "female":
-                gender_display = "Женский"
-            elif user.gender:
-                gender_display = user.gender.capitalize()
-            
-            # Format age group display
-            age_display = user.age_group or "Не указана"
-            
-            # Format interests
-            interests_text = "Не указаны"
-            if user.interests_list:
-                interests_text = ", ".join(user.interests_list)
-            
-            # Format goals
-            goals_text = "Не указаны"
-            if user.goals_list:
-                goals_text = ", ".join(user.goals_list)
-            
-            profile_text = f"""📝 **Редактирование профиля**
+    """Show profile editing menu with restriction info"""
+    async with get_session() as session:
+        user_service = UserService(session)
+        user = await user_service.get_user_by_telegram_id(callback.from_user.id)
+        
+        if not user:
+            await callback.message.edit_text(
+                "❌ Пользователь не найден. Используйте /start для регистрации.",
+                reply_markup=back_to_main_kb()
+            )
+            return
+        
+        # Check if user can edit profile
+        can_edit = user.can_edit_profile
+        days_until_edit = user.days_until_next_edit
+        
+        # Format current profile data
+        gender_display = "Не указан"
+        if user.gender == "male":
+            gender_display = "Мужской"
+        elif user.gender == "female":
+            gender_display = "Женский"
+        elif user.gender:
+            gender_display = user.gender.capitalize()
+        
+        age_display = user.age_group or "Не указана"
+        
+        interests_text = "Не указаны"
+        if user.interests_list:
+            interests_text = ", ".join(user.interests_list)
+        
+        goals_text = "Не указаны"
+        if user.goals_list:
+            goals_text = ", ".join(user.goals_list)
+        
+        # Create profile text with editing info
+        if can_edit:
+            edit_info = "✅ **Доступно редактирование профиля**\n\n"
+        else:
+            last_edit = user.last_profile_edit.strftime('%d.%m.%Y') if user.last_profile_edit else "Никогда"
+            edit_info = f"""🔒 **Редактирование ограничено**
 
-👤 **Имя:** {user.display_name or 'Не указано'}
+📅 **Последнее изменение:** {last_edit}
+⏳ **Следующее редактирование через:** {days_until_edit} дн.
+
+💡 *Редактирование профиля доступно раз в 30 дней*
+
+"""
+        
+        profile_text = f"""📝 **Редактирование профиля**
+
+{edit_info}👤 **Имя:** {user.display_name or 'Не указано'}
 🚻 **Пол:** {gender_display}
 🎂 **Возрастная группа:** {age_display}
 💫 **Интересы:** {interests_text}
@@ -97,23 +109,14 @@ async def edit_profile(callback: CallbackQuery) -> None:
 📋 **О себе:** {user.bio or 'Не указано'}
 
 💎 **Подписка:** {user.subscription_type}
-📊 **Анализов выполнено:** {user.total_analyses}
-
-Для изменения профиля используйте команду /start"""
-
-            await callback.message.edit_text(
-                profile_text,
-                reply_markup=profile_edit_kb(),
-                parse_mode="Markdown"
-            )
-            await callback.answer()
+📊 **Анализов выполнено:** {user.total_analyses}"""
         
-    except Exception as e:
-        logger.error(f"Error in edit_profile: {e}")
         await callback.message.edit_text(
-            "❌ Произошла ошибка при загрузке данных.\nДля изменения профиля воспользуйтесь командой /start.",
-            reply_markup=back_to_profile_kb()
+            profile_text,
+            reply_markup=profile_edit_navigation_kb(can_edit, days_until_edit),
+            parse_mode="Markdown"
         )
+        await callback.answer()
 
 @router.callback_query(F.data == "my_stats")
 @handle_errors
@@ -703,4 +706,599 @@ async def export_data(callback: CallbackQuery):
             reply_markup=back_to_main_kb(),
             parse_mode="Markdown"
         )
-        await callback.answer() 
+        await callback.answer()
+
+
+# === Profile Editing Handlers ===
+
+@router.callback_query(F.data == "start_profile_edit")
+@handle_errors
+async def start_profile_edit(callback: CallbackQuery, state: FSMContext):
+    """Start profile editing process"""
+    async with get_session() as session:
+        user_service = UserService(session)
+        user = await user_service.get_user_by_telegram_id(callback.from_user.id)
+        
+        if not user:
+            await callback.answer("❌ Пользователь не найден", show_alert=True)
+            return
+        
+        if not user.can_edit_profile:
+            days_until_edit = user.days_until_next_edit
+            await callback.answer(
+                f"🔒 Редактирование доступно через {days_until_edit} дн.",
+                show_alert=True
+            )
+            return
+        
+        # Store current user data in state for editing
+        await state.update_data(
+            user_id=user.id,
+            original_name=user.name,
+            original_age_group=user.age_group,
+            original_interests=user.interests,
+            original_goals=user.goals,
+            original_bio=user.bio,
+            changes_made={}
+        )
+        
+        await state.set_state(ProfileEditStates.select_field)
+        
+        edit_text = """✏️ **Редактирование профиля**
+
+Выберите поле для изменения:
+
+👤 **Имя** - ваше отображаемое имя
+🎂 **Возрастная группа** - диапазон возраста  
+💫 **Интересы** - ваши увлечения и хобби
+🎯 **Цели** - что вы хотите получить от анализов
+📋 **О себе** - краткое описание
+
+💡 *Изменения будут сохранены только после подтверждения*"""
+        
+        await callback.message.edit_text(
+            edit_text,
+            reply_markup=profile_edit_fields_kb(),
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+
+
+@router.callback_query(F.data == "edit_restriction_info")
+@handle_errors
+async def edit_restriction_info(callback: CallbackQuery):
+    """Show information about edit restrictions"""
+    async with get_session() as session:
+        user_service = UserService(session)
+        user = await user_service.get_user_by_telegram_id(callback.from_user.id)
+        
+        if not user:
+            await callback.answer("❌ Пользователь не найден", show_alert=True)
+            return
+        
+        last_edit = user.last_profile_edit.strftime('%d.%m.%Y') if user.last_profile_edit else "Никогда"
+        days_until_edit = user.days_until_next_edit
+        
+        info_text = f"""🔒 **Информация об ограничениях**
+
+📅 **Последнее редактирование:** {last_edit}
+⏳ **До следующего редактирования:** {days_until_edit} дн.
+
+🔐 **Почему есть ограничение?**
+• Предотвращение злоупотреблений
+• Стабильность анализов
+• Качество рекомендаций
+
+💎 **Премиум подписчики могут редактировать чаще!**
+
+Хотите изменить подписку?"""
+        
+        builder = InlineKeyboardBuilder()
+        builder.row(
+            InlineKeyboardButton(text="💎 Подписка", callback_data="subscription_menu")
+        )
+        builder.row(
+            InlineKeyboardButton(text="👤 Профиль", callback_data="profile_menu"),
+            InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+        )
+        
+        await callback.message.edit_text(
+            info_text,
+            reply_markup=builder.as_markup(),
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+
+
+@router.callback_query(F.data == "edit_field_name", ProfileEditStates.select_field)
+@handle_errors
+async def edit_field_name(callback: CallbackQuery, state: FSMContext):
+    """Start editing user name"""
+    data = await state.get_data()
+    current_name = data.get('original_name', 'Не указано')
+    
+    await state.set_state(ProfileEditStates.waiting_for_name)
+    
+    name_text = f"""👤 **Изменение имени**
+
+📝 **Текущее имя:** {current_name}
+
+✏️ Введите новое имя (от 2 до 50 символов):
+
+💡 *Это имя будет отображаться в вашем профиле и анализах*"""
+    
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit")
+    )
+    
+    await callback.message.edit_text(
+        name_text,
+        reply_markup=builder.as_markup(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.message(ProfileEditStates.waiting_for_name)
+@handle_errors
+async def process_new_name(message: Message, state: FSMContext):
+    """Process new name input"""
+    new_name = message.text.strip()
+    
+    # Validate name
+    if len(new_name) < 2 or len(new_name) > 50:
+        await message.answer(
+            "❌ Имя должно содержать от 2 до 50 символов. Попробуйте ещё раз:",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Update state data
+    data = await state.get_data()
+    data['changes_made']['name'] = new_name
+    await state.update_data(changes_made=data['changes_made'])
+    
+    await state.set_state(ProfileEditStates.select_field)
+    
+    success_text = f"""✅ **Имя изменено**
+
+👤 **Новое имя:** {new_name}
+
+Выберите следующее поле для изменения или сохраните изменения:"""
+    
+    await message.answer(
+        success_text,
+        reply_markup=profile_edit_fields_kb(),
+        parse_mode="Markdown"
+    )
+
+
+@router.callback_query(F.data == "edit_field_age", ProfileEditStates.select_field)
+@handle_errors
+async def edit_field_age(callback: CallbackQuery, state: FSMContext):
+    """Start editing age group"""
+    data = await state.get_data()
+    current_age = data.get('original_age_group', 'Не указана')
+    
+    await state.set_state(ProfileEditStates.waiting_for_age)
+    
+    age_text = f"""🎂 **Изменение возрастной группы**
+
+📊 **Текущая группа:** {current_age}
+
+Выберите новую возрастную группу:"""
+    
+    await callback.message.edit_text(
+        age_text,
+        reply_markup=age_group_kb(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("age_"), ProfileEditStates.waiting_for_age)
+@handle_errors
+async def process_new_age(callback: CallbackQuery, state: FSMContext):
+    """Process new age group selection"""
+    age_mapping = {
+        "age_18_25": "18-25",
+        "age_26_35": "26-35", 
+        "age_36_45": "36-45",
+        "age_46_plus": "46+",
+        "age_skip": None
+    }
+    
+    new_age = age_mapping.get(callback.data, None)
+    
+    # Update state data
+    data = await state.get_data()
+    data['changes_made']['age_group'] = new_age
+    await state.update_data(changes_made=data['changes_made'])
+    
+    await state.set_state(ProfileEditStates.select_field)
+    
+    age_display = new_age or "Не указана"
+    success_text = f"""✅ **Возрастная группа изменена**
+
+🎂 **Новая группа:** {age_display}
+
+Выберите следующее поле для изменения или сохраните изменения:"""
+    
+    await callback.message.edit_text(
+        success_text,
+        reply_markup=profile_edit_fields_kb(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "edit_field_interests", ProfileEditStates.select_field)
+@handle_errors
+async def edit_field_interests(callback: CallbackQuery, state: FSMContext):
+    """Start editing interests"""
+    data = await state.get_data()
+    
+    # Parse current interests
+    try:
+        import json
+        current_interests = json.loads(data.get('original_interests', '[]')) if data.get('original_interests') else []
+    except:
+        current_interests = []
+    
+    current_text = ", ".join(current_interests) if current_interests else "Не указаны"
+    
+    await state.set_state(ProfileEditStates.waiting_for_interests)
+    
+    interests_text = f"""💫 **Изменение интересов**
+
+🎯 **Текущие интересы:** {current_text}
+
+✏️ Введите новые интересы через запятую:
+
+📝 **Примеры:** музыка, спорт, путешествия, книги, готовка
+
+💡 *Интересы помогают создавать более точные анализы*"""
+    
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit")
+    )
+    
+    await callback.message.edit_text(
+        interests_text,
+        reply_markup=builder.as_markup(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.message(ProfileEditStates.waiting_for_interests)
+@handle_errors
+async def process_new_interests(message: Message, state: FSMContext):
+    """Process new interests input"""
+    import json
+    
+    interests_text = message.text.strip()
+    
+    if not interests_text:
+        new_interests = []
+    else:
+        # Parse interests from comma-separated text
+        new_interests = [interest.strip() for interest in interests_text.split(',')]
+        new_interests = [interest for interest in new_interests if interest]  # Remove empty
+        
+        if len(new_interests) > 10:
+            await message.answer(
+                "❌ Максимум 10 интересов. Попробуйте ещё раз:",
+                parse_mode="Markdown"
+            )
+            return
+    
+    # Convert to JSON for storage
+    interests_json = json.dumps(new_interests, ensure_ascii=False)
+    
+    # Update state data
+    data = await state.get_data()
+    data['changes_made']['interests'] = interests_json
+    await state.update_data(changes_made=data['changes_made'])
+    
+    await state.set_state(ProfileEditStates.select_field)
+    
+    interests_display = ", ".join(new_interests) if new_interests else "Не указаны"
+    success_text = f"""✅ **Интересы изменены**
+
+💫 **Новые интересы:** {interests_display}
+
+Выберите следующее поле для изменения или сохраните изменения:"""
+    
+    await message.answer(
+        success_text,
+        reply_markup=profile_edit_fields_kb(),
+        parse_mode="Markdown"
+    )
+
+
+@router.callback_query(F.data == "edit_field_goals", ProfileEditStates.select_field)
+@handle_errors
+async def edit_field_goals(callback: CallbackQuery, state: FSMContext):
+    """Start editing goals"""
+    data = await state.get_data()
+    
+    # Parse current goals
+    try:
+        import json
+        current_goals = json.loads(data.get('original_goals', '[]')) if data.get('original_goals') else []
+    except:
+        current_goals = []
+    
+    current_text = ", ".join(current_goals) if current_goals else "Не указаны"
+    
+    await state.set_state(ProfileEditStates.waiting_for_goals)
+    
+    goals_text = f"""🎯 **Изменение целей**
+
+🎲 **Текущие цели:** {current_text}
+
+✏️ Введите новые цели через запятую:
+
+📝 **Примеры:** улучшить отношения, понять себя, развить эмпатию
+
+💡 *Цели помогают персонализировать рекомендации*"""
+    
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit")
+    )
+    
+    await callback.message.edit_text(
+        goals_text,
+        reply_markup=builder.as_markup(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.message(ProfileEditStates.waiting_for_goals)
+@handle_errors
+async def process_new_goals(message: Message, state: FSMContext):
+    """Process new goals input"""
+    import json
+    
+    goals_text = message.text.strip()
+    
+    if not goals_text:
+        new_goals = []
+    else:
+        # Parse goals from comma-separated text
+        new_goals = [goal.strip() for goal in goals_text.split(',')]
+        new_goals = [goal for goal in new_goals if goal]  # Remove empty
+        
+        if len(new_goals) > 10:
+            await message.answer(
+                "❌ Максимум 10 целей. Попробуйте ещё раз:",
+                parse_mode="Markdown"
+            )
+            return
+    
+    # Convert to JSON for storage
+    goals_json = json.dumps(new_goals, ensure_ascii=False)
+    
+    # Update state data
+    data = await state.get_data()
+    data['changes_made']['goals'] = goals_json
+    await state.update_data(changes_made=data['changes_made'])
+    
+    await state.set_state(ProfileEditStates.select_field)
+    
+    goals_display = ", ".join(new_goals) if new_goals else "Не указаны"
+    success_text = f"""✅ **Цели изменены**
+
+🎯 **Новые цели:** {goals_display}
+
+Выберите следующее поле для изменения или сохраните изменения:"""
+    
+    await message.answer(
+        success_text,
+        reply_markup=profile_edit_fields_kb(),
+        parse_mode="Markdown"
+    )
+
+
+@router.callback_query(F.data == "edit_field_bio", ProfileEditStates.select_field)
+@handle_errors
+async def edit_field_bio(callback: CallbackQuery, state: FSMContext):
+    """Start editing bio"""
+    data = await state.get_data()
+    current_bio = data.get('original_bio', 'Не указано')
+    
+    await state.set_state(ProfileEditStates.waiting_for_bio)
+    
+    bio_text = f"""📋 **Изменение описания "О себе"**
+
+📝 **Текущее описание:** {current_bio}
+
+✏️ Введите новое описание (до 500 символов):
+
+💡 *Опишите себя, свой характер, особенности*"""
+    
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit")
+    )
+    
+    await callback.message.edit_text(
+        bio_text,
+        reply_markup=builder.as_markup(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.message(ProfileEditStates.waiting_for_bio)
+@handle_errors
+async def process_new_bio(message: Message, state: FSMContext):
+    """Process new bio input"""
+    new_bio = message.text.strip()
+    
+    # Validate bio length
+    if len(new_bio) > 500:
+        await message.answer(
+            "❌ Описание не должно превышать 500 символов. Попробуйте ещё раз:",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Update state data
+    data = await state.get_data()
+    data['changes_made']['bio'] = new_bio if new_bio else None
+    await state.update_data(changes_made=data['changes_made'])
+    
+    await state.set_state(ProfileEditStates.select_field)
+    
+    bio_display = new_bio if new_bio else "Не указано"
+    success_text = f"""✅ **Описание изменено**
+
+📋 **Новое описание:** {bio_display}
+
+Выберите следующее поле для изменения или сохраните изменения:"""
+    
+    await message.answer(
+        success_text,
+        reply_markup=profile_edit_fields_kb(),
+        parse_mode="Markdown"
+    )
+
+
+@router.callback_query(F.data == "confirm_profile_save")
+@handle_errors
+async def confirm_profile_save(callback: CallbackQuery, state: FSMContext):
+    """Show confirmation before saving changes"""
+    data = await state.get_data()
+    changes = data.get('changes_made', {})
+    
+    if not changes:
+        await callback.answer("❌ Нет изменений для сохранения", show_alert=True)
+        return
+    
+    await state.set_state(ProfileEditStates.confirming_changes)
+    
+    # Build changes summary
+    changes_text = "📝 **Подтверждение изменений**\n\n"
+    changes_text += "🔄 **Будут изменены:**\n\n"
+    
+    for field, value in changes.items():
+        if field == 'name':
+            changes_text += f"👤 **Имя:** {value}\n"
+        elif field == 'age_group':
+            changes_text += f"🎂 **Возрастная группа:** {value or 'Не указана'}\n"
+        elif field == 'interests':
+            try:
+                import json
+                interests_list = json.loads(value) if value else []
+                interests_display = ", ".join(interests_list) if interests_list else "Не указаны"
+                changes_text += f"💫 **Интересы:** {interests_display}\n"
+            except:
+                changes_text += f"💫 **Интересы:** Не указаны\n"
+        elif field == 'goals':
+            try:
+                import json
+                goals_list = json.loads(value) if value else []
+                goals_display = ", ".join(goals_list) if goals_list else "Не указаны"
+                changes_text += f"🎯 **Цели:** {goals_display}\n"
+            except:
+                changes_text += f"🎯 **Цели:** Не указаны\n"
+        elif field == 'bio':
+            changes_text += f"📋 **О себе:** {value or 'Не указано'}\n"
+    
+    changes_text += "\n⚠️ **Внимание:** Следующее редактирование будет доступно через 30 дней!\n\n"
+    changes_text += "Сохранить изменения?"
+    
+    await callback.message.edit_text(
+        changes_text,
+        reply_markup=confirm_profile_changes_kb(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "confirm_profile_save", ProfileEditStates.confirming_changes)
+@handle_errors
+async def save_profile_changes(callback: CallbackQuery, state: FSMContext):
+    """Save the profile changes to database"""
+    data = await state.get_data()
+    changes = data.get('changes_made', {})
+    user_id = data.get('user_id')
+    
+    if not changes or not user_id:
+        await callback.answer("❌ Ошибка при сохранении", show_alert=True)
+        await state.clear()
+        return
+    
+    async with get_session() as session:
+        user_service = UserService(session)
+        user = await user_service.get_user_by_id(user_id)
+        
+        if not user or not user.can_edit_profile:
+            await callback.answer("❌ Редактирование недоступно", show_alert=True)
+            await state.clear()
+            return
+        
+        try:
+            # Apply changes
+            for field, value in changes.items():
+                if field == 'name':
+                    user.name = value
+                elif field == 'age_group':
+                    user.age_group = value
+                elif field == 'interests':
+                    user.interests = value
+                elif field == 'goals':
+                    user.goals = value
+                elif field == 'bio':
+                    user.bio = value
+            
+            # Update last edit time
+            user.update_profile_edit_time()
+            
+            await session.commit()
+            
+            await state.clear()
+            
+            success_text = """✅ **Профиль успешно обновлён!**
+
+🎉 Изменения сохранены
+📅 Следующее редактирование будет доступно через 30 дней
+
+Обновлённые данные будут учтены в следующих анализах."""
+            
+            await callback.message.edit_text(
+                success_text,
+                reply_markup=back_to_main_kb(),
+                parse_mode="Markdown"
+            )
+            await callback.answer("✅ Профиль обновлён!", show_alert=True)
+            
+        except Exception as e:
+            logger.error(f"Error saving profile changes: {e}")
+            await callback.answer("❌ Ошибка при сохранении", show_alert=True)
+
+
+@router.callback_query(F.data == "cancel_profile_edit")
+@handle_errors
+async def cancel_profile_edit(callback: CallbackQuery, state: FSMContext):
+    """Cancel profile editing"""
+    await state.clear()
+    
+    cancel_text = """❌ **Редактирование отменено**
+
+Изменения не сохранены.
+
+Вы можете вернуться к редактированию в любое время."""
+    
+    await callback.message.edit_text(
+        cancel_text,
+        reply_markup=back_to_main_kb(),
+        parse_mode="Markdown"
+    )
+    await callback.answer("❌ Редактирование отменено") 
