@@ -355,4 +355,11 @@ async def test_command(message: Message) -> None:
         logger.info("TEST: Response sent successfully")
     except Exception as e:
         logger.error(f"TEST: Error sending response: {e}")
-        logger.exception("TEST: Full error traceback:") 
+        logger.exception("TEST: Full error traceback:")
+
+
+@router.message(Command("ping"))
+async def ping_command(message: Message) -> None:
+    """Ultra simple ping command for basic connectivity test"""
+    logger.info(f"PING: Received from user {message.from_user.id}")
+    await message.answer("🏓 Pong! Бот откликается.") 
