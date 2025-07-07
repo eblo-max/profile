@@ -347,8 +347,12 @@ async def support_command(message: Message) -> None:
 async def test_command(message: Message) -> None:
     """Simple test command without decorators"""
     logger.info(f"TEST: Handler called for user {message.from_user.id}")
+    logger.info(f"TEST: Message text: {message.text}")
+    logger.info(f"TEST: Chat ID: {message.chat.id}")
     try:
+        logger.info("TEST: About to send response")
         await message.answer("✅ Тест успешен! Бот работает.")
         logger.info("TEST: Response sent successfully")
     except Exception as e:
-        logger.error(f"TEST: Error sending response: {e}") 
+        logger.error(f"TEST: Error sending response: {e}")
+        logger.exception("TEST: Full error traceback:") 

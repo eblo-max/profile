@@ -103,8 +103,8 @@ def handle_errors(
                     elif isinstance(event, CallbackQuery):
                         await event.answer(error_message, show_alert=True)
                 
-                # Don't return None, let the handler complete normally
-                return None
+                # For PsychoDetectiveException, we handled it gracefully, just continue
+                return
                 
             except Exception as e:
                 if log_errors:
@@ -118,7 +118,7 @@ def handle_errors(
                     elif isinstance(event, CallbackQuery):
                         await event.answer(ERROR_MESSAGES["unknown_error"], show_alert=True)
                 
-                # Don't return here - let the exception propagate or re-raise it
+                # Re-raise the exception
                 raise
         
         return wrapper
