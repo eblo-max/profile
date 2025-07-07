@@ -88,38 +88,51 @@ def handle_errors(
         @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
             try:
+                # Simply execute the handler function
                 return await func(*args, **kwargs)
                 
             except PsychoDetectiveException as e:
+                # Log business logic errors
                 if log_errors:
                     logger.warning(f"PsychoDetective error in {func.__name__}: {e}")
                 
+                # Send user-friendly error message if needed
                 if send_error_message:
-                    event = args[0]
+                    event = args[0] if args else None
                     error_message = ERROR_MESSAGES.get(e.code, e.message)
                     
-                    if isinstance(event, Message):
-                        await event.answer(error_message)
-                    elif isinstance(event, CallbackQuery):
-                        await event.answer(error_message, show_alert=True)
+                    try:
+                        if isinstance(event, Message):
+                            await event.answer(f"⚠️ {error_message}")
+                        elif isinstance(event, CallbackQuery):
+                            await event.answer(f"⚠️ {error_message}", show_alert=True)
+                    except Exception as send_error:
+                        logger.error(f"Failed to send error message: {send_error}")
                 
-                # For PsychoDetectiveException, we handled it gracefully, just continue
-                return
+                # For business logic errors, we don't re-raise - just handle gracefully
+                return None
                 
             except Exception as e:
+                # Log unexpected errors
                 if log_errors:
                     logger.error(f"Unexpected error in {func.__name__}: {e}")
+                    logger.exception("Full traceback:")
                 
+                # Send generic error message to user
                 if send_error_message:
-                    event = args[0]
+                    event = args[0] if args else None
                     
-                    if isinstance(event, Message):
-                        await event.answer(ERROR_MESSAGES["unknown_error"])
-                    elif isinstance(event, CallbackQuery):
-                        await event.answer(ERROR_MESSAGES["unknown_error"], show_alert=True)
+                    try:
+                        if isinstance(event, Message):
+                            await event.answer("😔 Произошла ошибка. Попробуйте позже.")
+                        elif isinstance(event, CallbackQuery):
+                            await event.answer("😔 Произошла ошибка. Попробуйте позже.", show_alert=True)
+                    except Exception as send_error:
+                        logger.error(f"Failed to send error message: {send_error}")
                 
-                # Re-raise the exception
-                raise
+                # For unexpected errors, we also don't re-raise in production
+                # This ensures the bot stays responsive
+                return None
         
         return wrapper
     return decorator

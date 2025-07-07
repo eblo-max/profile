@@ -17,7 +17,7 @@ router = Router()
 
 
 @router.message(CommandStart())
-# @handle_errors  # Временно убираем для проверки
+@handle_errors()
 async def start_command(message: Message, state: FSMContext) -> None:
     """Handle /start command"""
     logger.info(f"START: Handler called for user {message.from_user.id}")
@@ -55,7 +55,7 @@ async def start_command(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("menu"))
 @router.callback_query(F.data == "main_menu")
-# @handle_errors  # Временно убираем для проверки
+@handle_errors()
 async def show_main_menu(message_or_query, state: FSMContext = None) -> None:
     """Show main menu"""
     
@@ -146,7 +146,7 @@ async def start_onboarding(message: Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data == "confirm_onboarding_start")
-@handle_errors
+@handle_errors()
 async def start_profile_setup(callback: CallbackQuery, state: FSMContext) -> None:
     """Start profile setup during onboarding"""
     from app.bot.states import UserProfileStates
@@ -169,7 +169,7 @@ async def start_profile_setup(callback: CallbackQuery, state: FSMContext) -> Non
 
 
 @router.message(F.text, UserProfileStates.waiting_for_name)
-@handle_errors
+@handle_errors()
 async def process_user_name(message: Message, state: FSMContext) -> None:
     """Process user name during setup"""
     name = message.text.strip()
@@ -193,7 +193,7 @@ async def process_user_name(message: Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith("gender_"), UserProfileStates.waiting_for_gender)
-@handle_errors
+@handle_errors()
 async def process_user_gender(callback: CallbackQuery, state: FSMContext) -> None:
     """Process user gender selection"""
     gender_data = callback.data.split("_")[1]
@@ -216,7 +216,7 @@ async def process_user_gender(callback: CallbackQuery, state: FSMContext) -> Non
 
 
 @router.callback_query(F.data.startswith("age_"), UserProfileStates.waiting_for_age)
-@handle_errors
+@handle_errors()
 async def process_user_age(callback: CallbackQuery, state: FSMContext) -> None:
     """Process user age group selection"""
     age_data = callback.data.split("_", 1)[1]
@@ -256,7 +256,7 @@ async def complete_profile_setup(callback: CallbackQuery, state: FSMContext) -> 
 
 
 @router.callback_query(F.data == "cancel_onboarding")
-@handle_errors
+@handle_errors()
 async def cancel_onboarding(callback: CallbackQuery, state: FSMContext) -> None:
     """Cancel onboarding and go to main menu"""
     await state.clear()
@@ -264,7 +264,7 @@ async def cancel_onboarding(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.message(Command("help"))
-# @handle_errors  # Временно убираем для проверки
+@handle_errors()
 async def help_command(message: Message) -> None:
     """Show help information"""
     help_text = """
@@ -314,7 +314,7 @@ async def help_command(message: Message) -> None:
 
 
 @router.message(Command("support"))
-@handle_errors
+@handle_errors()
 async def support_command(message: Message) -> None:
     """Show support information"""
     support_text = """
