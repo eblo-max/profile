@@ -1214,12 +1214,18 @@ async def confirm_profile_save(callback: CallbackQuery, state: FSMContext):
     changes_text += "\n⚠️ **Внимание:** Следующее редактирование будет доступно через 30 дней!\n\n"
     changes_text += "Сохранить изменения?"
     
-    await callback.message.edit_text(
-        changes_text,
-        reply_markup=confirm_profile_changes_kb(),
-        parse_mode="Markdown"
-    )
-    await callback.answer()
+    # Only edit if the content differs from current message
+    current_text = callback.message.text
+    if current_text != changes_text:
+        await callback.message.edit_text(
+            changes_text,
+            reply_markup=confirm_profile_changes_kb(),
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+    else:
+        # If content is the same, just answer callback
+        await callback.answer("Подтвердите сохранение")
 
 
 @router.callback_query(F.data == "confirm_profile_save", ProfileEditStates.confirming_changes)
@@ -1272,6 +1278,7 @@ async def save_profile_changes(callback: CallbackQuery, state: FSMContext):
 
 Обновлённые данные будут учтены в следующих анализах."""
             
+            # Always edit to success message since it's different content
             await callback.message.edit_text(
                 success_text,
                 reply_markup=back_to_main_kb(),
