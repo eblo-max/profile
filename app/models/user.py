@@ -60,6 +60,9 @@ class User(BaseModel):
     notifications_enabled = Column(Boolean, default=True)
     daily_tips_enabled = Column(Boolean, default=True)
     analysis_reminders_enabled = Column(Boolean, default=True)
+    weekly_stats_enabled = Column(Boolean, default=False)
+    notification_time = Column(String(5), default="09:00")  # HH:MM format
+    timezone = Column(String(50), default="Europe/Moscow")
     
     # Additional data
     referral_code = Column(String(50), nullable=True, unique=True)

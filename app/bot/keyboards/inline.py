@@ -399,4 +399,150 @@ def pagination_kb(current_page: int, total_pages: int, prefix: str) -> InlineKey
     if buttons:
         builder.row(*buttons)
     
+    return builder.as_markup()
+
+
+def settings_menu_kb() -> InlineKeyboardMarkup:
+    """Settings menu keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(
+        InlineKeyboardButton(text="🔔 Уведомления", callback_data="settings_notifications"),
+        InlineKeyboardButton(text="⏰ Время уведомлений", callback_data="settings_time")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🌍 Часовой пояс", callback_data="settings_timezone"),
+        InlineKeyboardButton(text="📊 Еженедельная статистика", callback_data="settings_weekly_stats")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🗑️ Очистить данные", callback_data="settings_clear_data"),
+        InlineKeyboardButton(text="📤 Экспорт данных", callback_data="settings_export_data")
+    )
+    builder.row(
+        InlineKeyboardButton(text="👤 Профиль", callback_data="profile_menu"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def notification_settings_detailed_kb(user) -> InlineKeyboardMarkup:
+    """Detailed notification settings keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    # Daily tips
+    daily_status = "✅" if user.daily_tips_enabled else "❌"
+    builder.row(
+        InlineKeyboardButton(
+            text=f"{daily_status} Ежедневные советы", 
+            callback_data="toggle_daily_tips"
+        )
+    )
+    
+    # Analysis reminders  
+    reminders_status = "✅" if user.analysis_reminders_enabled else "❌"
+    builder.row(
+        InlineKeyboardButton(
+            text=f"{reminders_status} Напоминания об анализах", 
+            callback_data="toggle_analysis_reminders"
+        )
+    )
+    
+    # Weekly stats
+    weekly_status = "✅" if user.weekly_stats_enabled else "❌"
+    builder.row(
+        InlineKeyboardButton(
+            text=f"{weekly_status} Еженедельная статистика", 
+            callback_data="toggle_weekly_stats"
+        )
+    )
+    
+    # All notifications toggle
+    all_status = "✅" if user.notifications_enabled else "❌"
+    builder.row(
+        InlineKeyboardButton(
+            text=f"{all_status} Все уведомления", 
+            callback_data="toggle_all_notifications"
+        )
+    )
+    
+    builder.row(
+        InlineKeyboardButton(text="◀️ Назад", callback_data="settings_menu"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def notification_time_kb(current_time: str = "09:00") -> InlineKeyboardMarkup:
+    """Notification time selection keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    times = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", 
+             "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
+             "19:00", "20:00", "21:00", "22:00"]
+    
+    # Show times in rows of 4
+    for i in range(0, len(times), 4):
+        row_times = times[i:i+4]
+        buttons = []
+        for time in row_times:
+            emoji = "🔥" if time == current_time else "⏰"
+            buttons.append(
+                InlineKeyboardButton(
+                    text=f"{emoji} {time}", 
+                    callback_data=f"set_time_{time.replace(':', '_')}"
+                )
+            )
+        builder.row(*buttons)
+    
+    builder.row(
+        InlineKeyboardButton(text="◀️ Назад", callback_data="settings_menu"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def timezone_kb(current_timezone: str = "Europe/Moscow") -> InlineKeyboardMarkup:
+    """Timezone selection keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    timezones = [
+        ("🇷🇺 Москва (UTC+3)", "Europe/Moscow"),
+        ("🇷🇺 Екатеринбург (UTC+5)", "Asia/Yekaterinburg"),
+        ("🇷🇺 Новосибирск (UTC+7)", "Asia/Novosibirsk"),
+        ("🇷🇺 Владивосток (UTC+10)", "Asia/Vladivostok"),
+        ("🇺🇦 Киев (UTC+2)", "Europe/Kiev"),
+        ("🇰🇿 Алматы (UTC+6)", "Asia/Almaty"),
+        ("🇺🇸 Нью-Йорк (UTC-5)", "America/New_York"),
+        ("🇬🇧 Лондон (UTC+0)", "Europe/London"),
+    ]
+    
+    for name, tz in timezones:
+        emoji = "🔥" if tz == current_timezone else ""
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{emoji} {name}", 
+                callback_data=f"set_timezone_{tz.replace('/', '_')}"
+            )
+        )
+    
+    builder.row(
+        InlineKeyboardButton(text="◀️ Назад", callback_data="settings_menu"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def confirm_clear_data_kb() -> InlineKeyboardMarkup:
+    """Confirm data clearing keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(
+        InlineKeyboardButton(text="🗑️ Да, очистить", callback_data="confirm_clear_data"),
+        InlineKeyboardButton(text="❌ Отмена", callback_data="settings_menu")
+    )
+    
     return builder.as_markup() 
