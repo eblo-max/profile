@@ -2,7 +2,7 @@
 
 import asyncio
 from functools import wraps
-from typing import Callable, Any
+from typing import Callable, Any, Union
 
 from aiogram.types import Message, CallbackQuery
 from loguru import logger
@@ -73,20 +73,21 @@ def rate_limit(
     return decorator
 
 
-def handle_errors(
-    send_error_message: bool = True,
-    log_errors: bool = True
-) -> Callable:
+def handle_errors(func_or_send_error: Union[Callable, bool] = True, log_errors: bool = True) -> Callable:
     """
     Error handling decorator for bot handlers
+    Supports both @handle_errors and @handle_errors() syntax
     
     Args:
-        send_error_message: Whether to send error message to user
+        func_or_send_error: Function (if used as @handle_errors) or send_error_message flag
         log_errors: Whether to log errors
     """
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
+            # Determine actual settings
+            send_error_message = func_or_send_error if isinstance(func_or_send_error, bool) else True
+            
             try:
                 # Simply execute the handler function
                 return await func(*args, **kwargs)
@@ -135,7 +136,15 @@ def handle_errors(
                 return None
         
         return wrapper
-    return decorator
+    
+    # Support both @handle_errors and @handle_errors() syntax
+    if callable(func_or_send_error):
+        # Used as @handle_errors (without parentheses)
+        func = func_or_send_error
+        return decorator(func)
+    else:
+        # Used as @handle_errors() (with parentheses)
+        return decorator
 
 
 def typing_action(action: str = "typing") -> Callable:
