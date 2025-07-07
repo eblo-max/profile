@@ -17,14 +17,19 @@ router = Router()
 
 
 @router.message(CommandStart())
-@handle_errors
+# @handle_errors  # Временно убираем для проверки
 async def start_command(message: Message, state: FSMContext) -> None:
     """Handle /start command"""
     logger.info(f"START: Handler called for user {message.from_user.id}")
+    logger.info(f"START: Message text: {message.text}")
+    logger.info(f"START: Chat ID: {message.chat.id}")
     try:
+        logger.info("START: Creating session")
         async with get_session() as session:
+            logger.info("START: Session created, getting user service")
             user_service = UserService(session)
             
+            logger.info("START: Getting or creating user")
             # Get or create user
             user = await user_service.get_or_create_user(
                 telegram_id=message.from_user.id,
@@ -34,9 +39,10 @@ async def start_command(message: Message, state: FSMContext) -> None:
             )
             logger.info(f"START: User created/found: {user.id}")
             
+            logger.info("START: Starting onboarding")
             # Always show onboarding for /start command
             await start_onboarding(message, state)
-            logger.info("START: Onboarding called")
+            logger.info("START: Onboarding called successfully")
                 
     except Exception as e:
         logger.error(f"Error in start command: {e}")
@@ -49,7 +55,7 @@ async def start_command(message: Message, state: FSMContext) -> None:
 
 @router.message(Command("menu"))
 @router.callback_query(F.data == "main_menu")
-@handle_errors
+# @handle_errors  # Временно убираем для проверки
 async def show_main_menu(message_or_query, state: FSMContext = None) -> None:
     """Show main menu"""
     
@@ -258,7 +264,7 @@ async def cancel_onboarding(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.message(Command("help"))
-@handle_errors
+# @handle_errors  # Временно убираем для проверки
 async def help_command(message: Message) -> None:
     """Show help information"""
     help_text = """
