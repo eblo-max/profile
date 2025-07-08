@@ -579,7 +579,7 @@ def confirm_profile_changes_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     builder.row(
-        InlineKeyboardButton(text="✅ Сохранить изменения", callback_data="confirm_profile_save"),
+        InlineKeyboardButton(text="✅ Сохранить изменения", callback_data="confirm_profile_changes"),
         InlineKeyboardButton(text="❌ Отменить", callback_data="cancel_profile_edit")
     )
     

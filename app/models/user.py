@@ -152,7 +152,7 @@ class User(BaseModel):
     
     def update_activity(self) -> None:
         """Update last activity timestamp"""
-        self.last_activity = datetime.utcnow()
+        self.last_activity = datetime.utcnow() 
     
     @property
     def can_edit_profile(self) -> bool:

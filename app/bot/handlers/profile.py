@@ -110,7 +110,7 @@ async def edit_profile(callback: CallbackQuery) -> None:
 
 💎 **Подписка:** {user.subscription_type}
 📊 **Анализов выполнено:** {user.total_analyses}"""
-        
+
         await callback.message.edit_text(
             profile_text,
             reply_markup=profile_edit_navigation_kb(can_edit, days_until_edit),
@@ -183,12 +183,12 @@ async def settings_menu(callback: CallbackQuery):
 
 Выберите что хотите настроить:"""
         
-        await callback.message.edit_text(
+    await callback.message.edit_text(
             settings_text,
             reply_markup=settings_menu_kb(),
-            parse_mode="Markdown"
-        )
-        await callback.answer()
+        parse_mode="Markdown"
+    )
+    await callback.answer()
 
 @router.callback_query(F.data == "subscription_menu")
 @handle_errors
@@ -291,7 +291,7 @@ async def my_subscription(callback: CallbackQuery):
 @router.message(Command("myprofile"))
 async def my_profile(message: Message):
     """Handle user profile command"""
-    await message.answer("👤 Функция управления профилем в разработке...")
+    await message.answer("👤 Функция управления профилем в разработке...") 
 
 
 # === Settings Handlers ===
@@ -1223,15 +1223,16 @@ async def confirm_profile_save(callback: CallbackQuery, state: FSMContext):
         )
         await callback.answer()
     except Exception as e:
-        # If message content is the same, just answer callback
+        # If message content is the same, just answer callback but still set state
         if "message is not modified" in str(e):
             await callback.answer("Подтвердите сохранение")
+            # State is already set above, so second handler will work
         else:
             # Re-raise other errors
             raise e
 
 
-@router.callback_query(F.data == "confirm_profile_save", ProfileEditStates.confirming_changes)
+@router.callback_query(F.data == "confirm_profile_changes", ProfileEditStates.confirming_changes)
 @handle_errors
 async def save_profile_changes(callback: CallbackQuery, state: FSMContext):
     """Save the profile changes to database"""
