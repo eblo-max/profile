@@ -161,8 +161,16 @@ class User(BaseModel):
             return True
         
         # Calculate time difference
-        now = datetime.utcnow()
-        time_diff = now - self.last_profile_edit
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        
+        # Ensure last_profile_edit is timezone-aware
+        last_edit = self.last_profile_edit
+        if last_edit.tzinfo is None:
+            # If naive datetime, assume it's UTC
+            last_edit = last_edit.replace(tzinfo=timezone.utc)
+        
+        time_diff = now - last_edit
         
         # Allow editing if more than 30 days have passed
         return time_diff.days >= 30
@@ -173,12 +181,21 @@ class User(BaseModel):
         if not self.last_profile_edit:
             return 0
         
-        now = datetime.utcnow()
-        time_diff = now - self.last_profile_edit
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        
+        # Ensure last_profile_edit is timezone-aware
+        last_edit = self.last_profile_edit
+        if last_edit.tzinfo is None:
+            # If naive datetime, assume it's UTC
+            last_edit = last_edit.replace(tzinfo=timezone.utc)
+        
+        time_diff = now - last_edit
         days_passed = time_diff.days
         
         return max(0, 30 - days_passed)
     
     def update_profile_edit_time(self) -> None:
         """Update last profile edit timestamp"""
-        self.last_profile_edit = datetime.utcnow() 
+        from datetime import timezone
+        self.last_profile_edit = datetime.now(timezone.utc) 
