@@ -17,21 +17,30 @@ class HTMLPDFService:
         self.playwright_checked = False
         self.fallback_service = None  # Initialize only if needed
         
-        logger.info("HTMLPDFService initialized - will check Playwright availability on first use")
+        logger.info("🚀 HTMLPDFService initialized - will check Playwright availability on first use")
+    
+    def reset_playwright_check(self):
+        """Force re-check of Playwright availability"""
+        logger.info("🔄 Resetting Playwright availability check")
+        self.playwright_checked = False
+        self.playwright_available = None
     
     async def _ensure_playwright_available(self) -> bool:
         """Ensure Playwright browser is available using async API"""
+        logger.info(f"🔍 _ensure_playwright_available called: checked={self.playwright_checked}, available={self.playwright_available}")
+        
         if self.playwright_checked:
-            logger.debug(f"Playwright already checked, available: {self.playwright_available}")
+            logger.info(f"⚡ Playwright already checked, returning cached result: {self.playwright_available}")
             return self.playwright_available
         
         try:
-            logger.debug("Checking Playwright availability...")
+            logger.info("🔍 Checking Playwright availability...")
             from playwright.async_api import async_playwright
             
             # Try to launch browser to verify availability
             async with async_playwright() as p:
                 try:
+                    logger.info("🚀 Attempting to launch Chromium browser...")
                     browser = await p.chromium.launch(headless=True)
                     await browser.close()
                     logger.info("✅ Playwright Chromium is available and working")
@@ -39,13 +48,13 @@ class HTMLPDFService:
                     self.playwright_checked = True
                     return True
                 except Exception as browser_error:
-                    logger.warning(f"Playwright browser launch failed: {browser_error}")
+                    logger.warning(f"❌ Playwright browser launch failed: {browser_error}")
                     # Try to install browser automatically
-                    logger.info("Attempting to install Playwright browser...")
+                    logger.info("🔧 Attempting to install Playwright browser...")
                     success = await self._install_playwright_browser_async()
                     
                     if success:
-                        logger.info("Playwright installation successful, rechecking availability...")
+                        logger.info("✅ Playwright installation successful, rechecking availability...")
                         # Recheck availability after installation
                         try:
                             async with async_playwright() as p_new:
@@ -56,18 +65,18 @@ class HTMLPDFService:
                                 self.playwright_checked = True
                                 return True
                         except Exception as verify_error:
-                            logger.error(f"Playwright verification failed after installation: {verify_error}")
+                            logger.error(f"❌ Playwright verification failed after installation: {verify_error}")
                             self.playwright_available = False
                             self.playwright_checked = True
                             return False
                     else:
-                        logger.error("Playwright installation failed")
+                        logger.error("❌ Playwright installation failed")
                         self.playwright_available = False
                         self.playwright_checked = True
                         return False
                         
         except Exception as e:
-            logger.error(f"Playwright availability check failed: {e}")
+            logger.error(f"💥 Playwright availability check failed: {e}")
             self.playwright_available = False
             self.playwright_checked = True
             return False
@@ -137,7 +146,10 @@ class HTMLPDFService:
             logger.debug(f"Analysis data keys: {list(analysis_data.keys())}")
             
             # Check Playwright availability first using async method
+            logger.info("🔄 About to check Playwright availability...")
             playwright_available = await self._ensure_playwright_available()
+            logger.info(f"🎯 Playwright availability result: {playwright_available}")
+            
             if not playwright_available:
                 logger.warning("Playwright not available, initializing ReportLab fallback service")
                 # Initialize fallback service if not already done
