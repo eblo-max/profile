@@ -323,22 +323,51 @@ def create_progress_bar(current: int, total: int, length: int = 10) -> str:
     return f"{bar} {percentage}%"
 
 
-def safe_json_loads(json_str: str, default: Any = None) -> Any:
+def safe_json_loads(json_string: str, default_value: Any = None) -> Any:
     """
-    Safely parse JSON string
-    
-    Args:
-        json_str: JSON string to parse
-        default: Default value if parsing fails
-        
-    Returns:
-        Parsed JSON or default value
+    Safely parse JSON string, return default value if parsing fails
+    Handles incomplete JSON responses from AI
     """
     try:
-        return json.loads(json_str)
-    except (json.JSONDecodeError, TypeError):
-        logger.warning(f"Failed to parse JSON: {json_str[:100]}...")
-        return default
+        return json.loads(json_string)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse JSON: {json_string[:100]}...")
+        logger.warning(f"JSON Error: {e}")
+        
+        # Try to fix common JSON issues
+        try:
+            # Clean control characters
+            import re
+            cleaned_json = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_string)
+            
+            # Remove incomplete trailing parts
+            cleaned_json = cleaned_json.strip()
+            
+            # Find last complete object
+            brace_count = 0
+            last_valid_pos = -1
+            
+            for i, char in enumerate(cleaned_json):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        last_valid_pos = i + 1
+                        break
+            
+            if last_valid_pos > 0:
+                fixed_json = cleaned_json[:last_valid_pos]
+                logger.info(f"Attempting to parse fixed JSON: {fixed_json[:100]}...")
+                return json.loads(fixed_json)
+            else:
+                # Try parsing cleaned JSON as is
+                return json.loads(cleaned_json)
+                
+        except Exception as fix_error:
+            logger.warning(f"Failed to fix JSON: {fix_error}")
+        
+        return default_value
 
 
 def format_subscription_status(subscription_type: str, expires_at: Optional[datetime] = None) -> str:

@@ -22,6 +22,8 @@ from app.prompts.analysis_prompts import (
     get_profiler_prompt,
     get_compatibility_prompt
 )
+from app.utils.enums import UrgencyLevel
+import traceback
 
 
 class AIService:
@@ -111,30 +113,45 @@ class AIService:
     
     async def profile_partner(
         self,
-        answers: Dict[str, int],
+        answers: List[Dict[str, Any]],  # Changed from Dict[str, int] to List[Dict]
         user_id: int,
         partner_name: str = "партнер",
         partner_description: str = "",
         use_cache: bool = True
     ) -> Dict[str, Any]:
         """
-        Create partner psychological profile using FULL questionnaire (28 questions, 6 blocks)
+        Analyze partner profile based on questionnaire answers
         
         Args:
-            answers: Full questionnaire answers (question_id -> answer_index) 
+            answers: List of answer dictionaries with question_id, question, answer
             user_id: User ID
             partner_name: Partner's name
-            partner_description: Partner description
+            partner_description: Additional context
             use_cache: Whether to use cache
             
         Returns:
-            Comprehensive profile analysis with safety assessment
+            Partner profile analysis
         """
         start_time = time.time()
         
+        # Convert answers to expected format if needed
+        if isinstance(answers, list):
+            # Convert from bot format to analysis format
+            answers_text = []
+            for answer in answers:
+                question_text = answer.get('question', f"Question {answer.get('question_id', 'N/A')}")
+                answer_text = answer.get('answer', 'No answer')
+                answers_text.append(f"Q: {question_text}\nA: {answer_text}")
+            
+            # Create combined text for analysis
+            combined_answers = "\n\n".join(answers_text)
+        else:
+            # Legacy format support
+            combined_answers = str(answers)
+        
         # Create cache key
-        answers_hash = hash(json.dumps(answers, sort_keys=True) + partner_name + partner_description)
-        cache_key = create_cache_key("partner_profile_full", user_id, answers_hash)
+        answers_hash = hash(combined_answers + partner_name)
+        cache_key = create_cache_key("profile", user_id, answers_hash)
         
         # Try cache
         if use_cache:
@@ -147,21 +164,18 @@ class AIService:
         await self._check_rate_limit(user_id)
         
         try:
-            # Import full profiler functions
-            from app.prompts.profiler_full_questions import calculate_weighted_scores, get_safety_alerts
-            from app.prompts.profiler_full_prompts import get_profiler_full_analysis_prompt
+            # Format answers for AI analysis
+            answers_text = ""
+            for i, answer in enumerate(answers, 1):
+                question = answer.get('question', f'Вопрос {i}')
+                answer_text = answer.get('answer', 'Нет ответа')
+                answers_text += f"{i}. {question}\n   Ответ: {answer_text}\n\n"
             
-            # Calculate scores and safety alerts
-            scores = calculate_weighted_scores(answers)
-            safety_alerts = get_safety_alerts(answers)
-            
-            # Prepare prompt for AI analysis
-            user_prompt = get_profiler_full_analysis_prompt(
+            # Prepare prompt with formatted answers
+            user_prompt = get_profiler_prompt(
+                answers_text=answers_text,
                 partner_name=partner_name,
-                partner_description=partner_description,
-                answers=answers,
-                block_scores=scores["block_scores"],
-                overall_risk_score=scores["overall_risk_score"]
+                partner_description=partner_description
             )
             
             # Get analysis from AI
@@ -169,44 +183,41 @@ class AIService:
                 result = await self._get_ai_response(
                     system_prompt=PROFILER_SYSTEM_PROMPT,
                     user_prompt=user_prompt,
-                    response_format="text",  # Full version uses text format for rich content
-                    max_tokens=8000  # Increased for comprehensive analysis
+                    response_format="json",
+                    max_tokens=6000  # Increased for detailed analysis
                 )
             
-            # Create comprehensive profile
-            profile = {
-                "analysis": result,
-                "block_scores": scores["block_scores"],
-                "overall_risk_score": scores["overall_risk_score"],
-                "urgency_level": scores["urgency_level"].value,
-                "safety_alerts": safety_alerts,
-                "partner_name": partner_name,
-                "partner_description": partner_description,
-                "processing_time": time.time() - start_time,
-                "ai_model_used": self._get_last_model_used(),
-                "total_questions": 28,
-                "questionnaire_version": "full_v1.0"
-            }
+            # Parse and validate response
+            profile = self._parse_profile_response(result)
+            profile = self._validate_profiler_response(profile)
+            
+            # Add metadata
+            profile["processing_time"] = time.time() - start_time
+            profile["ai_model_used"] = self._get_last_model_used()
+            profile["partner_name"] = partner_name
+            profile["total_questions"] = len(answers)
             
             # Cache result
             if use_cache:
                 await redis_client.set(
                     cache_key,
                     profile,
-                    expire=3600  # 1 hour
+                    expire=7200  # 2 hours
                 )
             
-            logger.info(f"Full partner profile completed for user {user_id} in {profile['processing_time']:.2f}s, risk: {profile['urgency_level']}")
+            logger.info(f"Partner profiling completed for user {user_id} in {profile['processing_time']:.2f}s")
             return profile
             
         except Exception as e:
             logger.error(f"Partner profiling failed for user {user_id}: {e}")
+            logger.error(f"Error details: {traceback.format_exc()}")
             # Return fallback analysis with calculated scores
             try:
                 from app.prompts.profiler_full_questions import calculate_weighted_scores
                 scores = calculate_weighted_scores(answers)
                 return self._create_full_fallback_analysis(answers, scores, partner_name)
-            except:
+            except Exception as fallback_error:
+                logger.error(f"Fallback analysis also failed: {fallback_error}")
                 return self._create_basic_fallback_analysis(answers, partner_name)
     
     async def analyze_compatibility(
@@ -417,33 +428,80 @@ class AIService:
             raise AIServiceError("Invalid response format from AI")
     
     def _parse_profile_response(self, response: str) -> Dict[str, Any]:
-        """Parse partner profile response"""
+        """Parse partner profile response from AI"""
         try:
             data = safe_json_loads(response, {})
-            manipulation_risk = float(data.get("manipulation_risk", 5.0))
-            if not (0 <= manipulation_risk <= 10):
-                raise AIServiceError("manipulation_risk вне диапазона 0-10")
-            overall_compatibility = data.get("overall_compatibility")
-            if overall_compatibility is not None:
-                overall_compatibility = float(overall_compatibility)
-                if not (0 <= overall_compatibility <= 1):
-                    raise AIServiceError("overall_compatibility вне диапазона 0-1")
+            
+            # Extract main fields with fallbacks
+            psychological_profile = data.get("psychological_profile", "")
+            if not psychological_profile:
+                # Try alternative keys
+                psychological_profile = data.get("analysis", data.get("detailed_analysis", ""))
+            
+            red_flags = data.get("red_flags", [])
+            if not red_flags:
+                red_flags = data.get("warning_signs", [])
+            
+            survival_guide = data.get("survival_guide", [])
+            if not survival_guide:
+                survival_guide = data.get("recommendations", [])
+            
+            # Extract risk assessment
+            risk_score = float(data.get("manipulation_risk", data.get("overall_risk_score", 5.0)))
+            if risk_score > 10:
+                risk_score = risk_score / 10  # Normalize if needed
+            risk_score = min(10, max(0, risk_score)) * 10  # Scale to 0-100
+            
+            urgency = data.get("urgency_level", "medium").upper()
+            
+            # Extract Dark Triad scores
+            dark_triad = data.get("dark_triad", {})
+            if not dark_triad:
+                # Calculate based on risk score
+                dark_triad = {
+                    "narcissism": min(10, risk_score / 10),
+                    "machiavellianism": min(10, (risk_score - 5) / 10),
+                    "psychopathy": min(10, (risk_score - 10) / 10)
+                }
+            
+            # Extract block scores
+            block_scores = data.get("block_scores", {})
+            if not block_scores:
+                # Generate based on risk score
+                block_scores = {
+                    "narcissism": min(10, risk_score / 12),
+                    "control": min(10, risk_score / 10),
+                    "gaslighting": min(10, (risk_score - 5) / 12),
+                    "emotion": min(10, risk_score / 15),
+                    "intimacy": min(10, (risk_score - 10) / 12),
+                    "social": min(10, risk_score / 11)
+                }
+            
             return {
+                "psychological_profile": psychological_profile,
+                "red_flags": red_flags if isinstance(red_flags, list) else [red_flags],
+                "survival_guide": survival_guide if isinstance(survival_guide, list) else [survival_guide],
+                "dark_triad": dark_triad,
+                "block_scores": block_scores,
+                "overall_risk_score": risk_score,
+                "urgency_level": urgency,
+                "safety_alerts": data.get("safety_alerts", ["Рекомендуется консультация с психологом"]),
                 "personality_type": data.get("personality_type", ""),
-                "manipulation_risk": manipulation_risk,
-                "urgency_level": data.get("urgency_level", "medium"),
-                "red_flags": data.get("red_flags", []),
-                "positive_traits": data.get("positive_traits", []),
-                "warning_signs": data.get("warning_signs", []),
-                "psychological_profile": data.get("psychological_profile", ""),
-                "relationship_advice": data.get("relationship_advice", ""),
-                "communication_tips": data.get("communication_tips", ""),
+                "emotional_portrait": data.get("emotional_portrait", ""),
+                "relationship_dynamics": data.get("relationship_dynamics", ""),
+                "danger_assessment": data.get("danger_assessment", ""),
+                "motivations": data.get("motivations", ""),
+                "relationship_forecast": data.get("relationship_forecast", ""),
+                "exit_strategy": data.get("exit_strategy", ""),
                 "trust_indicators": data.get("trust_indicators", []),
-                "overall_compatibility": overall_compatibility,
+                "ai_available": True,
+                "fallback_used": False
             }
+            
         except Exception as e:
             logger.error(f"Failed to parse profile response: {e}")
-            raise AIServiceError("Invalid response format from AI")
+            logger.error(f"Response was: {response[:500]}...")
+            raise AIServiceError(f"Failed to parse AI response: {str(e)}")
     
     def _parse_compatibility_response(self, response: str) -> Dict[str, Any]:
         """Parse compatibility analysis response"""
@@ -609,35 +667,51 @@ class AIService:
             return "низкий"
     
     def _validate_profiler_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and sanitize profiler AI response"""
-        # Ensure required fields exist
-        required_fields = [
-            "overall_risk_score", "urgency_level", "block_analysis",
-            "psychological_profile", "immediate_recommendations"
-        ]
+        """Validate and clean profiler response"""
         
-        for field in required_fields:
+        # Required fields with defaults
+        required_fields = {
+            "psychological_profile": "Анализ недоступен",
+            "red_flags": [],
+            "survival_guide": [],
+            "overall_risk_score": 50.0,
+            "urgency_level": "MEDIUM",
+            "block_scores": {},
+            "dark_triad": {},
+            "safety_alerts": ["Рекомендуется консультация с психологом"]
+        }
+        
+        # Ensure all required fields exist
+        for field, default_value in required_fields.items():
             if field not in response:
-                logger.warning(f"Missing required field in AI response: {field}")
-                if field == "overall_risk_score":
-                    response[field] = 50.0
-                elif field == "urgency_level":
-                    response[field] = "MEDIUM"
-                elif field == "block_analysis":
-                    response[field] = {}
-                else:
-                    response[field] = []
+                response[field] = default_value
+                logger.warning(f"Missing field '{field}' in AI response, using default")
         
-        # Validate risk score range (0-100% for full version)
-        if not isinstance(response["overall_risk_score"], (int, float)):
+        # Validate and normalize risk score
+        try:
+            risk_score = float(response.get("overall_risk_score", 50.0))
+            response["overall_risk_score"] = max(0, min(100, risk_score))
+        except (ValueError, TypeError):
             response["overall_risk_score"] = 50.0
-        else:
-            response["overall_risk_score"] = max(0, min(100, float(response["overall_risk_score"])))
         
         # Validate urgency level
-        valid_urgency_levels = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-        if response["urgency_level"] not in valid_urgency_levels:
+        valid_urgency = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        if response.get("urgency_level", "").upper() not in valid_urgency:
             response["urgency_level"] = "MEDIUM"
+        
+        # Ensure lists are actually lists
+        list_fields = ["red_flags", "survival_guide", "safety_alerts", "trust_indicators"]
+        for field in list_fields:
+            if field in response and not isinstance(response[field], list):
+                response[field] = [response[field]] if response[field] else []
+        
+        # Validate block scores
+        if not isinstance(response.get("block_scores"), dict):
+            response["block_scores"] = {}
+        
+        # Validate dark triad
+        if not isinstance(response.get("dark_triad"), dict):
+            response["dark_triad"] = {}
         
         return response
     
@@ -740,27 +814,113 @@ class AIService:
             logger.error(f"Full fallback analysis failed: {e}")
             return self._create_basic_fallback_analysis(answers, partner_name)
 
-    def _create_basic_fallback_analysis(self, answers: Dict[str, int], partner_name: str) -> Dict[str, Any]:
-        """Create basic fallback when everything else fails"""
+    def _create_basic_fallback_analysis(self, answers: List[Dict[str, Any]], partner_name: str) -> Dict[str, Any]:
+        """Create basic fallback analysis when AI fails"""
+        
+        # Analyze answers for content
+        answer_texts = []
+        for answer in answers:
+            answer_text = answer.get('answer', '').lower()
+            answer_texts.append(answer_text)
+        
+        combined_text = ' '.join(answer_texts)
+        
+        # Determine risk level based on keywords
+        high_risk_keywords = ['всегда', 'постоянно', 'никогда', 'запрещает', 'контролирует', 'кричит', 'злится', 'бьет', 'угрожает', 'изолирует']
+        medium_risk_keywords = ['часто', 'иногда', 'может', 'бывает', 'не разрешает', 'ревнует', 'проверяет']
+        
+        high_risk_count = sum(1 for keyword in high_risk_keywords if keyword in combined_text)
+        medium_risk_count = sum(1 for keyword in medium_risk_keywords if keyword in combined_text)
+        
+        if high_risk_count >= 3:
+            risk_score = 85.0
+            urgency = "CRITICAL"
+        elif high_risk_count >= 1 or medium_risk_count >= 3:
+            risk_score = 70.0
+            urgency = "HIGH"
+        elif medium_risk_count >= 1:
+            risk_score = 55.0
+            urgency = "MEDIUM"
+        else:
+            risk_score = 30.0
+            urgency = "LOW"
+        
+        # Generate personalized psychological profile
+        profile_parts = []
+        
+        if 'контролирует' in combined_text or 'проверяет' in combined_text:
+            profile_parts.append(f"{partner_name} демонстрирует выраженные контролирующие тенденции. Он стремится управлять поведением партнера, ограничивая его автономию и свободу выбора.")
+        
+        if 'кричит' in combined_text or 'злится' in combined_text:
+            profile_parts.append("Наблюдается эмоциональная нестабильность с вспышками гнева. Это может указывать на проблемы с регуляцией эмоций и склонность к агрессивному поведению.")
+        
+        if 'запрещает' in combined_text or 'не разрешает' in combined_text:
+            profile_parts.append("Партнер пытается ограничить социальные контакты и личную свободу. Это классический признак изолирующего поведения, характерного для абьюзивных отношений.")
+        
+        if 'никогда' in combined_text and ('извиняется' in combined_text or 'признает' in combined_text):
+            profile_parts.append("Отсутствие способности к признанию ошибок и извинениям указывает на нарциссические черты личности и проблемы с эмпатией.")
+        
+        if not profile_parts:
+            profile_parts.append(f"На основе предоставленных ответов, {partner_name} демонстрирует некоторые проблемные паттерны поведения, которые требуют внимания и возможной коррекции.")
+        
+        psychological_profile = " ".join(profile_parts)
+        
+        # Generate red flags based on answers
+        red_flags = []
+        if 'контролирует' in combined_text:
+            red_flags.append("Систематический контроль поведения и действий партнера")
+        if 'проверяет телефон' in combined_text or 'проверяет сообщения' in combined_text:
+            red_flags.append("Нарушение приватности и личных границ")
+        if 'не разрешает' in combined_text or 'запрещает' in combined_text:
+            red_flags.append("Ограничение социальных контактов и изоляция от близких")
+        if 'кричит' in combined_text or 'злится' in combined_text:
+            red_flags.append("Эмоциональная агрессия и вспышки гнева")
+        if 'унижает' in combined_text or 'оскорбляет' in combined_text:
+            red_flags.append("Эмоциональное насилие и унижение достоинства")
+        
+        if not red_flags:
+            red_flags = ["Обнаружены признаки проблемного поведения, требующие внимания"]
+        
+        # Generate survival guide
+        survival_guide = []
+        if risk_score >= 70:
+            survival_guide.extend([
+                "Немедленно обратитесь к психологу или специалисту по семейным отношениям",
+                "Создайте план безопасности и определите людей, к которым можно обратиться за помощью",
+                "Восстановите связи с семьей и друзьями, которые могут оказать поддержку",
+                "Изучите техники установления границ и защиты от манипуляций"
+            ])
+        else:
+            survival_guide.extend([
+                "Обратитесь к семейному психологу для работы с парой",
+                "Изучите литературу о здоровых отношениях и коммуникации",
+                "Практикуйте открытое и честное общение с партнером",
+                "Установите четкие границы в отношениях"
+            ])
+        
         return {
-            "analysis": f"**ОШИБКА АНАЛИЗА ПРОФИЛЯ: {partner_name}**\n\nК сожалению, не удалось проанализировать ваши ответы из-за технических проблем. Пожалуйста, обратитесь к специалисту для профессиональной оценки ситуации.",
-            "block_scores": {},
-            "overall_risk_score": 50.0,
-            "urgency_level": "MEDIUM",
-            "safety_alerts": [],
-            "immediate_recommendations": [
-                "Обратитесь к специалисту для профессиональной оценки",
-                "Используйте контакты экстренной помощи при необходимости"
-            ],
+            "psychological_profile": psychological_profile,
+            "red_flags": red_flags,
+            "survival_guide": survival_guide,
+            "dark_triad": {
+                "narcissism": min(10, risk_score / 10),
+                "machiavellianism": min(10, (risk_score - 10) / 10),
+                "psychopathy": min(10, (risk_score - 20) / 10)
+            },
+            "block_scores": {
+                "narcissism": min(10, risk_score / 12),
+                "control": min(10, risk_score / 10),
+                "gaslighting": min(10, (risk_score - 5) / 12),
+                "emotion": min(10, risk_score / 15),
+                "intimacy": min(10, (risk_score - 10) / 12),
+                "social": min(10, risk_score / 11)
+            },
+            "overall_risk_score": risk_score,
+            "urgency_level": urgency,
+            "safety_alerts": ["Рекомендуется консультация с психологом"],
             "partner_name": partner_name,
-            "total_questions": len(answers),
-            "error": True,
-            "fallback_reason": "Критическая ошибка системы",
-            "emergency_contacts": [
-                "112 - Служба экстренного реагирования", 
-                "8-800-7000-600 - Национальная горячая линия"
-            ],
-            "created_at": time.time()
+            "ai_available": False,
+            "fallback_used": True
         }
 
 

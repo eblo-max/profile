@@ -1,35 +1,47 @@
-"""Main entry point for PsychoDetective bot application"""
+"""Main application entry point"""
 
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
-import uvicorn
+from loguru import logger
 
 from app.core.config import settings
-from app.core.database import init_db
+from app.core.database import init_database
 from app.core.redis import init_redis, close_redis
-from app.core.logging import setup_logging, logger
-from app.bot.handlers import register_all_handlers
-from app.bot.middlewares import register_all_middlewares
+from app.core.logging import setup_logging
+
+# Import bot components
+from app.bot.handlers import (
+    start, profile, profiler, analysis, 
+    compatibility, daily, payments, admin
+)
+from app.bot.middlewares.auth import AuthMiddleware
+from app.bot.middlewares.logging import LoggingMiddleware
+from app.bot.middlewares.rate_limit import RateLimitMiddleware
+from app.bot.middlewares.subscription import SubscriptionMiddleware
+from app.bot.middlewares.dependencies import DependenciesMiddleware
+
+# Import API routes
 from app.api.routes import health, analytics, webhooks
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI):
     """Application lifespan manager"""
-    
-    # Startup
-    logger.info("Starting PsychoDetective application...")
-    
     try:
+        # Setup logging
+        setup_logging()
+        logger.info("Starting application...")
+        
         # Initialize database
-        await init_db()
+        await init_database()
         logger.info("Database initialized")
         
         # Initialize Redis
@@ -37,48 +49,67 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("Redis initialized")
         
         # Initialize bot
-        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        bot = Bot(
+            token=settings.BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        )
+        
+        # Create dispatcher
         dp = Dispatcher()
         
-        # Register middlewares and handlers
-        register_all_middlewares(dp)
-        register_all_handlers(dp)
+        # Setup middlewares
+        dp.message.middleware(DependenciesMiddleware())
+        dp.callback_query.middleware(DependenciesMiddleware())
+        dp.message.middleware(AuthMiddleware())
+        dp.callback_query.middleware(AuthMiddleware())
+        dp.message.middleware(LoggingMiddleware())
+        dp.callback_query.middleware(LoggingMiddleware())
+        dp.message.middleware(RateLimitMiddleware())
+        dp.callback_query.middleware(RateLimitMiddleware())
+        dp.message.middleware(SubscriptionMiddleware())
+        dp.callback_query.middleware(SubscriptionMiddleware())
+        
+        # Register handlers
+        dp.include_router(start.router)
+        dp.include_router(profile.router)
+        dp.include_router(profiler.router)
+        dp.include_router(analysis.router)
+        dp.include_router(compatibility.router)
+        dp.include_router(daily.router)
+        dp.include_router(payments.router)
+        dp.include_router(admin.router)
         
         # Set webhook if configured
         if settings.WEBHOOK_URL:
             await bot.set_webhook(
                 url=f"{settings.WEBHOOK_URL}/webhook",
-                drop_pending_updates=True
+                secret_token=settings.WEBHOOK_SECRET
             )
             logger.info(f"Webhook set to {settings.WEBHOOK_URL}/webhook")
+        else:
+            # Delete webhook for polling mode
+            await bot.delete_webhook(drop_pending_updates=True)
+            logger.info("Webhook deleted, using polling mode")
         
-        # Store bot in app state
+        # Store bot and dispatcher in app state
         app.state.bot = bot
         app.state.dp = dp
         
-        logger.info("Application startup completed")
-        
+        logger.info("Application started successfully")
         yield
         
     except Exception as e:
-        logger.error(f"Error during startup: {e}")
+        logger.error(f"Failed to start application: {e}")
         raise
-    
-    # Shutdown
-    logger.info("Shutting down application...")
-    
-    try:
-        # Close bot session
-        if hasattr(app.state, 'bot'):
-            await app.state.bot.session.close()
-        
-        # Close Redis
-        await close_redis()
-        
-        logger.info("Application shutdown completed")
-        
-    except Exception as e:
-        logger.error(f"Error during shutdown: {e}")
+    finally:
+        # Cleanup
+        try:
+            if hasattr(app.state, 'bot'):
+                await app.state.bot.session.close()
+            await close_redis()
+            logger.info("Application shutdown complete")
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
 
 
 def create_app() -> FastAPI:
@@ -86,7 +117,7 @@ def create_app() -> FastAPI:
     
     app = FastAPI(
         title="PsychoDetective Bot API",
-        description="API for PsychoDetective relationship analysis bot",
+        description="Telegram bot for psychological partner analysis",
         version="1.0.0",
         lifespan=lifespan
     )
@@ -100,106 +131,88 @@ def create_app() -> FastAPI:
 
 
 def create_webhook_app() -> web.Application:
-    """Create aiohttp application for webhook handling"""
+    """Create aiohttp app for webhook handling"""
     
-    app = create_app()
+    # Create FastAPI app
+    fastapi_app = create_app()
     
     # Create aiohttp app
     aiohttp_app = web.Application()
     
     # Setup webhook handler
-    @aiohttp_app.router.post("/webhook")
-    async def webhook_handler(request: web.Request) -> web.Response:
-        """Handle Telegram webhook"""
-        try:
-            bot = app.state.bot
-            dp = app.state.dp
-            
-            # Create simple request handler
-            handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
-            
-            # Process webhook
-            return await handler.handle(request)
-            
-        except Exception as e:
-            logger.error(f"Webhook error: {e}")
-            return web.Response(status=500)
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=fastapi_app.state.dp,
+        bot=fastapi_app.state.bot,
+        secret_token=settings.WEBHOOK_SECRET
+    )
+    webhook_requests_handler.register(aiohttp_app, path="/webhook")
     
-    # Note: setup_application would be called after bot/dp are initialized
-    # This function is primarily for structure, actual setup happens in main()
+    # Mount FastAPI app
+    setup_application(aiohttp_app, fastapi_app)
     
     return aiohttp_app
 
 
-async def run_polling():
-    """Run bot in polling mode (for development)"""
-    
-    logger.info("Starting bot in polling mode...")
-    
-    try:
-        # Initialize database and Redis
-        await init_db()
-        await init_redis()
-        
-        # Create bot and dispatcher
-        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-        dp = Dispatcher()
-        
-        # Register middlewares and handlers
-        register_all_middlewares(dp)
-        register_all_handlers(dp)
-        
-        # Start polling
-        logger.info("Bot polling started")
-        await dp.start_polling(bot)
-        
-    except Exception as e:
-        logger.error(f"Error in polling mode: {e}")
-        raise
-    finally:
-        # Cleanup
-        await close_redis()
-        if 'bot' in locals():
-            await bot.session.close()
-
-
-def run_webhook():
-    """Run application in webhook mode (for production)"""
-    
-    logger.info("Starting application in webhook mode...")
-    
-    # Create FastAPI app
-    app = create_app()
-    
-    # Run with uvicorn
-    uvicorn.run(
-        app,
-        host=settings.HOST,
-        port=settings.PORT,
-        log_config=None,  # Use our custom logging
-        access_log=False
-    )
-
-
-def main():
-    """Main entry point"""
+async def main():
+    """Main function for polling mode"""
     
     # Setup logging
     setup_logging()
+    logger.info("Starting bot in polling mode...")
     
-    logger.info("PsychoDetective Bot starting...")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info(f"Debug mode: {settings.DEBUG}")
-    
-    if settings.WEBHOOK_URL:
-        # Production mode with webhook
-        logger.info("Running in webhook mode")
-        run_webhook()
-    else:
-        # Development mode with polling
-        logger.info("Running in polling mode")
-        asyncio.run(run_polling())
+    try:
+        # Initialize database
+        await init_database()
+        logger.info("Database initialized")
+        
+        # Initialize Redis
+        await init_redis()
+        logger.info("Redis initialized")
+        
+        # Create bot
+        bot = Bot(
+            token=settings.BOT_TOKEN,
+            default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+        )
+        
+        # Create dispatcher
+        dp = Dispatcher()
+        
+        # Setup middlewares
+        dp.message.middleware(DependenciesMiddleware())
+        dp.callback_query.middleware(DependenciesMiddleware())
+        dp.message.middleware(AuthMiddleware())
+        dp.callback_query.middleware(AuthMiddleware())
+        dp.message.middleware(LoggingMiddleware())
+        dp.callback_query.middleware(LoggingMiddleware())
+        dp.message.middleware(RateLimitMiddleware())
+        dp.callback_query.middleware(RateLimitMiddleware())
+        dp.message.middleware(SubscriptionMiddleware())
+        dp.callback_query.middleware(SubscriptionMiddleware())
+        
+        # Register handlers
+        dp.include_router(start.router)
+        dp.include_router(profile.router)
+        dp.include_router(profiler.router)
+        dp.include_router(analysis.router)
+        dp.include_router(compatibility.router)
+        dp.include_router(daily.router)
+        dp.include_router(payments.router)
+        dp.include_router(admin.router)
+        
+        # Delete webhook
+        await bot.delete_webhook(drop_pending_updates=True)
+        
+        # Start polling
+        logger.info("Bot started in polling mode")
+        await dp.start_polling(bot)
+        
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
+        raise
+    finally:
+        await close_redis()
 
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

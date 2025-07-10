@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # AI Configuration
     CLAUDE_API_KEY: Optional[str] = Field(None, env="CLAUDE_API_KEY")
     OPENAI_API_KEY: Optional[str] = Field(None, env="OPENAI_API_KEY")
-    CLAUDE_MODEL: str = Field("claude-3-sonnet-20240229", env="CLAUDE_MODEL")
+    CLAUDE_MODEL: str = Field("claude-3-5-sonnet-20241022", env="CLAUDE_MODEL")
     OPENAI_MODEL: str = Field("gpt-4-turbo-preview", env="OPENAI_MODEL")
     
     # AI Performance

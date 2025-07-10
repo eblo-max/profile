@@ -701,9 +701,13 @@ def profiler_results_navigation_kb(
     )
     
     # Export and sharing
+    builder.row(
+        InlineKeyboardButton(text="📄 PDF отчет", callback_data="prof_generate_pdf"),
+        InlineKeyboardButton(text="📋 Краткий отчет", callback_data="prof_brief_report")
+    )
+    
     if overall_risk < 70:  # Only for lower risk profiles
         builder.row(
-            InlineKeyboardButton(text="📋 Краткий отчет", callback_data="prof_brief_report"),
             InlineKeyboardButton(text="📤 Поделиться", callback_data="prof_share_results")
         )
     

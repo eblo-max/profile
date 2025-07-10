@@ -73,6 +73,12 @@ class AnalysisLimitError(PsychoDetectiveException):
         super().__init__(message, "ANALYSIS_LIMIT")
 
 
+class ServiceError(PsychoDetectiveException):
+    """Exception raised for service errors"""
+    def __init__(self, message: str = "Service error"):
+        super().__init__(message, "SERVICE_ERROR")
+
+
 class TextTooLongError(ValidationError):
     """Exception raised when text is too long"""
     def __init__(self, max_length: int):
