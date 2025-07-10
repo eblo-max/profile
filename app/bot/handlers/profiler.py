@@ -825,7 +825,7 @@ async def send_analysis_results(
             reply_markup=get_profiler_keyboard()
         )
         
-        # Send PDF report
+                # Send PDF report
         try:
             from aiogram.types import BufferedInputFile
             
@@ -834,12 +834,12 @@ async def send_analysis_results(
                 pdf_bytes,
                 filename=f"profile_{partner_name}_{message.from_user.id}.pdf"
             )
-        
-        await message.answer_document(
-            document=pdf_file,
-            caption=f"📄 Полный психологический профиль партнера {partner_name}",
-            reply_markup=get_profiler_keyboard()
-        )
+            
+            await message.answer_document(
+                document=pdf_file,
+                caption=f"📄 Полный психологический профиль партнера {partner_name}",
+                reply_markup=get_profiler_keyboard()
+            )
             logger.info(f"PDF report sent successfully for user {message.from_user.id}")
             
         except Exception as pdf_error:
