@@ -28,18 +28,18 @@ class HTMLPDFService:
         try:
             logger.debug("Checking Playwright availability...")
             from playwright.async_api import async_playwright
+            
+            # Try to launch browser to verify availability
             async with async_playwright() as p:
-                # Try to get browser executable path
-                browser_path = p.chromium.executable_path
-                logger.debug(f"Browser path from Playwright: {browser_path}")
-                
-                if browser_path and Path(browser_path).exists():
-                    logger.info(f"Playwright Chromium found at: {browser_path}")
+                try:
+                    browser = await p.chromium.launch(headless=True)
+                    await browser.close()
+                    logger.info("✅ Playwright Chromium is available and working")
                     self.playwright_available = True
                     self.playwright_checked = True
                     return True
-                else:
-                    logger.warning(f"Playwright Chromium executable not found at: {browser_path}")
+                except Exception as browser_error:
+                    logger.warning(f"Playwright browser launch failed: {browser_error}")
                     # Try to install browser automatically
                     logger.info("Attempting to install Playwright browser...")
                     success = await self._install_playwright_browser_async()
@@ -47,20 +47,19 @@ class HTMLPDFService:
                     if success:
                         logger.info("Playwright installation successful, rechecking availability...")
                         # Recheck availability after installation
-                        async with async_playwright() as p_new:
-                            new_browser_path = p_new.chromium.executable_path
-                            logger.debug(f"New browser path after installation: {new_browser_path}")
-                            
-                            if new_browser_path and Path(new_browser_path).exists():
-                                logger.info(f"Playwright Chromium verified at: {new_browser_path}")
+                        try:
+                            async with async_playwright() as p_new:
+                                browser = await p_new.chromium.launch(headless=True)
+                                await browser.close()
+                                logger.info("✅ Playwright Chromium verified after installation")
                                 self.playwright_available = True
                                 self.playwright_checked = True
                                 return True
-                            else:
-                                logger.error(f"Playwright installation completed but browser still not found at: {new_browser_path}")
-                                self.playwright_available = False
-                                self.playwright_checked = True
-                                return False
+                        except Exception as verify_error:
+                            logger.error(f"Playwright verification failed after installation: {verify_error}")
+                            self.playwright_available = False
+                            self.playwright_checked = True
+                            return False
                     else:
                         logger.error("Playwright installation failed")
                         self.playwright_available = False
@@ -97,16 +96,17 @@ class HTMLPDFService:
             
             if process.returncode == 0:
                 logger.info("Playwright Chromium installed successfully")
-                # Verify installation using async API
-                from playwright.async_api import async_playwright
-                async with async_playwright() as p:
-                    browser_path = p.chromium.executable_path
-                    if browser_path and Path(browser_path).exists():
-                        logger.info(f"Verified Playwright Chromium at: {browser_path}")
+                # Verify installation by actually launching browser
+                try:
+                    from playwright.async_api import async_playwright
+                    async with async_playwright() as p:
+                        browser = await p.chromium.launch(headless=True)
+                        await browser.close()
+                        logger.info("✅ Playwright Chromium verified by successful launch")
                         return True
-                    else:
-                        logger.warning(f"Playwright installed but executable not found at: {browser_path}")
-                        return False
+                except Exception as e:
+                    logger.error(f"Failed to verify Playwright browser by launch: {e}")
+                    return False
             else:
                 logger.error(f"Failed to install Playwright browser: {stderr.decode()}")
                 return False
