@@ -280,21 +280,21 @@ class HTMLPDFService:
     <div class="header">
         <h1>ПСИХОЛОГИЧЕСКИЙ ПРОФИЛЬ ПАРТНЕРА</h1>
         <p>Партнер: {data['partner_name']} | Дата: {data['date']}</p>
-    </div>
-    
+            </div>
+            
     <div class="risk-score">Оценка риска: {data['risk_score']}</div>
-    
-    <div class="section">
+            
+            <div class="section">
         <h3>Тип личности</h3>
         <p>{data['personality_type']}</p>
-    </div>
-    
-    <div class="section">
+            </div>
+            
+            <div class="section">
         <h3>Красные флаги</h3>
         <ul>{''.join(f'<li>{flag}</li>' for flag in data['red_flags'])}</ul>
-    </div>
-    
-    <div class="section">
+            </div>
+            
+            <div class="section">
         <h3>Рекомендации</h3>
         <p>{data['recommendations']}</p>
     </div>
@@ -381,14 +381,6 @@ class HTMLPDFService:
         except Exception as e:
             logger.error(f"Playwright PDF conversion failed: {e}")
             raise ServiceError(f"Failed to convert HTML to PDF: {str(e)}")
-    
-    def _generate_red_flags_section(self, red_flags: list, risk_score: float) -> str:
-        """Generate red flags section HTML (compatibility method)"""
-        return self._generate_red_flags_html(red_flags)
-    
-    def _generate_recommendations_list(self, recommendations: list, risk_score: float) -> str:
-        """Generate recommendations list HTML (compatibility method)"""
-        return self._generate_recommendations_html(recommendations) 
     
     def _determine_personality_type(self, risk_score: float) -> str:
         """Determine personality type based on risk score"""

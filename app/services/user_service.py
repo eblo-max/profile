@@ -389,7 +389,7 @@ class UserService:
             
         except Exception as e:
             logger.error(f"Error getting user count stats: {e}")
-            return {}
+            return {} 
     
     async def save_analysis(
         self,
