@@ -29,6 +29,9 @@ from app.prompts.profiler_full_prompts import (
     get_relationship_therapy_prompt, get_patterns_recognition_prompt
 )
 import json
+from app.models.profile import PartnerProfile
+from app.utils.enums import UrgencyLevel
+from sqlalchemy import select, desc
 
 router = Router()
 
@@ -364,6 +367,8 @@ async def show_review(message: Message, state: FSMContext):
     partner_name = data.get("partner_name", "партнер")
     answers = data.get("answers", {})
     
+    logger.info(f"Showing review for user, partner: {partner_name}, answers: {len(answers)}")
+    
     # Calculate preliminary risk scores with weighted scoring
     weighted_scores = calculate_weighted_scores(answers)
     safety_alerts = get_safety_alerts(answers)
@@ -419,9 +424,12 @@ async def start_ai_analysis(callback: CallbackQuery, state: FSMContext):
     partner_description = data.get("partner_description", "")
     answers = data.get("answers", {})
     
+    logger.info(f"Starting AI analysis for user {callback.from_user.id}, partner: {partner_name}, answers count: {len(answers)}")
+    
     # Validate answers
     is_valid, error_msg = validate_full_answers(answers)
     if not is_valid:
+        logger.warning(f"Validation failed for user {callback.from_user.id}: {error_msg}")
         await callback.message.edit_text(
             f"❌ **Ошибка валидации:**\n{error_msg}\n\nПопробуйте заново.",
             reply_markup=back_to_main_kb(),
@@ -452,12 +460,15 @@ async def start_ai_analysis(callback: CallbackQuery, state: FSMContext):
             user = await user_service.get_user_by_telegram_id(callback.from_user.id)
             
             if not user:
+                logger.error(f"User not found in database: {callback.from_user.id}")
                 await callback.message.edit_text(
                     "❌ Пользователь не найден. Используйте /start для регистрации.",
                     reply_markup=back_to_main_kb()
                 )
                 await state.clear()
                 return
+            
+            logger.info(f"Starting AI analysis for database user {user.id}")
             
             # Call AI analysis with full profiler
             analysis_result = await ai_service.profile_partner(
@@ -466,6 +477,8 @@ async def start_ai_analysis(callback: CallbackQuery, state: FSMContext):
                 partner_name=partner_name,
                 partner_description=partner_description
             )
+            
+            logger.info(f"AI analysis completed, result keys: {list(analysis_result.keys())}")
             
             # Save results to state for display
             await state.update_data(analysis_result=analysis_result)
@@ -484,6 +497,34 @@ async def start_ai_analysis(callback: CallbackQuery, state: FSMContext):
             parse_mode="Markdown"
         )
         await state.clear()
+
+# Дополнительный обработчик без ограничения состояния для диагностики
+@router.callback_query(F.data == "start_analysis")
+@handle_errors
+async def start_ai_analysis_fallback(callback: CallbackQuery, state: FSMContext):
+    """Fallback handler for start_analysis without state restriction"""
+    current_state = await state.get_state()
+    data = await state.get_data()
+    
+    logger.info(f"Fallback start_analysis handler triggered for user {callback.from_user.id}")
+    logger.info(f"Current state: {current_state}")
+    logger.info(f"Data keys: {list(data.keys())}")
+    
+    # If we're not in the right state, try to fix it
+    if current_state != PartnerProfileStates.reviewing_answers:
+        answers = data.get("answers", {})
+        if len(answers) >= 28:  # We have enough answers
+            logger.info("Setting state to reviewing_answers and redirecting")
+            await state.set_state(PartnerProfileStates.reviewing_answers)
+            # Call the main handler
+            await start_ai_analysis(callback, state)
+        else:
+            await callback.answer("❌ Недостаточно ответов для анализа")
+            logger.warning(f"Not enough answers: {len(answers)}")
+    else:
+        # Should be handled by the main handler
+        await callback.answer("⚠️ Попробуйте еще раз")
+        logger.warning("Already in correct state but main handler didn't catch")
 
 async def show_analysis_results(message: Message, state: FSMContext):
     """Show AI analysis results"""
@@ -807,23 +848,79 @@ async def back_to_results(callback: CallbackQuery, state: FSMContext):
 @handle_errors
 async def save_profile(callback: CallbackQuery, state: FSMContext):
     """Save profile for future reference"""
+    from app.services.profile_service import ProfileService
+    from app.core.database import get_session
+    
     data = await state.get_data()
     partner_name = data.get("partner_name", "партнер")
+    partner_description = data.get("partner_description", "")
+    answers = data.get("answers", {})
+    analysis_results = data.get("analysis_result", {})  # Исправлено с analysis_results на analysis_result
     
-    # TODO: Implement actual profile saving to database
+    # Get user ID from callback
+    user_id = callback.from_user.id
     
-    await callback.message.edit_text(
-        f"💾 **Профиль сохранен**\n\n"
-        f"Профиль партнера \"{partner_name}\" сохранен в ваш личный кабинет.\n\n"
-        f"Вы можете вернуться к нему в любое время через "
-        f"раздел \"📋 Мои профили\".\n\n"
-        f"🔔 **Напоминание:** Рекомендуется повторить анализ через 3-6 месяцев "
-        f"для отслеживания изменений в отношениях.",
-        reply_markup=back_to_main_kb(),
-        parse_mode="Markdown"
-    )
-    await callback.answer("✅ Профиль сохранен")
-    await state.clear()
+    try:
+        # Create profile service
+        async with get_session() as session:
+            profile_service = ProfileService(session)
+            
+            # Create profile with analysis results
+            profile = PartnerProfile(
+                user_id=user_id,
+                partner_name=partner_name,
+                partner_description=partner_description,
+                questionnaire_answers=answers,  # Обязательное поле
+                
+                # Analysis results from AI
+                psychological_profile=analysis_results.get("psychological_profile", ""),
+                relationship_advice=analysis_results.get("relationship_advice", ""),
+                communication_tips=analysis_results.get("communication_tips", ""),
+                
+                manipulation_risk=analysis_results.get("manipulation_risk", 0.0),
+                red_flags=analysis_results.get("red_flags", []),
+                positive_traits=analysis_results.get("positive_traits", []),
+                warning_signs=analysis_results.get("warning_signs", []),
+                
+                urgency_level=analysis_results.get("urgency_level", UrgencyLevel.LOW),
+                overall_compatibility=analysis_results.get("overall_compatibility", 0.5),
+                trust_indicators=analysis_results.get("trust_indicators", []),
+                
+                confidence_score=analysis_results.get("confidence_score", 0.8),
+                ai_model_used=analysis_results.get("ai_model_used", "claude-3-sonnet"),
+                is_completed=True
+            )
+            
+            session.add(profile)
+            await session.commit()
+            await session.refresh(profile)
+            
+            await callback.message.edit_text(
+                f"💾 **Профиль сохранен**\n\n"
+                f"Профиль партнера \"{partner_name}\" успешно сохранен в ваш личный кабинет.\n\n"
+                f"📊 **ID профиля:** {profile.id}\n"
+                f"🎯 **Риск манипуляций:** {profile.manipulation_risk:.1f}/10\n"
+                f"📈 **Статус:** {profile.safety_summary}\n\n"
+                f"Вы можете вернуться к нему в любое время через "
+                f"раздел \"📋 Мои профили\".\n\n"
+                f"🔔 **Напоминание:** Рекомендуется повторить анализ через 3-6 месяцев "
+                f"для отслеживания изменений в отношениях.",
+                reply_markup=back_to_main_kb(),
+                parse_mode="Markdown"
+            )
+            await callback.answer("✅ Профиль успешно сохранен!")
+            await state.clear()
+            
+    except Exception as e:
+        logger.error(f"Error saving profile: {e}")
+        await callback.message.edit_text(
+            f"❌ **Ошибка сохранения**\n\n"
+            f"Не удалось сохранить профиль \"{partner_name}\".\n\n"
+            f"Попробуйте еще раз или обратитесь в поддержку.",
+            reply_markup=back_to_main_kb(),
+            parse_mode="Markdown"
+        )
+        await callback.answer("❌ Ошибка при сохранении профиля")
 
 @router.callback_query(F.data == "edit_answers", PartnerProfileStates.reviewing_answers)
 @handle_errors
@@ -862,14 +959,80 @@ async def show_progress_info(callback: CallbackQuery):
 @handle_errors
 async def my_profiles(callback: CallbackQuery):
     """Show user's profiles"""
-    await callback.message.edit_text(
-        "📋 **Мои профили**\n\n"
-        "У вас пока нет сохранённых профилей.\n\n"
-        "Создайте первый профиль партнера для получения "
-        "персональных рекомендаций и анализа безопасности.",
-        reply_markup=back_to_main_kb(),
-        parse_mode="Markdown"
-    )
+    from app.services.profile_service import ProfileService
+    from app.core.database import get_session
+    
+    user_id = callback.from_user.id
+    
+    try:
+        async with get_session() as session:
+            # Get user profiles
+            result = await session.execute(
+                select(PartnerProfile)
+                .where(PartnerProfile.user_id == user_id)
+                .order_by(desc(PartnerProfile.created_at))
+                .limit(10)
+            )
+            profiles = result.scalars().all()
+            
+            if not profiles:
+                await callback.message.edit_text(
+                    "📋 **Мои профили**\n\n"
+                    "У вас пока нет сохранённых профилей.\n\n"
+                    "Создайте первый профиль партнера для получения "
+                    "персональных рекомендаций и анализа безопасности.",
+                    reply_markup=back_to_main_kb(),
+                    parse_mode="Markdown"
+                )
+            else:
+                # Build profiles list
+                profiles_text = "📋 **Мои профили**\n\n"
+                
+                for i, profile in enumerate(profiles, 1):
+                    created_date = profile.created_at.strftime("%d.%m.%Y")
+                    risk_emoji = profile.risk_emoji
+                    
+                    profiles_text += (
+                        f"{i}. **{profile.partner_name}** {risk_emoji}\n"
+                        f"   📅 Создан: {created_date}\n"
+                        f"   🎯 Риск: {profile.manipulation_risk:.1f}/10\n"
+                        f"   📊 {profile.safety_summary}\n\n"
+                    )
+                
+                # Create keyboard with profile buttons
+                builder = InlineKeyboardBuilder()
+                
+                # Add profile buttons (max 5 per row)
+                for profile in profiles:
+                    builder.add(InlineKeyboardButton(
+                        text=f"👤 {profile.partner_name}",
+                        callback_data=f"view_profile_{profile.id}"
+                    ))
+                
+                builder.adjust(2)  # 2 buttons per row
+                
+                # Add navigation buttons
+                builder.row(
+                    InlineKeyboardButton(text="➕ Создать новый", callback_data="create_profile"),
+                    InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+                )
+                
+                await callback.message.edit_text(
+                    profiles_text,
+                    reply_markup=builder.as_markup(),
+                    parse_mode="Markdown"
+                )
+                
+    except Exception as e:
+        logger.error(f"Error loading profiles: {e}")
+        await callback.message.edit_text(
+            "❌ **Ошибка загрузки**\n\n"
+            "Не удалось загрузить список профилей.\n\n"
+            "Попробуйте еще раз или обратитесь в поддержку.",
+            reply_markup=back_to_main_kb(),
+            parse_mode="Markdown"
+        )
+    
     await callback.answer()
 
 @router.callback_query(F.data == "profile_recommendations")
@@ -1454,4 +1617,87 @@ async def compare_blocks(callback: CallbackQuery, state: FSMContext):
         reply_markup=profiler_block_analysis_kb(block_scores),
         parse_mode="Markdown"
     )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("view_profile_"))
+@handle_errors
+async def view_saved_profile(callback: CallbackQuery):
+    """View saved profile details"""
+    from app.core.database import get_session
+    
+    # Extract profile ID
+    profile_id = int(callback.data.split("_")[-1])
+    user_id = callback.from_user.id
+    
+    try:
+        async with get_session() as session:
+            # Get profile
+            result = await session.execute(
+                select(PartnerProfile)
+                .where(
+                    PartnerProfile.id == profile_id,
+                    PartnerProfile.user_id == user_id
+                )
+            )
+            profile = result.scalar_one_or_none()
+            
+            if not profile:
+                await callback.answer("❌ Профиль не найден", show_alert=True)
+                return
+            
+            # Format profile details
+            created_date = profile.created_at.strftime("%d.%m.%Y в %H:%M")
+            
+            profile_text = f"""👤 **Профиль: {profile.partner_name}**
+
+📅 **Создан:** {created_date}
+📝 **Описание:** {profile.partner_description or "Не указано"}
+
+🎯 **Анализ безопасности:**
+{profile.risk_emoji} **Риск манипуляций:** {profile.manipulation_risk:.1f}/10
+📊 **Статус:** {profile.safety_summary}
+
+🔍 **Психологический профиль:**
+{profile.psychological_profile[:500] + "..." if len(profile.psychological_profile or "") > 500 else profile.psychological_profile or "Анализ не завершен"}
+
+💡 **Рекомендации:**
+{profile.relationship_advice[:400] + "..." if len(profile.relationship_advice or "") > 400 else profile.relationship_advice or "Рекомендации не сформированы"}"""
+
+            # Create keyboard
+            builder = InlineKeyboardBuilder()
+            
+            if profile.red_flags:
+                builder.add(InlineKeyboardButton(
+                    text=f"🚩 Красные флаги ({len(profile.red_flags)})",
+                    callback_data=f"profile_red_flags_{profile_id}"
+                ))
+            
+            if profile.positive_traits:
+                builder.add(InlineKeyboardButton(
+                    text=f"✅ Позитивные черты ({len(profile.positive_traits)})",
+                    callback_data=f"profile_positive_{profile_id}"
+                ))
+            
+            builder.adjust(2)
+            
+            builder.row(
+                InlineKeyboardButton(text="📊 Детальный анализ", callback_data=f"profile_detailed_{profile_id}"),
+                InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"delete_profile_{profile_id}")
+            )
+            
+            builder.row(
+                InlineKeyboardButton(text="⬅️ К списку профилей", callback_data="my_profiles"),
+                InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+            )
+            
+            await callback.message.edit_text(
+                profile_text,
+                reply_markup=builder.as_markup(),
+                parse_mode="Markdown"
+            )
+            
+    except Exception as e:
+        logger.error(f"Error viewing profile {profile_id}: {e}")
+        await callback.answer("❌ Ошибка загрузки профиля", show_alert=True)
+    
     await callback.answer() 
