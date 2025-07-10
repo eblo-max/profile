@@ -6,14 +6,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from aiogram import Bot, Dispatcher
-from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from loguru import logger
 
 from app.core.config import settings
-from app.core.database import init_database
+from app.core.database import init_db, close_db
 from app.core.redis import init_redis, close_redis
 from app.core.logging import setup_logging
 
@@ -41,7 +40,7 @@ async def lifespan(app: FastAPI):
         logger.info("Starting application...")
         
         # Initialize database
-        await init_database()
+        await init_db()
         logger.info("Database initialized")
         
         # Initialize Redis
@@ -51,7 +50,7 @@ async def lifespan(app: FastAPI):
         # Initialize bot
         bot = Bot(
             token=settings.BOT_TOKEN,
-            default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+            parse_mode=ParseMode.HTML
         )
         
         # Create dispatcher
@@ -106,6 +105,7 @@ async def lifespan(app: FastAPI):
         try:
             if hasattr(app.state, 'bot'):
                 await app.state.bot.session.close()
+            await close_db()
             await close_redis()
             logger.info("Application shutdown complete")
         except Exception as e:
@@ -162,7 +162,7 @@ async def main():
     
     try:
         # Initialize database
-        await init_database()
+        await init_db()
         logger.info("Database initialized")
         
         # Initialize Redis
@@ -172,7 +172,7 @@ async def main():
         # Create bot
         bot = Bot(
             token=settings.BOT_TOKEN,
-            default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+            parse_mode=ParseMode.HTML
         )
         
         # Create dispatcher
@@ -211,6 +211,7 @@ async def main():
         logger.error(f"Bot error: {e}")
         raise
     finally:
+        await close_db()
         await close_redis()
 
 

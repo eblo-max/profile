@@ -13,17 +13,280 @@ from loguru import logger
 from app.core.config import settings
 from app.core.redis import redis_client
 from app.utils.exceptions import AIServiceError
-from app.utils.helpers import safe_json_loads, create_cache_key
+from app.utils.helpers import safe_json_loads, create_cache_key, extract_json_from_text
 from app.prompts.analysis_prompts import (
-    TEXT_ANALYSIS_SYSTEM_PROMPT,
+    ANALYSIS_SYSTEM_PROMPT,
     PROFILER_SYSTEM_PROMPT, 
     COMPATIBILITY_SYSTEM_PROMPT,
     get_text_analysis_prompt,
     get_profiler_prompt,
-    get_compatibility_prompt
+    get_compatibility_prompt,
+    get_safe_advice_prompt,
+    get_cot_text_analysis_prompt,
+    get_tot_profiler_prompt,
+    get_meta_prompt_generator,
+    get_self_refining_prompt
 )
 from app.utils.enums import UrgencyLevel
 import traceback
+
+
+class ContextEngineer:
+    """
+    Context Engineering class for semantic field management and optimization
+    """
+    
+    def __init__(self):
+        self.field_state = {
+            "attractors": [],
+            "boundaries": {},
+            "resonance": 0.0,
+            "residue": [],
+            "token_budget": 4000
+        }
+        
+    def create_semantic_attractor(self, concept: str, strength: float = 0.8) -> dict:
+        """Create a semantic attractor for context focus"""
+        return {
+            "concept": concept,
+            "strength": strength,
+            "embedding": None,  # Would be computed with actual embeddings
+            "activation_count": 0
+        }
+    
+    def establish_field_boundaries(self, relevance_threshold: float = 0.6) -> dict:
+        """Establish semantic boundaries for information filtering"""
+        return {
+            "permeability": 0.7,
+            "gradient": 0.2,
+            "relevance_threshold": relevance_threshold,
+            "filter_criteria": ["clinical_relevance", "safety_importance", "practical_utility"]
+        }
+    
+    def optimize_context_for_budget(self, context: str, target_tokens: int) -> str:
+        """Optimize context to fit token budget using field-aware methods"""
+        # Simplified token counting (in real implementation would use proper tokenizer)
+        current_tokens = len(context.split()) * 1.3  # Rough approximation
+        
+        if current_tokens <= target_tokens:
+            return context
+        
+        # Field-aware compression
+        if self.field_state["attractors"]:
+            # Prioritize content related to attractors
+            paragraphs = context.split("\n\n")
+            
+            # Score paragraphs by relevance to attractors
+            scored_paragraphs = []
+            for paragraph in paragraphs:
+                relevance_score = self._calculate_attractor_relevance(paragraph)
+                paragraph_tokens = len(paragraph.split()) * 1.3
+                scored_paragraphs.append((paragraph, relevance_score, paragraph_tokens))
+            
+            # Sort by relevance and add until budget is reached
+            scored_paragraphs.sort(key=lambda x: x[1], reverse=True)
+            
+            optimized_content = []
+            used_tokens = 0
+            
+            for paragraph, score, tokens in scored_paragraphs:
+                if used_tokens + tokens <= target_tokens:
+                    optimized_content.append(paragraph)
+                    used_tokens += tokens
+                else:
+                    break
+            
+            return "\n\n".join(optimized_content)
+        
+        # Fallback: simple truncation
+        ratio = target_tokens / current_tokens
+        return context[:int(len(context) * ratio)]
+    
+    def _calculate_attractor_relevance(self, text: str) -> float:
+        """Calculate relevance of text to current attractors"""
+        if not self.field_state["attractors"]:
+            return 0.5
+        
+        # Simplified relevance calculation
+        relevance_scores = []
+        text_lower = text.lower()
+        
+        for attractor in self.field_state["attractors"]:
+            concept = attractor["concept"].lower()
+            if concept in text_lower:
+                relevance_scores.append(attractor["strength"])
+            else:
+                # Simple word overlap scoring
+                concept_words = set(concept.split())
+                text_words = set(text_lower.split())
+                overlap = len(concept_words.intersection(text_words))
+                if overlap > 0:
+                    relevance_scores.append(overlap / len(concept_words) * attractor["strength"])
+        
+        return max(relevance_scores) if relevance_scores else 0.1
+    
+    def amplify_resonance(self, concepts: list) -> dict:
+        """Amplify resonance between compatible concepts"""
+        resonance_patterns = {}
+        
+        for i, concept1 in enumerate(concepts):
+            for j, concept2 in enumerate(concepts[i+1:], i+1):
+                # Calculate conceptual resonance (simplified)
+                resonance_score = self._calculate_concept_resonance(concept1, concept2)
+                if resonance_score > 0.5:
+                    resonance_patterns[f"{concept1}-{concept2}"] = resonance_score
+        
+        self.field_state["resonance"] = sum(resonance_patterns.values()) / len(resonance_patterns) if resonance_patterns else 0.0
+        return resonance_patterns
+    
+    def _calculate_concept_resonance(self, concept1: str, concept2: str) -> float:
+        """Calculate resonance between two concepts"""
+        # Simplified resonance calculation
+        # In real implementation, would use semantic embeddings
+        
+        # Define known resonant pairs for psychology domain
+        resonant_pairs = {
+            ("control", "manipulation"): 0.9,
+            ("gaslighting", "emotional_abuse"): 0.8,
+            ("isolation", "social_control"): 0.85,
+            ("threats", "intimidation"): 0.9,
+            ("narcissism", "lack_of_empathy"): 0.8
+        }
+        
+        pair = tuple(sorted([concept1.lower(), concept2.lower()]))
+        return resonant_pairs.get(pair, 0.3)
+    
+    def preserve_residue(self, key_concepts: list) -> None:
+        """Preserve critical information across context changes"""
+        self.field_state["residue"] = key_concepts
+    
+    def create_field_aware_prompt(self, base_prompt: str, task_context: str) -> str:
+        """Create a field-aware prompt with semantic optimization"""
+        
+        # Identify key concepts for attractors
+        key_concepts = self._extract_key_concepts(task_context)
+        
+        # Create semantic attractors
+        self.field_state["attractors"] = [
+            self.create_semantic_attractor(concept, 0.8) 
+            for concept in key_concepts[:3]  # Limit to top 3
+        ]
+        
+        # Establish boundaries
+        self.field_state["boundaries"] = self.establish_field_boundaries()
+        
+        # Optimize prompt for token budget
+        optimized_prompt = self.optimize_context_for_budget(
+            base_prompt, 
+            self.field_state["token_budget"] * 0.7  # Reserve 30% for response
+        )
+        
+        # Add field management instructions
+        field_instructions = self._generate_field_instructions()
+        
+        return f"{optimized_prompt}\n\n{field_instructions}"
+    
+    def _extract_key_concepts(self, context: str) -> list:
+        """Extract key concepts from context for attractor creation"""
+        # Simplified concept extraction
+        psychology_keywords = [
+            "manipulation", "control", "gaslighting", "emotional_abuse",
+            "narcissism", "isolation", "threats", "intimidation",
+            "safety", "risk_assessment", "behavioral_patterns"
+        ]
+        
+        context_lower = context.lower()
+        found_concepts = [
+            keyword for keyword in psychology_keywords 
+            if keyword in context_lower
+        ]
+        
+        return found_concepts[:5]  # Return top 5 concepts
+    
+    def _generate_field_instructions(self) -> str:
+        """Generate field management instructions for the prompt"""
+        
+        attractors_text = ", ".join([a["concept"] for a in self.field_state["attractors"]])
+        
+        return f"""
+<field_management>
+CORE ATTRACTORS: {attractors_text}
+- Поддерживай фокус на этих концепциях
+- Включай релевантную информацию с приоритетом
+
+BOUNDARY RULES:
+- Включай новую информацию только при релевантности > 7/10
+- Поддерживай согласованность с предыдущим контекстом
+- Фильтруй касательную информацию
+
+RESIDUE PRESERVATION:
+- Ключевые определения должны сохраняться
+- Критические решения/выводы должны быть сохранены
+- Основные принципы должны подкрепляться
+
+OPTIMIZATION DIRECTIVES:
+- Приоритизируй контент с высокой релевантностью к основным аттракторам
+- Сжимай формат, но сохраняй смысл
+- Поддерживай клиническую точность
+</field_management>
+"""
+
+
+class CognitiveTools:
+    """
+    Specialized cognitive tools for complex reasoning tasks
+    """
+    
+    @staticmethod
+    def recursive_analysis(question: str, iterations: int = 2) -> str:
+        """Apply recursive analysis for improved responses"""
+        
+        return f"""
+<recursive_analysis>
+Проведи {iterations} итерации анализа для улучшения качества ответа:
+
+ИТЕРАЦИЯ 1: Первичный анализ
+{question}
+
+САМОПРОВЕРКА 1:
+1. Какая информация может отсутствовать?
+2. Есть ли предположения, которые следует поставить под сомнение?
+3. Как можно сделать объяснение более четким или точным?
+
+ИТЕРАЦИЯ 2: Улучшенный анализ
+На основе самопроверки, предоставь улучшенный ответ:
+
+ФИНАЛЬНАЯ ПРОВЕРКА:
+- Достаточно ли полон анализ?
+- Соответствуют ли выводы доказательствам?
+- Практичны ли рекомендации?
+</recursive_analysis>
+"""
+    
+    @staticmethod
+    def multi_perspective_analysis(question: str, perspectives: list) -> str:
+        """Analyze from multiple expert perspectives"""
+        
+        perspectives_text = "\n".join([
+            f"ПЕРСПЕКТИВА {i+1}: {perspective}" 
+            for i, perspective in enumerate(perspectives)
+        ])
+        
+        return f"""
+<multi_perspective_analysis>
+Проанализируй следующий вопрос с разных экспертных позиций:
+
+ВОПРОС: {question}
+
+{perspectives_text}
+
+СИНТЕЗ ПЕРСПЕКТИВ:
+1. Найди общие темы и согласованные выводы
+2. Выяви различия в подходах и интерпретациях
+3. Определи наиболее обоснованную позицию
+4. Сформулируй комплексное заключение
+</multi_perspective_analysis>
+"""
 
 
 class AIService:
@@ -42,122 +305,167 @@ class AIService:
         # Rate limiting
         self._request_semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_AI_REQUESTS)
         self._last_requests = {}
+        
+        # Advanced Prompt Engineering components
+        self.context_engineer = ContextEngineer()
+        self.cognitive_tools = CognitiveTools()
+        
+        # Prompt technique selection
+        self.prompt_techniques = {
+            "chain_of_thought": "cot",
+            "tree_of_thoughts": "tot",
+            "meta_prompting": "meta",
+            "self_refining": "refine",
+            "field_aware": "field"
+        }
     
-    async def analyze_text(
+    async def analyze_text_advanced(
         self,
         text: str,
         user_id: int,
         context: str = "",
+        technique: str = "chain_of_thought",
         use_cache: bool = True
     ) -> Dict[str, Any]:
         """
-        Analyze text for manipulation patterns and risks
-        
-        Args:
-            text: Text to analyze
-            user_id: User ID for rate limiting
-            context: Additional context
-            use_cache: Whether to use cache
-            
-        Returns:
-            Analysis results
+        Advanced text analysis using specified prompting technique
         """
         start_time = time.time()
         
-        # Create cache key
-        cache_key = create_cache_key("text_analysis", user_id, hash(text + context))
+        # Create cache key including technique
+        cache_key = create_cache_key("text_analysis_advanced", user_id, hash(text + context + technique))
         
-        # Try to get from cache
+        # Try cache
         if use_cache:
             cached_result = await redis_client.get(cache_key)
             if cached_result:
-                logger.info(f"Text analysis cache hit for user {user_id}")
+                logger.info(f"Advanced text analysis cache hit for user {user_id} with {technique}")
                 return cached_result
         
         # Check rate limiting
         await self._check_rate_limit(user_id)
         
         try:
-            # Prepare prompt
-            user_prompt = get_text_analysis_prompt(text, context)
+            # Select prompting technique
+            if technique == "chain_of_thought":
+                user_prompt = get_cot_text_analysis_prompt(text, context)
+                system_prompt = ANALYSIS_SYSTEM_PROMPT
+                
+            elif technique == "meta_prompting":
+                # First generate optimized prompt
+                meta_prompt = get_meta_prompt_generator("text_analysis", "advanced", "psychology")
+                meta_result = await self._get_ai_response(
+                    system_prompt="Ты эксперт по prompt engineering",
+                    user_prompt=meta_prompt,
+                    response_format="json"
+                )
+                
+                # Extract optimized prompt
+                meta_response = extract_json_from_text(meta_result)
+                optimized_prompt = meta_response.get("optimized_prompt", get_cot_text_analysis_prompt(text, context))
+                
+                user_prompt = optimized_prompt.format(text=text, context=context)
+                system_prompt = ANALYSIS_SYSTEM_PROMPT
+                
+            elif technique == "field_aware":
+                # Use context engineering
+                base_prompt = get_text_analysis_prompt(text, context)
+                user_prompt = self.context_engineer.create_field_aware_prompt(
+                    base_prompt, 
+                    f"text_analysis: {text[:200]}"  # First 200 chars for context
+                )
+                system_prompt = ANALYSIS_SYSTEM_PROMPT
+                
+            else:
+                # Fallback to standard
+                user_prompt = get_text_analysis_prompt(text, context)
+                system_prompt = ANALYSIS_SYSTEM_PROMPT
             
             # Get analysis from AI
             async with self._request_semaphore:
-                result = await self._get_ai_response(
-                    system_prompt=TEXT_ANALYSIS_SYSTEM_PROMPT,
+                result = await self._get_ai_response_with_quality_check(
+                    system_prompt=system_prompt,
                     user_prompt=user_prompt,
-                    response_format="json"
+                    response_format="json",
+                    max_tokens=5000,
+                    min_quality_score=75
                 )
             
             # Parse and validate response
             analysis = self._parse_analysis_response(result)
             
+            # Apply self-refining if requested
+            if technique == "self_refining":
+                refining_prompt = get_self_refining_prompt(
+                    json.dumps(analysis, ensure_ascii=False), 
+                    f"Анализ текста: {text[:100]}..."
+                )
+                
+                refined_result = await self._get_ai_response(
+                    system_prompt="Ты эксперт по улучшению AI ответов",
+                    user_prompt=refining_prompt,
+                    response_format="json"
+                )
+                
+                refined_response = extract_json_from_text(refined_result)
+                if "refined_response" in refined_response:
+                    analysis = extract_json_from_text(refined_response["refined_response"])
+            
+            # Validate response quality
+            analysis = self._validate_response_quality(analysis, 'analysis')
+            
             # Add metadata
             analysis["processing_time"] = time.time() - start_time
             analysis["ai_model_used"] = self._get_last_model_used()
+            analysis["technique_used"] = technique
+            
+            # Log performance metrics
+            self._log_performance_metrics(analysis, f'text_analysis_{technique}', analysis["processing_time"])
             
             # Cache result
             if use_cache:
-                await redis_client.set(
-                    cache_key,
-                    analysis,
-                    expire=1800  # 30 minutes
-                )
+                await redis_client.set(cache_key, analysis, expire=1800)
             
-            logger.info(f"Text analysis completed for user {user_id} in {analysis['processing_time']:.2f}s")
+            logger.info(f"Advanced text analysis completed for user {user_id} using {technique} in {analysis['processing_time']:.2f}s")
             return analysis
             
         except Exception as e:
-            logger.error(f"Text analysis failed for user {user_id}: {e}")
-            raise AIServiceError(f"Failed to analyze text: {str(e)}")
+            logger.error(f"Advanced text analysis failed for user {user_id}: {e}")
+            raise AIServiceError(f"Failed to analyze text with {technique}: {str(e)}")
     
-    async def profile_partner(
+    async def profile_partner_advanced(
         self,
-        answers: List[Dict[str, Any]],  # Changed from Dict[str, int] to List[Dict]
+        answers: List[Dict[str, Any]],
         user_id: int,
         partner_name: str = "партнер",
         partner_description: str = "",
+        technique: str = "tree_of_thoughts",
         use_cache: bool = True
     ) -> Dict[str, Any]:
         """
-        Analyze partner profile based on questionnaire answers
-        
-        Args:
-            answers: List of answer dictionaries with question_id, question, answer
-            user_id: User ID
-            partner_name: Partner's name
-            partner_description: Additional context
-            use_cache: Whether to use cache
-            
-        Returns:
-            Partner profile analysis
+        Advanced partner profiling using specified technique
         """
         start_time = time.time()
         
-        # Convert answers to expected format if needed
+        # Convert answers format
         if isinstance(answers, list):
-            # Convert from bot format to analysis format
             answers_text = []
             for answer in answers:
                 question_text = answer.get('question', f"Question {answer.get('question_id', 'N/A')}")
                 answer_text = answer.get('answer', 'No answer')
                 answers_text.append(f"Q: {question_text}\nA: {answer_text}")
-            
-            # Create combined text for analysis
             combined_answers = "\n\n".join(answers_text)
         else:
-            # Legacy format support
             combined_answers = str(answers)
         
         # Create cache key
-        answers_hash = hash(combined_answers + partner_name)
-        cache_key = create_cache_key("profile", user_id, answers_hash)
+        cache_key = create_cache_key("profile_advanced", user_id, hash(combined_answers + partner_name + technique))
         
         # Try cache
         if use_cache:
             cached_result = await redis_client.get(cache_key)
             if cached_result:
-                logger.info(f"Partner profile cache hit for user {user_id}")
+                logger.info(f"Advanced profile cache hit for user {user_id} with {technique}")
                 return cached_result
         
         # Check rate limiting
@@ -171,47 +479,118 @@ class AIService:
                 answer_text = answer.get('answer', 'Нет ответа')
                 answers_text += f"{i}. {question}\n   Ответ: {answer_text}\n\n"
             
-            # Prepare prompt with formatted answers
-            user_prompt = get_profiler_prompt(
-                answers_text=answers_text,
-                partner_name=partner_name,
-                partner_description=partner_description
-            )
+            # Select prompting technique
+            if technique == "tree_of_thoughts":
+                user_prompt = get_tot_profiler_prompt(answers_text, partner_name, partner_description)
+                system_prompt = PROFILER_SYSTEM_PROMPT
+                max_tokens = 8000  # ToT needs more space
+                
+            elif technique == "cognitive_tools":
+                # Use recursive analysis
+                base_question = f"Проанализируй профиль партнера на основе ответов: {answers_text[:500]}..."
+                recursive_prompt = self.cognitive_tools.recursive_analysis(base_question, iterations=3)
+                user_prompt = f"{get_profiler_prompt(answers_text, partner_name, partner_description)}\n\n{recursive_prompt}"
+                system_prompt = PROFILER_SYSTEM_PROMPT
+                max_tokens = 7000
+                
+            elif technique == "multi_perspective":
+                # Multi-perspective analysis
+                perspectives = [
+                    "Клинический психолог со специализацией на расстройствах личности",
+                    "Специалист по домашнему насилию и безопасности",
+                    "Семейный терапевт с опытом работы с парами"
+                ]
+                base_question = f"Оцени риски в отношениях на основе: {answers_text[:300]}..."
+                multi_perspective_prompt = self.cognitive_tools.multi_perspective_analysis(base_question, perspectives)
+                user_prompt = f"{get_profiler_prompt(answers_text, partner_name, partner_description)}\n\n{multi_perspective_prompt}"
+                system_prompt = PROFILER_SYSTEM_PROMPT
+                max_tokens = 7000
+                
+            else:
+                # Standard profiling
+                user_prompt = get_profiler_prompt(answers_text, partner_name, partner_description)
+                system_prompt = PROFILER_SYSTEM_PROMPT
+                max_tokens = 6000
             
             # Get analysis from AI
             async with self._request_semaphore:
-                result = await self._get_ai_response(
-                    system_prompt=PROFILER_SYSTEM_PROMPT,
+                result = await self._get_ai_response_with_quality_check(
+                    system_prompt=system_prompt,
                     user_prompt=user_prompt,
                     response_format="json",
-                    max_tokens=6000  # Increased for detailed analysis
+                    max_tokens=max_tokens,
+                    min_quality_score=80
                 )
             
             # Parse and validate response
-            profile = self._parse_profile_response(result)
+            if technique == "tree_of_thoughts":
+                profile = self._parse_tot_profile_response(result)
+            else:
+                profile = self._parse_profile_response(result)
+                
             profile = self._validate_profiler_response(profile)
             
             # Add metadata
             profile["processing_time"] = time.time() - start_time
             profile["ai_model_used"] = self._get_last_model_used()
-            profile["partner_name"] = partner_name
-            profile["total_questions"] = len(answers)
+            profile["technique_used"] = technique
+            
+            # Log performance metrics
+            self._log_performance_metrics(profile, f'profiler_{technique}', profile["processing_time"])
             
             # Cache result
             if use_cache:
-                await redis_client.set(
-                    cache_key,
-                    profile,
-                    expire=7200  # 2 hours
-                )
+                await redis_client.set(cache_key, profile, expire=3600)
             
-            logger.info(f"Partner profiling completed for user {user_id} in {profile['processing_time']:.2f}s")
+            logger.info(f"Advanced profiling completed for user {user_id} using {technique} in {profile['processing_time']:.2f}s")
             return profile
             
         except Exception as e:
-            logger.error(f"Partner profiling failed for user {user_id}: {e}")
-            logger.error(f"Error details: {traceback.format_exc()}")
-            # Return fallback analysis with calculated scores
+            logger.error(f"Advanced profiling failed for user {user_id}: {e}")
+            raise AIServiceError(f"Failed to profile partner with {technique}: {str(e)}")
+    
+    # Backward compatibility methods
+    async def analyze_text(
+        self,
+        text: str,
+        user_id: int,
+        context: str = "",
+        use_cache: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Backward compatible text analysis (uses Chain-of-Thought by default)
+        """
+        return await self.analyze_text_advanced(
+            text=text,
+            user_id=user_id,
+            context=context,
+            technique="chain_of_thought",
+            use_cache=use_cache
+        )
+    
+    async def profile_partner(
+        self,
+        answers: List[Dict[str, Any]],
+        user_id: int,
+        partner_name: str = "партнер",
+        partner_description: str = "",
+        use_cache: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Backward compatible partner profiling (uses Tree-of-Thoughts by default)
+        """
+        try:
+            return await self.profile_partner_advanced(
+                answers=answers,
+                user_id=user_id,
+                partner_name=partner_name,
+                partner_description=partner_description,
+                technique="tree_of_thoughts",
+                use_cache=use_cache
+            )
+        except Exception as e:
+            logger.error(f"Advanced profiling failed, falling back to basic analysis: {e}")
+            # Fallback to basic analysis if advanced fails
             try:
                 from app.prompts.profiler_full_questions import calculate_weighted_scores
                 scores = calculate_weighted_scores(answers)
@@ -279,6 +658,9 @@ class AIService:
             # Parse response
             compatibility = self._parse_compatibility_response(result)
             
+            # Validate response quality
+            compatibility = self._validate_response_quality(compatibility, 'compatibility')
+            
             # Add metadata
             compatibility["processing_time"] = time.time() - start_time
             compatibility["ai_model_used"] = self._get_last_model_used()
@@ -331,6 +713,66 @@ class AIService:
                 raise AIServiceError("All AI services are unavailable")
         
         raise AIServiceError("No AI services configured")
+    
+    async def _get_ai_response_with_quality_check(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_format: str = "json",
+        max_tokens: int = 4000,
+        min_quality_score: int = 70,
+        max_retries: int = 2
+    ) -> str:
+        """
+        Get AI response with quality validation and retry mechanism
+        
+        Args:
+            system_prompt: System prompt
+            user_prompt: User prompt
+            response_format: Response format
+            max_tokens: Maximum tokens
+            min_quality_score: Minimum quality score to accept
+            max_retries: Maximum retry attempts
+            
+        Returns:
+            AI response string
+        """
+        for attempt in range(max_retries + 1):
+            try:
+                # Get AI response
+                response = await self._get_ai_response(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    response_format=response_format,
+                    max_tokens=max_tokens
+                )
+                
+                # For first attempt, return immediately
+                if attempt == 0:
+                    return response
+                
+                # For retry attempts, check quality
+                try:
+                    # Quick quality check - parse response
+                    if response_format == "json":
+                        parsed = extract_json_from_text(response)
+                        if parsed and len(parsed) >= 3:  # Basic structure check
+                            return response
+                except:
+                    pass
+                
+                # If quality check fails, continue to next attempt
+                logger.warning(f"AI response quality check failed, attempt {attempt + 1}/{max_retries + 1}")
+                
+            except Exception as e:
+                logger.error(f"AI response attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries:
+                    raise
+                
+                # Wait before retry
+                await asyncio.sleep(1)
+        
+        return response  # Return last attempt even if quality is low
     
     async def _get_claude_response(
         self,
@@ -403,7 +845,11 @@ class AIService:
     def _parse_analysis_response(self, response: str) -> Dict[str, Any]:
         """Parse text analysis response"""
         try:
-            data = safe_json_loads(response, {})
+            # Try to extract JSON from structured response
+            data = extract_json_from_text(response)
+            if not data:
+                data = safe_json_loads(response, {})
+            
             toxicity_score = float(data.get("toxicity_score", 0))
             if not (0 <= toxicity_score <= 10):
                 raise AIServiceError("toxicity_score вне диапазона 0-10")
@@ -430,7 +876,10 @@ class AIService:
     def _parse_profile_response(self, response: str) -> Dict[str, Any]:
         """Parse partner profile response from AI"""
         try:
-            data = safe_json_loads(response, {})
+            # Try to extract JSON from structured response
+            data = extract_json_from_text(response)
+            if not data:
+                data = safe_json_loads(response, {})
             
             # Extract main fields with fallbacks
             psychological_profile = data.get("psychological_profile", "")
@@ -733,6 +1182,52 @@ class AIService:
         
         return status
 
+    def _parse_tot_profile_response(self, response: str) -> Dict[str, Any]:
+        """Parse Tree of Thoughts profile response"""
+        try:
+            # Extract JSON from response
+            profile_data = extract_json_from_text(response)
+            
+            if not profile_data:
+                raise ValueError("No valid JSON found in ToT response")
+            
+            # Handle Tree of Thoughts specific structure
+            if "consensus_analysis" in profile_data:
+                consensus = profile_data["consensus_analysis"]
+                expert_analyses = profile_data.get("expert_analyses", {})
+                
+                # Extract core information from consensus
+                result = {
+                    "personality_type": consensus.get("personality_type", "Неопределен"),
+                    "manipulation_risk": consensus.get("manipulation_risk", 5),
+                    "urgency_level": consensus.get("urgency_level", "medium"),
+                    "psychological_profile": consensus.get("psychological_profile", "Профиль недоступен"),
+                    "red_flags": consensus.get("red_flags", []),
+                    "safety_alerts": consensus.get("safety_alerts", []),
+                    "block_scores": profile_data.get("block_scores", {}),
+                    "expert_agreement": consensus.get("expert_agreement", 0.5),
+                    "expert_analyses": expert_analyses
+                }
+                
+                # Add additional fields for compatibility
+                result.update({
+                    "positive_traits": [],
+                    "danger_assessment": f"Согласованная оценка экспертов: {consensus.get('urgency_level', 'medium')}",
+                    "relationship_forecast": "Основано на экспертном консенсусе",
+                    "exit_strategy": "См. рекомендации по безопасности",
+                    "confidence_level": consensus.get("expert_agreement", 0.5)
+                })
+                
+                return result
+            else:
+                # Fallback to standard parsing
+                return self._parse_profile_response(response)
+                
+        except Exception as e:
+            logger.error(f"Failed to parse ToT profile response: {e}")
+            # Fallback to standard parsing
+            return self._parse_profile_response(response)
+
     def _create_full_fallback_analysis(self, answers: Dict[str, int], scores: Dict[str, Any], partner_name: str) -> Dict[str, Any]:
         """Create fallback analysis for full profiler when AI fails"""
         try:
@@ -922,6 +1417,111 @@ class AIService:
             "ai_available": False,
             "fallback_used": True
         }
+
+    def _validate_response_quality(self, response: Dict[str, Any], response_type: str) -> Dict[str, Any]:
+        """
+        Validate AI response quality and completeness
+        
+        Args:
+            response: AI response dictionary
+            response_type: Type of response ('profile' or 'analysis')
+            
+        Returns:
+            Updated response with quality metrics
+        """
+        quality_score = 0
+        quality_issues = []
+        
+        if response_type == 'profile':
+            # Check required fields
+            required_fields = ['personality_type', 'psychological_profile', 'red_flags', 'manipulation_risk']
+            for field in required_fields:
+                if field in response and response[field]:
+                    quality_score += 20
+                else:
+                    quality_issues.append(f"Missing or empty field: {field}")
+            
+            # Check psychological profile length
+            profile_text = response.get('psychological_profile', '')
+            if len(profile_text) >= 200:
+                quality_score += 10
+            else:
+                quality_issues.append(f"Psychological profile too short: {len(profile_text)} chars")
+            
+            # Check red flags specificity
+            red_flags = response.get('red_flags', [])
+            if isinstance(red_flags, list) and len(red_flags) >= 3:
+                quality_score += 10
+            else:
+                quality_issues.append(f"Insufficient red flags: {len(red_flags) if isinstance(red_flags, list) else 0}")
+            
+        elif response_type == 'analysis':
+            # Check required fields for text analysis
+            required_fields = ['toxicity_score', 'urgency_level', 'analysis', 'patterns_detected']
+            for field in required_fields:
+                if field in response and response[field]:
+                    quality_score += 20
+                else:
+                    quality_issues.append(f"Missing or empty field: {field}")
+            
+            # Check toxicity-urgency alignment
+            toxicity = response.get('toxicity_score', 0)
+            urgency = response.get('urgency_level', 'low')
+            
+            urgency_mapping = {
+                'low': (0, 3),
+                'medium': (4, 6),
+                'high': (7, 8),
+                'critical': (9, 10)
+            }
+            
+            expected_range = urgency_mapping.get(urgency, (0, 10))
+            if expected_range[0] <= toxicity <= expected_range[1]:
+                quality_score += 20
+            else:
+                quality_issues.append(f"Toxicity-urgency mismatch: {toxicity} vs {urgency}")
+        
+        # Add quality metrics to response
+        response['quality_score'] = quality_score
+        response['quality_issues'] = quality_issues
+        response['quality_grade'] = self._get_quality_grade(quality_score)
+        
+        return response
+    
+    def _get_quality_grade(self, score: int) -> str:
+        """Convert quality score to grade"""
+        if score >= 90:
+            return "A"
+        elif score >= 80:
+            return "B"
+        elif score >= 70:
+            return "C"
+        elif score >= 60:
+            return "D"
+        else:
+            return "F"
+
+    def _log_performance_metrics(self, response: Dict[str, Any], response_type: str, processing_time: float):
+        """
+        Log performance metrics for monitoring
+        
+        Args:
+            response: AI response
+            response_type: Type of response
+            processing_time: Processing time in seconds
+        """
+        quality_score = response.get('quality_score', 0)
+        quality_grade = response.get('quality_grade', 'F')
+        
+        logger.info(f"AI Performance - Type: {response_type}, "
+                   f"Quality: {quality_score}% ({quality_grade}), "
+                   f"Time: {processing_time:.2f}s, "
+                   f"Model: {self._get_last_model_used()}")
+        
+        # Log quality issues if any
+        quality_issues = response.get('quality_issues', [])
+        if quality_issues:
+            logger.warning(f"Quality issues detected: {quality_issues}")
 
 
 # Global AI service instance

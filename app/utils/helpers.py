@@ -459,3 +459,162 @@ def human_readable_size(size_bytes: int) -> str:
         i += 1
     
     return f"{size_bytes:.1f} {size_names[i]}" 
+
+
+def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Extract JSON from AI response that may contain XML tags and step-by-step thinking
+    
+    Args:
+        text: AI response text
+        
+    Returns:
+        Parsed JSON object or None
+    """
+    import re
+    
+    try:
+        # First, try to parse as direct JSON
+        return json.loads(text)
+    except:
+        pass
+    
+    try:
+        # Look for JSON within the text
+        # Pattern 1: JSON object enclosed in ```json blocks
+        json_pattern = r'```json\s*(\{.*?\})\s*```'
+        match = re.search(json_pattern, text, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+        
+        # Pattern 2: Find the largest complete JSON object
+        # Look for balanced braces
+        brace_positions = []
+        brace_count = 0
+        start_pos = -1
+        
+        for i, char in enumerate(text):
+            if char == '{':
+                if brace_count == 0:
+                    start_pos = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and start_pos != -1:
+                    # Found complete JSON object
+                    json_text = text[start_pos:i+1]
+                    try:
+                        parsed = json.loads(json_text)
+                        if isinstance(parsed, dict) and len(parsed) > 2:
+                            return parsed
+                    except:
+                        pass
+        
+        # Pattern 3: Extract content between specific markers
+        # Look for the main JSON response after thinking process
+        markers = [
+            (r'<output_format>.*?</output_format>', 'after'),
+            (r'<answer>.*?</answer>', 'within'),
+            (r'Final analysis:', 'after'),
+            (r'Response:', 'after'),
+            (r'JSON:', 'after'),
+            (r'Result:', 'after')
+        ]
+        
+        for pattern, position in markers:
+            match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+            if match:
+                if position == 'after':
+                    remaining_text = text[match.end():]
+                else:
+                    remaining_text = match.group(0)
+                
+                # Try to find JSON in remaining text
+                json_match = re.search(r'(\{.*\})', remaining_text, re.DOTALL)
+                if json_match:
+                    try:
+                        return json.loads(json_match.group(1))
+                    except:
+                        continue
+        
+        # Pattern 4: Try to extract JSON-like structure manually for profiler
+        if 'personality_type' in text or 'manipulation_risk' in text:
+            # This looks like our profiler response, try to extract manually
+            extracted = {}
+            
+            # Extract key fields using regex
+            patterns = {
+                'personality_type': r'"personality_type":\s*"([^"]*)"',
+                'manipulation_risk': r'"manipulation_risk":\s*(\d+)',
+                'urgency_level': r'"urgency_level":\s*"([^"]*)"',
+                'psychological_profile': r'"psychological_profile":\s*"([^"]*)"',
+                'red_flags': r'"red_flags":\s*\[(.*?)\]',
+                'positive_traits': r'"positive_traits":\s*\[(.*?)\]'
+            }
+            
+            for key, pattern in patterns.items():
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    value = match.group(1)
+                    if key in ['manipulation_risk']:
+                        extracted[key] = int(value)
+                    elif key in ['red_flags', 'positive_traits']:
+                        # Parse array
+                        items = re.findall(r'"([^"]*)"', value)
+                        extracted[key] = items
+                    else:
+                        extracted[key] = value
+            
+            if extracted:
+                return extracted
+        
+        # Pattern 5: Try to extract JSON-like structure for text analysis
+        if 'toxicity_score' in text or 'content_analysis' in text:
+            extracted = {}
+            
+            # Extract key fields for text analysis
+            patterns = {
+                'toxicity_score': r'"toxicity_score":\s*(\d+(?:\.\d+)?)',
+                'urgency_level': r'"urgency_level":\s*"([^"]*)"',
+                'red_flags': r'"red_flags":\s*\[(.*?)\]',
+                'patterns_detected': r'"patterns_detected":\s*\[(.*?)\]',
+                'analysis': r'"analysis":\s*"([^"]*)"',
+                'recommendation': r'"recommendation":\s*"([^"]*)"',
+                'confidence_score': r'"confidence_score":\s*(\d+(?:\.\d+)?)',
+                'sentiment_score': r'"sentiment_score":\s*(-?\d+(?:\.\d+)?)'
+            }
+            
+            for key, pattern in patterns.items():
+                match = re.search(pattern, text, re.DOTALL)
+                if match:
+                    value = match.group(1)
+                    if key in ['toxicity_score', 'confidence_score', 'sentiment_score']:
+                        extracted[key] = float(value)
+                    elif key in ['red_flags', 'patterns_detected']:
+                        # Parse array
+                        items = re.findall(r'"([^"]*)"', value)
+                        extracted[key] = items
+                    else:
+                        extracted[key] = value
+            
+            if extracted:
+                return extracted
+        
+        # Pattern 6: Try to parse multiline JSON with extra content
+        # Remove everything before first { and after last }
+        first_brace = text.find('{')
+        last_brace = text.rfind('}')
+        
+        if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
+            json_candidate = text[first_brace:last_brace+1]
+            try:
+                return json.loads(json_candidate)
+            except:
+                pass
+        
+        logger.warning(f"Could not extract JSON from response: {text[:200]}...")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error extracting JSON: {e}")
+        return None 

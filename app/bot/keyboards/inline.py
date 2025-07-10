@@ -970,3 +970,51 @@ def profiler_progress_visual_kb(
     )
     
     return builder.as_markup() 
+
+
+def get_profiler_keyboard() -> InlineKeyboardMarkup:
+    """Get profiler main keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.row(
+        InlineKeyboardButton(text="🆕 Новый профиль", callback_data="create_profile"),
+        InlineKeyboardButton(text="📋 Мои профили", callback_data="my_profiles")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🎯 Рекомендации", callback_data="profile_recommendations")
+    )
+    builder.row(
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def get_profiler_navigation_keyboard(current_step: int, total_steps: int) -> InlineKeyboardMarkup:
+    """Get profiler navigation keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    # Previous button
+    if current_step > 1:
+        builder.row(
+            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"profiler_prev_{current_step}")
+        )
+    
+    # Next button
+    if current_step < total_steps:
+        builder.row(
+            InlineKeyboardButton(text="➡️ Далее", callback_data=f"profiler_next_{current_step}")
+        )
+    
+    # Finish button
+    if current_step == total_steps:
+        builder.row(
+            InlineKeyboardButton(text="✅ Завершить", callback_data="profiler_finish")
+        )
+    
+    # Cancel button
+    builder.row(
+        InlineKeyboardButton(text="❌ Отменить", callback_data="profiler_cancel")
+    )
+    
+    return builder.as_markup() 

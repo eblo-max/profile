@@ -24,7 +24,7 @@ class AnalysisService:
         self,
         user_id: int,
         text: str,
-        analysis_type: AnalysisType = AnalysisType.MESSAGE,
+        analysis_type: AnalysisType = AnalysisType.TEXT_ANALYSIS,
         context: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ) -> Optional[TextAnalysis]:
@@ -213,7 +213,7 @@ class AnalysisService:
         self,
         user_id: int,
         texts: List[str],
-        analysis_type: AnalysisType = AnalysisType.CHAT
+        analysis_type: AnalysisType = AnalysisType.TEXT_ANALYSIS
     ) -> List[TextAnalysis]:
         """Analyze multiple texts in bulk (premium feature)"""
         try:

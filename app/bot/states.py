@@ -211,6 +211,13 @@ class QuestionnaireStates(StatesGroup):
     complete = State()
 
 
+class ProfilerStates(StatesGroup):
+    """Profiler states"""
+    answering_questions = State()
+    processing = State()
+    results_ready = State()
+
+
 class AdminStates(StatesGroup):
     """Admin panel states"""
     main_menu = State()
@@ -274,6 +281,7 @@ STATE_GROUPS = {
     'onboarding': OnboardingStates,
     'settings': SettingsStates,
     'questionnaire': QuestionnaireStates,
+    'profiler': ProfilerStates,
     'admin': AdminStates,
     'chat_import': ChatImportStates,
     'achievements': AchievementStates,

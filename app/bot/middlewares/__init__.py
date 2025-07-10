@@ -5,14 +5,14 @@ from .auth import AuthMiddleware
 from .logging import LoggingMiddleware
 from .rate_limit import RateLimitMiddleware
 from .subscription import SubscriptionMiddleware
-from .dependencies import DependencyMiddleware
+from .dependencies import DependenciesMiddleware
 
 
 def register_all_middlewares(dp: Dispatcher) -> None:
     """Register all middlewares"""
     # Re-enable DependencyMiddleware to provide UserService
-    dp.message.middleware(DependencyMiddleware())
-    dp.callback_query.middleware(DependencyMiddleware())
+    dp.message.middleware(DependenciesMiddleware())
+    dp.callback_query.middleware(DependenciesMiddleware())
     
     dp.message.middleware(AuthMiddleware())
     dp.callback_query.middleware(AuthMiddleware())
