@@ -7,9 +7,10 @@ from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
 
 from app.models.user import User
+from app.models.analysis import TextAnalysis
 from app.models.analytics import UserActivity, UserAchievement
 from app.models.subscription import Subscription
-from app.utils.enums import SubscriptionType, ActivityType
+from app.utils.enums import SubscriptionType, ActivityType, AnalysisType, UrgencyLevel
 from app.core.logging import logger
 
 
@@ -388,4 +389,71 @@ class UserService:
             
         except Exception as e:
             logger.error(f"Error getting user count stats: {e}")
-            return {} 
+            return {}
+    
+    async def save_analysis(
+        self,
+        user_id: int,
+        analysis_type: AnalysisType,
+        analysis_data: Dict[str, Any],
+        questions: Optional[List[Dict[str, Any]]] = None
+    ) -> Optional[TextAnalysis]:
+        """Save analysis results to database"""
+        try:
+            # Extract data from analysis_data
+            toxicity_score = analysis_data.get('overall_risk', analysis_data.get('overall_risk_score', 0))
+            
+            # Convert to 0-10 scale if needed
+            if isinstance(toxicity_score, float) and toxicity_score > 10:
+                toxicity_score = toxicity_score / 10  # Convert from 0-100 to 0-10
+            
+            # Extract urgency level
+            urgency_level_str = analysis_data.get('urgency_level', 'LOW')
+            try:
+                urgency_level = UrgencyLevel(urgency_level_str.upper())
+            except ValueError:
+                urgency_level = UrgencyLevel.LOW
+            
+            # Create text representation of questions/answers
+            if questions:
+                original_text = "\n".join([
+                    f"Q: {q.get('question', 'Unknown question')} - A: {q.get('answer', 'No answer')}"
+                    for q in questions
+                ])
+            else:
+                original_text = "Partner analysis data"
+            
+            # Create text hash for deduplication
+            import hashlib
+            text_hash = hashlib.sha256(original_text.encode()).hexdigest()
+            
+            # Create analysis record
+            analysis = TextAnalysis(
+                user_id=user_id,
+                analysis_type=analysis_type,
+                original_text=original_text,
+                text_hash=text_hash,
+                toxicity_score=float(toxicity_score),
+                urgency_level=urgency_level,
+                red_flags=analysis_data.get('red_flags', []),
+                patterns_detected=analysis_data.get('patterns_detected', []),
+                analysis_text=analysis_data.get('psychological_profile', ''),
+                recommendation=analysis_data.get('survival_guide', ''),
+                confidence_score=analysis_data.get('confidence_score', 0.8),
+                ai_model_used=analysis_data.get('ai_model_used', 'claude-3-sonnet'),
+                keywords=analysis_data.get('keywords', []),
+                sentiment_score=analysis_data.get('sentiment_score'),
+                is_processed=True
+            )
+            
+            self.session.add(analysis)
+            await self.session.commit()
+            await self.session.refresh(analysis)
+            
+            logger.info(f"Analysis saved for user {user_id}, analysis_id: {analysis.id}")
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"Error saving analysis: {e}")
+            await self.session.rollback()
+            return None 

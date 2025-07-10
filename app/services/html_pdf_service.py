@@ -28,27 +28,53 @@ class HTMLPDFService:
     async def _ensure_playwright_available(self) -> bool:
         """Ensure Playwright browser is available using async API"""
         if self.playwright_checked:
+            logger.debug(f"Playwright already checked, available: {self.playwright_available}")
             return self.playwright_available
         
         try:
+            logger.debug("Checking Playwright availability...")
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
                 # Try to get browser executable path
                 browser_path = p.chromium.executable_path
+                logger.debug(f"Browser path from Playwright: {browser_path}")
+                
                 if browser_path and Path(browser_path).exists():
                     logger.info(f"Playwright Chromium found at: {browser_path}")
                     self.playwright_available = True
                     self.playwright_checked = True
                     return True
                 else:
-                    logger.warning("Playwright Chromium executable not found")
+                    logger.warning(f"Playwright Chromium executable not found at: {browser_path}")
                     # Try to install browser automatically
+                    logger.info("Attempting to install Playwright browser...")
                     success = await self._install_playwright_browser_async()
-                    self.playwright_available = success
-                    self.playwright_checked = True
-                    return success
+                    
+                    if success:
+                        logger.info("Playwright installation successful, rechecking availability...")
+                        # Recheck availability after installation
+                        async with async_playwright() as p_new:
+                            new_browser_path = p_new.chromium.executable_path
+                            logger.debug(f"New browser path after installation: {new_browser_path}")
+                            
+                            if new_browser_path and Path(new_browser_path).exists():
+                                logger.info(f"Playwright Chromium verified at: {new_browser_path}")
+                                self.playwright_available = True
+                                self.playwright_checked = True
+                                return True
+                            else:
+                                logger.error(f"Playwright installation completed but browser still not found at: {new_browser_path}")
+                                self.playwright_available = False
+                                self.playwright_checked = True
+                                return False
+                    else:
+                        logger.error("Playwright installation failed")
+                        self.playwright_available = False
+                        self.playwright_checked = True
+                        return False
+                        
         except Exception as e:
-            logger.warning(f"Playwright availability check failed: {e}")
+            logger.error(f"Playwright availability check failed: {e}")
             self.playwright_available = False
             self.playwright_checked = True
             return False
@@ -84,6 +110,9 @@ class HTMLPDFService:
                     if browser_path and Path(browser_path).exists():
                         logger.info(f"Verified Playwright Chromium at: {browser_path}")
                         return True
+                    else:
+                        logger.warning(f"Playwright installed but executable not found at: {browser_path}")
+                        return False
             else:
                 logger.error(f"Failed to install Playwright browser: {stderr.decode()}")
                 return False
