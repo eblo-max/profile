@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     WEBHOOK_URL: Optional[str] = Field(None, env="WEBHOOK_URL")
     
     # AI Configuration
-    CLAUDE_API_KEY: str = Field(..., env="CLAUDE_API_KEY")
+    CLAUDE_API_KEY: Optional[str] = Field(None, env="CLAUDE_API_KEY")
     OPENAI_API_KEY: Optional[str] = Field(None, env="OPENAI_API_KEY")
     CLAUDE_MODEL: str = Field("claude-3-sonnet-20240229", env="CLAUDE_MODEL")
     OPENAI_MODEL: str = Field("gpt-4-turbo-preview", env="OPENAI_MODEL")
