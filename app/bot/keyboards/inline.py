@@ -1017,4 +1017,26 @@ def get_profiler_navigation_keyboard(current_step: int, total_steps: int) -> Inl
         InlineKeyboardButton(text="❌ Отменить", callback_data="profiler_cancel")
     )
     
+    return builder.as_markup()
+
+
+def get_profiler_question_keyboard(question_id: str, options: List[str]) -> InlineKeyboardMarkup:
+    """Create keyboard with answer options for profiler questions"""
+    builder = InlineKeyboardBuilder()
+    
+    # Add answer options
+    for i, option in enumerate(options):
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{i+1}. {option}",
+                callback_data=f"answer_{question_id}_{i}"
+            )
+        )
+    
+    # Add navigation buttons
+    builder.row(
+        InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_back"),
+        InlineKeyboardButton(text="❌ Отменить", callback_data="profiler_cancel")
+    )
+    
     return builder.as_markup() 

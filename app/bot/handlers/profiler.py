@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from loguru import logger
 
 from app.bot.states import ProfilerStates, PartnerProfileStates
-from app.bot.keyboards.inline import profiler_menu_kb, get_profiler_keyboard, get_profiler_navigation_keyboard
+from app.bot.keyboards.inline import profiler_menu_kb, get_profiler_keyboard, get_profiler_navigation_keyboard, get_profiler_question_keyboard
 from app.services.ai_service import AIService
 from app.services.html_pdf_service import HTMLPDFService
 from app.services.user_service import UserService
@@ -348,39 +348,44 @@ async def start_questions_now(callback: CallbackQuery, state: FSMContext):
     try:
         # Get all questions
         questions = get_all_questions()
-        question_order = [
-            "narcissism_q1", "narcissism_q2", "narcissism_q3", "narcissism_q4", "narcissism_q5", "narcissism_q6",
-            "control_q1", "control_q2", "control_q3", "control_q4", "control_q5", "control_q6",
-            "gaslighting_q1", "gaslighting_q2", "gaslighting_q3", "gaslighting_q4", "gaslighting_q5",
-            "emotion_q1", "emotion_q2", "emotion_q3", "emotion_q4",
-            "intimacy_q1", "intimacy_q2", "intimacy_q3",
-            "social_q1", "social_q2", "social_q3", "social_q4"
-        ]
+        from app.prompts.profiler_full_questions import QUESTION_ORDER
         
         # Update state with questions data
         await state.set_state(ProfilerStates.answering_questions)
         await state.update_data(
             questions=questions,
-            question_order=question_order,
+            question_order=QUESTION_ORDER,
             current_question=0,
             answers={}
         )
         
         # Send first question
-        first_question_id = question_order[0]
+        first_question_id = QUESTION_ORDER[0]
         first_question = questions[first_question_id]
         
         data = await state.get_data()
         partner_name = data.get('partner_name', 'партнера')
         
+        # Get block name in Russian
+        block_names = {
+            "narcissism": "Нарциссизм и грандиозность",
+            "control": "Контроль и манипуляции",
+            "gaslighting": "Газлайтинг и искажение реальности",
+            "emotion": "Эмоциональная регуляция",
+            "intimacy": "Интимность и принуждение",
+            "social": "Социальное поведение"
+        }
+        
+        block_name = block_names.get(first_question['block'], first_question['block'])
+        
         await callback.message.edit_text(
             f"🎯 <b>Вопрос 1 из 28</b>\n\n"
             f"📝 <b>О {partner_name}:</b>\n\n"
-            f"{first_question['question']}\n\n"
-            f"🔍 <b>Блок:</b> {first_question['block']}\n"
-            f"💡 <i>{first_question['description']}</i>",
+            f"{first_question['text']}\n\n"
+            f"🔍 <b>Блок:</b> {block_name}\n"
+            f"💡 <i>{first_question['context']}</i>",
             parse_mode="HTML",
-            reply_markup=get_profiler_keyboard(first_question_id, 1, 28)
+            reply_markup=get_profiler_question_keyboard(first_question_id, first_question['options'])
         )
         
     except Exception as e:
@@ -546,8 +551,14 @@ async def show_profile_recommendations(callback: CallbackQuery, state: FSMContex
 async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
     """Handle user answer to profiling question"""
     try:
-        # Get answer index
-        answer_index = int(callback.data.split("_")[1])
+        # Parse callback data: answer_{question_id}_{answer_index}
+        callback_parts = callback.data.split("_")
+        if len(callback_parts) < 3:
+            await callback.answer("❌ Неверный формат ответа")
+            return
+            
+        question_id = callback_parts[1]
+        answer_index = int(callback_parts[2])
         
         # Get state data
         data = await state.get_data()
@@ -557,8 +568,7 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
         answers = data.get('answers', {})
         
         # Save answer
-        current_question_id = question_order[current_question]
-        answers[current_question_id] = answer_index
+        answers[question_id] = answer_index
         
         # Move to next question
         next_question = current_question + 1
@@ -574,6 +584,9 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             next_question_id = question_order[next_question]
             question = questions[next_question_id]
             
+            # Get partner name
+            partner_name = data.get('partner_name', 'партнера')
+            
             # Get block name
             block_names = {
                 "narcissism": "Нарциссизм и грандиозность",
@@ -585,30 +598,14 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             }
             block_name = block_names.get(question['block'], question['block'])
             
-            # Format question text
-            question_text = f"""🔍 <b>Профайлинг партнера</b>
-
-📋 Вопрос {next_question + 1} из {len(question_order)}
-
-{get_block_emoji(question['block'])} <b>Блок:</b> {block_name}
-
-<b>{question['text']}</b>
-
-💭 <i>{question['context']}</i>
-
-Выберите наиболее подходящий вариант:"""
-            
-            # Create options keyboard
-            options = []
-            for i, option in enumerate(question['options']):
-                options.append([InlineKeyboardButton(text=f"{i+1}. {option[:50]}{'...' if len(option) > 50 else ''}", callback_data=f"answer_{i}")])
-            
-            options.append([InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")])
-            
             await callback.message.edit_text(
-                question_text,
+                f"🎯 <b>Вопрос {next_question + 1} из {len(question_order)}</b>\n\n"
+                f"📝 <b>О {partner_name}:</b>\n\n"
+                f"{question['text']}\n\n"
+                f"🔍 <b>Блок:</b> {block_name}\n"
+                f"💡 <i>{question['context']}</i>",
                 parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=options)
+                reply_markup=get_profiler_question_keyboard(next_question_id, question['options'])
             )
         else:
             # All questions answered - start analysis
