@@ -13,7 +13,67 @@ class HTMLPDFService:
     """Service for generating beautiful PDF reports via HTML using Playwright"""
     
     def __init__(self):
-        pass
+        self.playwright_available = self._check_playwright_availability()
+        if not self.playwright_available:
+            logger.warning("Playwright browser not available, will use fallback ReportLab PDF service")
+            # Import fallback service
+            try:
+                from app.services.reportlab_pdf_service import ReportLabPDFService
+                self.fallback_service = ReportLabPDFService()
+                logger.info("ReportLab fallback service initialized")
+            except ImportError:
+                logger.error("Neither Playwright nor ReportLab available for PDF generation")
+                self.fallback_service = None
+    
+    def _check_playwright_availability(self) -> bool:
+        """Check if Playwright browser is available"""
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                # Try to get browser executable path
+                browser_path = p.chromium.executable_path
+                if browser_path and Path(browser_path).exists():
+                    logger.info(f"Playwright Chromium found at: {browser_path}")
+                    return True
+                else:
+                    logger.warning("Playwright Chromium executable not found")
+                    # Try to install browser automatically
+                    return self._install_playwright_browser()
+        except Exception as e:
+            logger.warning(f"Playwright availability check failed: {e}")
+            return False
+    
+    def _install_playwright_browser(self) -> bool:
+        """Try to install Playwright browser automatically"""
+        try:
+            logger.info("Attempting to install Playwright Chromium browser...")
+            import subprocess
+            import os
+            
+            # Set environment for headless installation
+            env = os.environ.copy()
+            env['PLAYWRIGHT_BROWSERS_PATH'] = '/tmp/playwright-browsers'
+            
+            result = subprocess.run([
+                'python', '-m', 'playwright', 'install', 'chromium'
+            ], capture_output=True, text=True, timeout=300, env=env)
+            
+            if result.returncode == 0:
+                logger.info("Playwright Chromium installed successfully")
+                # Verify installation
+                from playwright.sync_api import sync_playwright
+                with sync_playwright() as p:
+                    browser_path = p.chromium.executable_path
+                    if browser_path and Path(browser_path).exists():
+                        logger.info(f"Verified Playwright Chromium at: {browser_path}")
+                        return True
+            else:
+                logger.error(f"Failed to install Playwright browser: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error installing Playwright browser: {e}")
+            return False
     
     async def generate_partner_report_html(
         self,
@@ -36,6 +96,14 @@ class HTMLPDFService:
             logger.info(f"Starting HTML PDF generation for user {user_id}, partner: {partner_name}")
             logger.debug(f"Analysis data keys: {list(analysis_data.keys())}")
             
+            # Check Playwright availability first
+            if not self.playwright_available:
+                logger.warning("Playwright not available, using fallback ReportLab service")
+                if self.fallback_service:
+                    return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
+                else:
+                    raise ServiceError("No PDF generation service available")
+            
             # Generate complete HTML report matching mockup
             html_content = self._generate_beautiful_html_report(analysis_data, partner_name, user_id)
             
@@ -47,7 +115,35 @@ class HTMLPDFService:
             
         except Exception as e:
             logger.error(f"HTML PDF generation failed: {e}")
-            raise ServiceError(f"Failed to generate HTML PDF: {str(e)}")
+            
+            # Try fallback service if available
+            if self.fallback_service:
+                logger.info("Attempting fallback PDF generation with ReportLab")
+                try:
+                    return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
+                except Exception as fallback_error:
+                    logger.error(f"Fallback PDF generation also failed: {fallback_error}")
+            
+            raise ServiceError(f"Failed to generate PDF: {str(e)}")
+    
+    async def _generate_fallback_pdf(
+        self,
+        analysis_data: Dict[str, Any],
+        user_id: int,
+        partner_name: str
+    ) -> bytes:
+        """Generate PDF using fallback ReportLab service"""
+        logger.info("Generating PDF using ReportLab fallback service")
+        
+        if not self.fallback_service:
+            raise ServiceError("Fallback PDF service not available")
+        
+        # Use the existing ReportLab service
+        return await self.fallback_service.generate_partner_report(
+            analysis_data=analysis_data,
+            user_id=user_id,
+            partner_name=partner_name
+        )
     
     def _generate_beautiful_html_report(
         self,

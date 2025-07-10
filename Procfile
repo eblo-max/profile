@@ -1,2 +1,2 @@
 web: python -m app.main
-release: alembic upgrade head 
+release: python scripts/setup_playwright.py && alembic upgrade head 
