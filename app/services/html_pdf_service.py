@@ -13,62 +13,79 @@ class HTMLPDFService:
     """Service for generating beautiful PDF reports via HTML using Playwright"""
     
     def __init__(self):
-        self.playwright_available = self._check_playwright_availability()
-        if not self.playwright_available:
-            logger.warning("Playwright browser not available, will use fallback ReportLab PDF service")
-            # Import fallback service
-            try:
-                from app.services.reportlab_pdf_service import ReportLabPDFService
-                self.fallback_service = ReportLabPDFService()
-                logger.info("ReportLab fallback service initialized")
-            except ImportError:
-                logger.error("Neither Playwright nor ReportLab available for PDF generation")
-                self.fallback_service = None
-    
-    def _check_playwright_availability(self) -> bool:
-        """Check if Playwright browser is available"""
+        self.playwright_available = None  # Will be checked lazily
+        self.playwright_checked = False
+        
+        # Initialize fallback service
         try:
-            from playwright.sync_api import sync_playwright
-            with sync_playwright() as p:
+            from app.services.reportlab_pdf_service import ReportLabPDFService
+            self.fallback_service = ReportLabPDFService()
+            logger.info("ReportLab fallback service initialized")
+        except ImportError:
+            logger.error("ReportLab service not available for PDF generation")
+            self.fallback_service = None
+    
+    async def _ensure_playwright_available(self) -> bool:
+        """Ensure Playwright browser is available using async API"""
+        if self.playwright_checked:
+            return self.playwright_available
+        
+        try:
+            from playwright.async_api import async_playwright
+            async with async_playwright() as p:
                 # Try to get browser executable path
                 browser_path = p.chromium.executable_path
                 if browser_path and Path(browser_path).exists():
                     logger.info(f"Playwright Chromium found at: {browser_path}")
+                    self.playwright_available = True
+                    self.playwright_checked = True
                     return True
                 else:
                     logger.warning("Playwright Chromium executable not found")
                     # Try to install browser automatically
-                    return self._install_playwright_browser()
+                    success = await self._install_playwright_browser_async()
+                    self.playwright_available = success
+                    self.playwright_checked = True
+                    return success
         except Exception as e:
             logger.warning(f"Playwright availability check failed: {e}")
+            self.playwright_available = False
+            self.playwright_checked = True
             return False
     
-    def _install_playwright_browser(self) -> bool:
-        """Try to install Playwright browser automatically"""
+    async def _install_playwright_browser_async(self) -> bool:
+        """Try to install Playwright browser automatically using async API"""
         try:
             logger.info("Attempting to install Playwright Chromium browser...")
             import subprocess
             import os
+            import asyncio
             
             # Set environment for headless installation
             env = os.environ.copy()
             env['PLAYWRIGHT_BROWSERS_PATH'] = '/tmp/playwright-browsers'
             
-            result = subprocess.run([
-                'python', '-m', 'playwright', 'install', 'chromium'
-            ], capture_output=True, text=True, timeout=300, env=env)
+            # Run subprocess asynchronously
+            process = await asyncio.create_subprocess_exec(
+                'python', '-m', 'playwright', 'install', 'chromium',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env
+            )
             
-            if result.returncode == 0:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
+            
+            if process.returncode == 0:
                 logger.info("Playwright Chromium installed successfully")
-                # Verify installation
-                from playwright.sync_api import sync_playwright
-                with sync_playwright() as p:
+                # Verify installation using async API
+                from playwright.async_api import async_playwright
+                async with async_playwright() as p:
                     browser_path = p.chromium.executable_path
                     if browser_path and Path(browser_path).exists():
                         logger.info(f"Verified Playwright Chromium at: {browser_path}")
                         return True
             else:
-                logger.error(f"Failed to install Playwright browser: {result.stderr}")
+                logger.error(f"Failed to install Playwright browser: {stderr.decode()}")
                 return False
                 
         except Exception as e:
@@ -96,8 +113,9 @@ class HTMLPDFService:
             logger.info(f"Starting HTML PDF generation for user {user_id}, partner: {partner_name}")
             logger.debug(f"Analysis data keys: {list(analysis_data.keys())}")
             
-            # Check Playwright availability first
-            if not self.playwright_available:
+            # Check Playwright availability first using async method
+            playwright_available = await self._ensure_playwright_available()
+            if not playwright_available:
                 logger.warning("Playwright not available, using fallback ReportLab service")
                 if self.fallback_service:
                     return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
