@@ -22,24 +22,64 @@ class TextAnalysisStates(StatesGroup):
 
 
 class PartnerProfileStates(StatesGroup):
-    """Partner profile creation states"""
+    """Partner profile creation states - FULL version (28 questions in 6 blocks)"""
+    # Introduction and consent
+    intro = State()
+    privacy_consent = State()
     waiting_for_name = State()
     waiting_for_description = State()
     
-    # Questionnaire states
-    question_1 = State()  # Basic info
-    question_2 = State()  # Communication style
-    question_3 = State()  # Emotional patterns
-    question_4 = State()  # Conflict resolution
-    question_5 = State()  # Values and priorities
-    question_6 = State()  # Lifestyle preferences
-    question_7 = State()  # Future plans
-    question_8 = State()  # Red flags
-    question_9 = State()  # Additional observations
-    question_10 = State() # Final notes
+    # Block 1: Narcissism and Grandiosity (7 questions)
+    narcissism_q1 = State()  # Reaction to criticism
+    narcissism_q2 = State()  # Attitude to success
+    narcissism_q3 = State()  # Self-perception
+    narcissism_q4 = State()  # Empathy to experiences
+    narcissism_q5 = State()  # Relationships with others
+    narcissism_q6 = State()  # Apologies and mistakes
+    narcissism_q7 = State()  # Need for attention
     
+    # Block 2: Control and Manipulation (8 questions)
+    control_q1 = State()     # Time control
+    control_q2 = State()     # Relationships with friends
+    control_q3 = State()     # Access to information
+    control_q4 = State()     # Financial control
+    control_q5 = State()     # Reaction to boundaries
+    control_q6 = State()     # Emotional blackmail
+    control_q7 = State()     # Threats and intimidation
+    control_q8 = State()     # Jealousy
+    
+    # Block 3: Gaslighting and Reality Distortion (6 questions)
+    gaslighting_q1 = State() # Denial of events
+    gaslighting_q2 = State() # Devaluation of feelings
+    gaslighting_q3 = State() # Blame shifting
+    gaslighting_q4 = State() # Using information
+    gaslighting_q5 = State() # Double standards
+    gaslighting_q6 = State() # Distorting words
+    
+    # Block 4: Emotional Regulation (5 questions)
+    emotion_q1 = State()     # Anger management
+    emotion_q2 = State()     # Emotional swings
+    emotion_q3 = State()     # Ability to forgive
+    emotion_q4 = State()     # Stress resistance
+    emotion_q5 = State()     # Emotional support
+    
+    # Block 5: Intimacy and Coercion (4 questions)
+    intimacy_q1 = State()    # Consent and coercion
+    intimacy_q2 = State()    # Using intimacy
+    intimacy_q3 = State()    # Appearance control
+    intimacy_q4 = State()    # Jealousy about past
+    
+    # Block 6: Social Behavior (4 questions)
+    social_q1 = State()      # Behavior alone vs public
+    social_q2 = State()      # Attitude to staff
+    social_q3 = State()      # Ability to friendship
+    social_q4 = State()      # Work relationships
+    
+    # Processing and results
     reviewing_answers = State()
+    processing = State()
     profile_complete = State()
+    detailed_view = State()
 
 
 class CompatibilityTestStates(StatesGroup):

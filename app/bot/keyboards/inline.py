@@ -606,3 +606,363 @@ def profile_edit_navigation_kb(can_edit: bool, days_until_edit: int = 0) -> Inli
     )
     
     return builder.as_markup() 
+
+
+def profiler_full_navigation_kb(
+    current_state: str, 
+    current_num: int, 
+    total_questions: int,
+    block_name: str = "",
+    can_skip: bool = False
+) -> InlineKeyboardMarkup:
+    """Advanced navigation for full profiler questionnaire"""
+    builder = InlineKeyboardBuilder()
+    
+    # Visual progress bar
+    progress_filled = int((current_num / total_questions) * 10)
+    progress_bar = "█" * progress_filled + "░" * (10 - progress_filled)
+    
+    # Answer buttons will be added in the handler, this is just navigation
+    
+    # Navigation row
+    nav_buttons = []
+    
+    # Previous button (except for first question)
+    if current_num > 1:
+        nav_buttons.append(
+            InlineKeyboardButton(text="⬅️ Назад", callback_data=f"prof_prev_{current_state}")
+        )
+    
+    # Progress indicator with visual bar
+    nav_buttons.append(
+        InlineKeyboardButton(
+            text=f"📊 {current_num}/{total_questions}", 
+            callback_data="prof_progress_info"
+        )
+    )
+    
+    # Skip button for non-critical questions
+    if can_skip:
+        nav_buttons.append(
+            InlineKeyboardButton(text="⏭️ Пропустить", callback_data=f"prof_skip_{current_state}")
+        )
+    
+    if nav_buttons:
+        builder.row(*nav_buttons)
+    
+    # Block progress info
+    if block_name:
+        builder.row(
+            InlineKeyboardButton(
+                text=f"📋 Блок: {block_name}", 
+                callback_data="prof_block_info"
+            )
+        )
+    
+    # Quick actions
+    actions_row = []
+    actions_row.append(
+        InlineKeyboardButton(text="💾 Сохранить", callback_data="prof_save_progress")
+    )
+    actions_row.append(
+        InlineKeyboardButton(text="❌ Выход", callback_data="prof_exit_confirm")
+    )
+    
+    builder.row(*actions_row)
+    
+    return builder.as_markup()
+
+
+def profiler_results_navigation_kb(
+    urgency_level: str,
+    has_safety_alerts: bool = False,
+    overall_risk: float = 0.0
+) -> InlineKeyboardMarkup:
+    """Advanced results navigation with risk-based options"""
+    builder = InlineKeyboardBuilder()
+    
+    # Main analysis options
+    builder.row(
+        InlineKeyboardButton(text="📊 Полный анализ", callback_data="prof_detailed_analysis"),
+        InlineKeyboardButton(text="💡 Рекомендации", callback_data="prof_recommendations")
+    )
+    
+    # Risk-specific options
+    if urgency_level in ["HIGH", "CRITICAL"] or has_safety_alerts:
+        builder.row(
+            InlineKeyboardButton(text="🚨 План безопасности", callback_data="prof_safety_plan"),
+            InlineKeyboardButton(text="📞 Экстренная помощь", callback_data="prof_emergency_help")
+        )
+    
+    # Additional analysis
+    builder.row(
+        InlineKeyboardButton(text="🔍 Анализ по блокам", callback_data="prof_block_analysis"),
+        InlineKeyboardButton(text="📈 Динамика рисков", callback_data="prof_risk_trends")
+    )
+    
+    # Export and sharing
+    if overall_risk < 70:  # Only for lower risk profiles
+        builder.row(
+            InlineKeyboardButton(text="📋 Краткий отчет", callback_data="prof_brief_report"),
+            InlineKeyboardButton(text="📤 Поделиться", callback_data="prof_share_results")
+        )
+    
+    # Profile management
+    builder.row(
+        InlineKeyboardButton(text="💾 Сохранить профиль", callback_data="prof_save_profile"),
+        InlineKeyboardButton(text="🔄 Пройти заново", callback_data="prof_restart")
+    )
+    
+    # Navigation
+    builder.row(
+        InlineKeyboardButton(text="📋 Мои профили", callback_data="prof_my_profiles"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def profiler_block_analysis_kb(
+    block_scores: dict,
+    current_block: str = ""
+) -> InlineKeyboardMarkup:
+    """Navigation for detailed block analysis"""
+    builder = InlineKeyboardBuilder()
+    
+    # Block navigation buttons with risk indicators
+    block_info = {
+        "narcissism": {"name": "🧠 Нарциссизм", "emoji": "🧠"},
+        "control": {"name": "🎯 Контроль", "emoji": "🎯"},
+        "gaslighting": {"name": "🔄 Газлайтинг", "emoji": "🔄"},
+        "emotion": {"name": "💭 Эмоции", "emoji": "💭"},
+        "intimacy": {"name": "💕 Интимность", "emoji": "💕"},
+        "social": {"name": "👥 Социальное", "emoji": "👥"}
+    }
+    
+    # Create rows of block buttons
+    block_buttons = []
+    for block_key, info in block_info.items():
+        score = block_scores.get(block_key, 0)
+        risk_indicator = "🔴" if score >= 7 else "🟡" if score >= 4 else "🟢"
+        
+        # Highlight current block
+        if block_key == current_block:
+            text = f"▶️ {info['name']} {risk_indicator}"
+        else:
+            text = f"{info['emoji']} {info['name']} {risk_indicator}"
+        
+        block_buttons.append(
+            InlineKeyboardButton(
+                text=text,
+                callback_data=f"prof_view_block_{block_key}"
+            )
+        )
+    
+    # Arrange in rows of 2
+    for i in range(0, len(block_buttons), 2):
+        row_buttons = block_buttons[i:i+2]
+        builder.row(*row_buttons)
+    
+    # Summary and comparison
+    builder.row(
+        InlineKeyboardButton(text="📊 Общая сводка", callback_data="prof_blocks_summary"),
+        InlineKeyboardButton(text="⚖️ Сравнение блоков", callback_data="prof_blocks_compare")
+    )
+    
+    # Navigation
+    builder.row(
+        InlineKeyboardButton(text="⬅️ К результатам", callback_data="prof_back_to_results"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def profiler_safety_plan_kb(urgency_level: str) -> InlineKeyboardMarkup:
+    """Safety plan navigation based on urgency level"""
+    builder = InlineKeyboardBuilder()
+    
+    # Emergency contacts (always visible)
+    builder.row(
+        InlineKeyboardButton(text="🚨 Служба 112", url="tel:112"),
+        InlineKeyboardButton(text="☎️ Горячая линия", url="tel:88007000600")
+    )
+    
+    if urgency_level == "CRITICAL":
+        # Critical situation options
+        builder.row(
+            InlineKeyboardButton(text="🏃‍♀️ План эвакуации", callback_data="prof_evacuation_plan"),
+            InlineKeyboardButton(text="📋 Документы", callback_data="prof_emergency_docs")
+        )
+        builder.row(
+            InlineKeyboardButton(text="🏠 Безопасные места", callback_data="prof_safe_places"),
+            InlineKeyboardButton(text="👥 Сеть поддержки", callback_data="prof_support_network")
+        )
+    
+    elif urgency_level == "HIGH":
+        # High risk options
+        builder.row(
+            InlineKeyboardButton(text="🛡️ Границы безопасности", callback_data="prof_safety_boundaries"),
+            InlineKeyboardButton(text="📱 Приложения помощи", callback_data="prof_safety_apps")
+        )
+        builder.row(
+            InlineKeyboardButton(text="💬 Коды безопасности", callback_data="prof_safety_codes"),
+            InlineKeyboardButton(text="🗂️ Документирование", callback_data="prof_incident_docs")
+        )
+    
+    # Professional help
+    builder.row(
+        InlineKeyboardButton(text="👨‍⚕️ Психолог", callback_data="prof_find_therapist"),
+        InlineKeyboardButton(text="⚖️ Юридическая помощь", callback_data="prof_legal_help")
+    )
+    
+    # Self-care and resources
+    builder.row(
+        InlineKeyboardButton(text="🧘‍♀️ Техники выживания", callback_data="prof_coping_techniques"),
+        InlineKeyboardButton(text="📚 Ресурсы", callback_data="prof_safety_resources")
+    )
+    
+    # Navigation
+    builder.row(
+        InlineKeyboardButton(text="⬅️ К результатам", callback_data="prof_back_to_results"),
+        InlineKeyboardButton(text="💡 Рекомендации", callback_data="prof_recommendations")
+    )
+    
+    return builder.as_markup()
+
+
+def profiler_my_profiles_kb(profiles_count: int = 0) -> InlineKeyboardMarkup:
+    """My profiles management keyboard"""
+    builder = InlineKeyboardBuilder()
+    
+    if profiles_count > 0:
+        # Profile management options
+        builder.row(
+            InlineKeyboardButton(text="📋 Список профилей", callback_data="prof_list_profiles"),
+            InlineKeyboardButton(text="🔍 Поиск профиля", callback_data="prof_search_profiles")
+        )
+        builder.row(
+            InlineKeyboardButton(text="📊 Сравнить профили", callback_data="prof_compare_profiles"),
+            InlineKeyboardButton(text="📈 История изменений", callback_data="prof_profile_history")
+        )
+        builder.row(
+            InlineKeyboardButton(text="📤 Экспорт данных", callback_data="prof_export_profiles"),
+            InlineKeyboardButton(text="🗑️ Удалить профиль", callback_data="prof_delete_profile")
+        )
+    else:
+        # No profiles yet
+        builder.row(
+            InlineKeyboardButton(text="📝 Создать первый профиль", callback_data="create_profile")
+        )
+    
+    # Always available options
+    builder.row(
+        InlineKeyboardButton(text="➕ Новый профиль", callback_data="create_profile"),
+        InlineKeyboardButton(text="📚 Гайд по профилям", callback_data="prof_profile_guide")
+    )
+    
+    builder.row(
+        InlineKeyboardButton(text="👤 Профайлер", callback_data="profiler_menu"),
+        InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")
+    )
+    
+    return builder.as_markup()
+
+
+def profiler_confirmation_kb(action: str, data: str = "") -> InlineKeyboardMarkup:
+    """Confirmation dialogs for profiler actions"""
+    builder = InlineKeyboardBuilder()
+    
+    if action == "exit":
+        builder.row(
+            InlineKeyboardButton(text="✅ Сохранить и выйти", callback_data="prof_save_and_exit"),
+            InlineKeyboardButton(text="❌ Выйти без сохранения", callback_data="prof_exit_no_save")
+        )
+        builder.row(
+            InlineKeyboardButton(text="↩️ Продолжить анкету", callback_data="prof_continue")
+        )
+    
+    elif action == "restart":
+        builder.row(
+            InlineKeyboardButton(text="🔄 Да, начать заново", callback_data="prof_confirm_restart"),
+            InlineKeyboardButton(text="❌ Отменить", callback_data="prof_back_to_results")
+        )
+    
+    elif action == "delete_profile":
+        builder.row(
+            InlineKeyboardButton(text="🗑️ Удалить навсегда", callback_data=f"prof_confirm_delete_{data}"),
+            InlineKeyboardButton(text="❌ Отменить", callback_data="prof_my_profiles")
+        )
+    
+    elif action == "share":
+        builder.row(
+            InlineKeyboardButton(text="📤 Поделиться анонимно", callback_data="prof_share_anonymous"),
+            InlineKeyboardButton(text="📧 Отправить на email", callback_data="prof_share_email")
+        )
+        builder.row(
+            InlineKeyboardButton(text="❌ Отменить", callback_data="prof_back_to_results")
+        )
+    
+    return builder.as_markup()
+
+
+def profiler_progress_visual_kb(
+    current_num: int,
+    total_questions: int,
+    block_progress: dict
+) -> InlineKeyboardMarkup:
+    """Visual progress display with block breakdown"""
+    builder = InlineKeyboardBuilder()
+    
+    # Overall progress
+    overall_percent = int((current_num / total_questions) * 100)
+    builder.row(
+        InlineKeyboardButton(
+            text=f"📊 Общий прогресс: {overall_percent}% ({current_num}/{total_questions})",
+            callback_data="prof_progress_details"
+        )
+    )
+    
+    # Block progress indicators
+    block_names = {
+        "narcissism": "🧠 Нарциссизм",
+        "control": "🎯 Контроль", 
+        "gaslighting": "🔄 Газлайтинг",
+        "emotion": "💭 Эмоции",
+        "intimacy": "💕 Интимность",
+        "social": "👥 Социальное"
+    }
+    
+    for block_key, name in block_names.items():
+        completed = block_progress.get(f"{block_key}_completed", 0)
+        total = block_progress.get(f"{block_key}_total", 0)
+        
+        if total > 0:
+            percent = int((completed / total) * 100)
+            status = "✅" if completed == total else "⏳" if completed > 0 else "⏸️"
+            
+            builder.row(
+                InlineKeyboardButton(
+                    text=f"{status} {name}: {percent}% ({completed}/{total})",
+                    callback_data=f"prof_block_progress_{block_key}"
+                )
+            )
+    
+    # Time estimate
+    questions_left = total_questions - current_num
+    time_estimate = questions_left * 30  # 30 seconds per question
+    
+    if time_estimate > 60:
+        time_text = f"⏱️ Осталось: ~{time_estimate//60} мин"
+    else:
+        time_text = f"⏱️ Осталось: ~{time_estimate} сек"
+    
+    builder.row(
+        InlineKeyboardButton(text=time_text, callback_data="prof_time_info")
+    )
+    
+    builder.row(
+        InlineKeyboardButton(text="↩️ Назад к вопросу", callback_data="prof_back_to_question")
+    )
+    
+    return builder.as_markup() 
