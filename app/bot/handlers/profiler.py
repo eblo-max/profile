@@ -552,13 +552,15 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
     """Handle user answer to profiling question"""
     try:
         # Parse callback data: answer_{question_id}_{answer_index}
+        # Question ID can contain underscores, so we split and take the last part as answer_index
         callback_parts = callback.data.split("_")
         if len(callback_parts) < 3:
             await callback.answer("❌ Неверный формат ответа")
             return
             
-        question_id = callback_parts[1]
-        answer_index = int(callback_parts[2])
+        # Last part is answer_index, everything between "answer" and last part is question_id
+        answer_index = int(callback_parts[-1])
+        question_id = "_".join(callback_parts[1:-1])
         
         # Get state data
         data = await state.get_data()
@@ -569,9 +571,11 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
         
         # Save answer
         answers[question_id] = answer_index
+        logger.info(f"Saved answer for question {question_id}: {answer_index}")
         
         # Move to next question
         next_question = current_question + 1
+        logger.info(f"Moving to question {next_question + 1} of {len(question_order)}")
         
         if next_question < len(question_order):
             # Update state
@@ -582,7 +586,12 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             
             # Send next question
             next_question_id = question_order[next_question]
-            question = questions[next_question_id]
+            question = questions.get(next_question_id)
+            
+            if not question:
+                logger.error(f"Question {next_question_id} not found in questions dict")
+                await callback.answer("❌ Вопрос не найден")
+                return
             
             # Get partner name
             partner_name = data.get('partner_name', 'партнера')
@@ -874,14 +883,21 @@ async def handle_navigation(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "profiler_back")
 async def back_to_profiler(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
-    """Go back to profiler menu"""
-    try:
-        await state.clear()
-        # Use the same logic as show_profiler_menu
-        await show_profiler_menu(callback, state, profile_service)
-    except Exception as e:
-        logger.error(f"Error in back_to_profiler: {e}")
-        await callback.answer("❌ Произошла ошибка")
+    """Back to profiler menu"""
+    await state.clear()
+    await show_profiler_menu(callback, state, profile_service)
+
+
+@router.callback_query(F.data == "profiler_cancel")
+async def cancel_profiler(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
+    """Cancel profiler and return to menu"""
+    await state.clear()
+    await callback.message.edit_text(
+        "❌ <b>Профайлер отменен</b>\n\n"
+        "Вы можете начать заново в любое время.",
+        parse_mode="HTML"
+    )
+    await show_profiler_menu(callback, state, profile_service)
 
 
 @router.callback_query(F.data.startswith("view_profile_"))
