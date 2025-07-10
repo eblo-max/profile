@@ -14,10 +14,12 @@ router = APIRouter()
 async def telegram_webhook(request: Request):
     """Handle Telegram webhook updates"""
     
+    logger.info("🔔 Webhook endpoint called")
+    
     try:
         # Check if bot is available
         if not hasattr(request.app.state, 'bot') or not hasattr(request.app.state, 'dp'):
-            logger.warning("WEBHOOK: Bot not initialized, skipping webhook processing")
+            logger.error("❌ WEBHOOK: Bot not initialized, skipping webhook processing")
             return {"status": "bot_not_initialized", "message": "Bot not available"}
         
         # Get bot and dispatcher from app state
@@ -25,36 +27,44 @@ async def telegram_webhook(request: Request):
         dp = request.app.state.dp
         
         if not bot or not dp:
-            logger.warning("WEBHOOK: Bot or dispatcher is None")
+            logger.error("❌ WEBHOOK: Bot or dispatcher is None")
             return {"status": "bot_not_available", "message": "Bot or dispatcher not available"}
         
         # Debug app state
-        logger.info(f"WEBHOOK: Bot object: {type(bot)} - {bot}")
-        logger.info(f"WEBHOOK: Dispatcher object: {type(dp)} - {dp}")
+        logger.info(f"✅ WEBHOOK: Bot object: {type(bot)}")
+        logger.info(f"✅ WEBHOOK: Dispatcher object: {type(dp)}")
         
         # Get update data
         body = await request.json()
-        logger.info(f"WEBHOOK: Received body: {body}")
+        logger.info(f"📨 WEBHOOK: Received update: {body}")
         
         update = Update(**body)
         
-        # Log basic info
+        # Log basic info about the update
         if update.message:
-            logger.info(f"WEBHOOK: Processing message '{update.message.text}' from user {update.message.from_user.id}")
+            user_id = update.message.from_user.id
+            username = update.message.from_user.username or "no_username"
+            text = update.message.text or "no_text"
+            logger.info(f"💬 WEBHOOK: Message from @{username} (ID: {user_id}): '{text}'")
         elif update.callback_query:
-            logger.info(f"WEBHOOK: Processing callback '{update.callback_query.data}' from user {update.callback_query.from_user.id}")
+            user_id = update.callback_query.from_user.id
+            username = update.callback_query.from_user.username or "no_username"
+            data = update.callback_query.data or "no_data"
+            logger.info(f"🔘 WEBHOOK: Callback from @{username} (ID: {user_id}): '{data}'")
+        else:
+            logger.info(f"❓ WEBHOOK: Unknown update type: {type(update)}")
         
         # Process update through dispatcher
-        logger.info("WEBHOOK: Processing through dispatcher")
+        logger.info("⚙️ WEBHOOK: Processing through dispatcher...")
         result = await dp.feed_update(bot, update)
-        logger.info(f"WEBHOOK: Update processed successfully, result: {result}")
+        logger.info(f"✅ WEBHOOK: Update processed successfully, result: {result}")
         
-        return {"status": "ok"}
+        return {"status": "ok", "processed": True}
         
     except Exception as e:
-        logger.error(f"Webhook processing error: {e}")
-        logger.exception("WEBHOOK: Full error traceback:")
-        raise HTTPException(status_code=500, detail="Webhook processing failed")
+        logger.error(f"❌ WEBHOOK: Processing error: {e}")
+        logger.exception("💥 WEBHOOK: Full error traceback:")
+        return {"status": "error", "message": str(e)}
 
 
 @router.get("/webhook")

@@ -64,11 +64,20 @@ async def lifespan(app: FastAPI):
         
         # Initialize bot (only if we have a bot token)
         try:
-            if settings.BOT_TOKEN:
+            # Try to get bot token from different sources
+            bot_token = getattr(settings, 'BOT_TOKEN', None) or getattr(settings, 'TELEGRAM_BOT_TOKEN', None)
+            
+            if bot_token:
+                logger.info(f"🤖 Initializing bot with token: {bot_token[:10]}...")
+                
                 bot = Bot(
-                    token=settings.BOT_TOKEN,
+                    token=bot_token,
                     parse_mode=ParseMode.HTML
                 )
+                
+                # Test bot connection
+                bot_info = await bot.get_me()
+                logger.info(f"✅ Bot connected: @{bot_info.username} ({bot_info.first_name})")
                 
                 # Create dispatcher
                 dp = Dispatcher()
@@ -95,13 +104,24 @@ async def lifespan(app: FastAPI):
                 dp.include_router(payments.router)
                 dp.include_router(admin.router)
                 
+                logger.info("✅ Bot handlers registered")
+                
                 # Set webhook if configured
-                if settings.WEBHOOK_URL:
+                webhook_url = getattr(settings, 'WEBHOOK_URL', None)
+                if webhook_url:
+                    webhook_secret = getattr(settings, 'WEBHOOK_SECRET', None)
+                    full_webhook_url = f"{webhook_url}/webhook"
+                    
                     await bot.set_webhook(
-                        url=f"{settings.WEBHOOK_URL}/webhook",
-                        secret_token=settings.WEBHOOK_SECRET
+                        url=full_webhook_url,
+                        secret_token=webhook_secret,
+                        drop_pending_updates=True
                     )
-                    logger.info(f"✅ Webhook set to {settings.WEBHOOK_URL}/webhook")
+                    logger.info(f"✅ Webhook set to {full_webhook_url}")
+                    
+                    # Verify webhook
+                    webhook_info = await bot.get_webhook_info()
+                    logger.info(f"📡 Webhook info: {webhook_info.url}, pending: {webhook_info.pending_update_count}")
                 else:
                     # Delete webhook for polling mode
                     await bot.delete_webhook(drop_pending_updates=True)
@@ -111,12 +131,14 @@ async def lifespan(app: FastAPI):
                 app.state.bot = bot
                 app.state.dp = dp
                 bot_initialized = True
-                logger.info("✅ Bot initialized")
+                logger.info("✅ Bot initialization complete")
             else:
-                logger.warning("⚠️ No BOT_TOKEN provided, bot not initialized")
+                logger.error("❌ No BOT_TOKEN or TELEGRAM_BOT_TOKEN provided!")
+                logger.error("❌ Bot will not work without a token!")
                 
         except Exception as e:
             logger.error(f"❌ Bot initialization failed: {e}")
+            logger.exception("Full bot initialization error:")
             # Don't fail the whole app, just log the error
         
         logger.info("🚀 Application started successfully")
