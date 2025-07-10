@@ -202,31 +202,33 @@ def subscription_required(subscription_type: str = "premium") -> Callable:
         @wraps(func)
         async def wrapper(*args, **kwargs) -> Any:
             from app.services.user_service import UserService
+            from app.core.database import get_session
             
             event = args[0]
             if isinstance(event, (Message, CallbackQuery)):
                 user_id = event.from_user.id
                 
-                user_service = UserService()
-                user = await user_service.get_user_by_telegram_id(user_id)
-                
-                if not user:
-                    error_msg = "❌ Пользователь не найден. Используйте /start"
-                elif subscription_type == "premium" and not user.is_premium:
-                    error_msg = "💎 Эта функция доступна только с Premium подпиской"
-                elif subscription_type == "vip" and not user.is_vip:
-                    error_msg = "⭐ Эта функция доступна только с VIP подпиской"
-                else:
-                    # User has required subscription
-                    return await func(*args, **kwargs)
-                
-                # Send error message
-                if isinstance(event, Message):
-                    await event.answer(error_msg)
-                elif isinstance(event, CallbackQuery):
-                    await event.answer(error_msg, show_alert=True)
-                
-                return
+                async with get_session() as session:
+                    user_service = UserService(session)
+                    user = await user_service.get_user_by_telegram_id(user_id)
+                    
+                    if not user:
+                        error_msg = "❌ Пользователь не найден. Используйте /start"
+                    elif subscription_type == "premium" and not user.is_premium:
+                        error_msg = "💎 Эта функция доступна только с Premium подпиской"
+                    elif subscription_type == "vip" and not user.is_vip:
+                        error_msg = "⭐ Эта функция доступна только с VIP подпиской"
+                    else:
+                        # User has required subscription
+                        return await func(*args, **kwargs)
+                    
+                    # Send error message
+                    if isinstance(event, Message):
+                        await event.answer(error_msg)
+                    elif isinstance(event, CallbackQuery):
+                        await event.answer(error_msg, show_alert=True)
+                    
+                    return
         
         return wrapper
     return decorator

@@ -6,7 +6,6 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db, get_session
 from app.services.user_service import UserService
 from app.bot.keyboards.inline import main_menu_kb, back_to_main_kb
 from app.bot.states import OnboardingStates, UserProfileStates
@@ -18,32 +17,29 @@ router = Router()
 
 @router.message(CommandStart())
 @handle_errors()
-async def start_command(message: Message, state: FSMContext) -> None:
+async def start_command(message: Message, state: FSMContext, user_service: UserService) -> None:
     """Handle /start command"""
     logger.info(f"START: Handler called for user {message.from_user.id}")
     logger.info(f"START: Message text: {message.text}")
     logger.info(f"START: Chat ID: {message.chat.id}")
     try:
-        logger.info("START: Creating session")
-        async with get_session() as session:
-            logger.info("START: Session created, getting user service")
-            user_service = UserService(session)
+        logger.info("START: Using user service from middleware")
+        
+        logger.info("START: Getting or creating user")
+        # Get or create user
+        user = await user_service.get_or_create_user(
+            telegram_id=message.from_user.id,
+            username=message.from_user.username,
+            first_name=message.from_user.first_name,
+            last_name=message.from_user.last_name
+        )
+        logger.info(f"START: User created/found: {user.id}")
+        
+        logger.info("START: Starting onboarding")
+        # Always show onboarding for /start command
+        await start_onboarding(message, state)
+        logger.info("START: Onboarding called successfully")
             
-            logger.info("START: Getting or creating user")
-            # Get or create user
-            user = await user_service.get_or_create_user(
-                telegram_id=message.from_user.id,
-                username=message.from_user.username,
-                first_name=message.from_user.first_name,
-                last_name=message.from_user.last_name
-            )
-            logger.info(f"START: User created/found: {user.id}")
-            
-            logger.info("START: Starting onboarding")
-            # Always show onboarding for /start command
-            await start_onboarding(message, state)
-            logger.info("START: Onboarding called successfully")
-                
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         logger.exception("START: Full error traceback:")
@@ -217,7 +213,7 @@ async def process_user_gender(callback: CallbackQuery, state: FSMContext) -> Non
 
 @router.callback_query(F.data.startswith("age_"), UserProfileStates.waiting_for_age)
 @handle_errors()
-async def process_user_age(callback: CallbackQuery, state: FSMContext) -> None:
+async def process_user_age(callback: CallbackQuery, state: FSMContext, user_service: UserService) -> None:
     """Process user age group selection"""
     age_data = callback.data.split("_", 1)[1]
     
@@ -227,29 +223,33 @@ async def process_user_age(callback: CallbackQuery, state: FSMContext) -> None:
         age_group = age_data.replace("_", "-")
     
     await state.update_data(age_group=age_group)
-    await complete_profile_setup(callback, state)
+    await complete_profile_setup(callback, state, user_service)
 
 
-async def complete_profile_setup(callback: CallbackQuery, state: FSMContext) -> None:
+async def complete_profile_setup(callback: CallbackQuery, state: FSMContext, user_service: UserService = None) -> None:
     """Complete profile setup and save to database"""
     user_data = await state.get_data()
     
     try:
-        async with get_session() as session:
-            user_service = UserService(session)
+        # If user_service is not provided, we're being called from middleware context
+        if user_service is None:
+            # This should not happen if called from proper handler
+            logger.error("complete_profile_setup called without user_service")
+            await callback.answer("❌ Ошибка при сохранении профиля")
+            return
             
-            # Update user profile
-            await user_service.update_user_profile(
-                telegram_id=callback.from_user.id,
-                name=user_data.get("name"),
-                gender=user_data.get("gender"),
-                age_group=user_data.get("age_group")
-            )
-            
-            await state.clear()
-            await show_main_menu(callback)
-            await callback.answer("✅ Профиль сохранен!")
-            
+        # Update user profile
+        await user_service.update_user_profile(
+            telegram_id=callback.from_user.id,
+            name=user_data.get("name"),
+            gender=user_data.get("gender"),
+            age_group=user_data.get("age_group")
+        )
+        
+        await state.clear()
+        await show_main_menu(callback)
+        await callback.answer("✅ Профиль сохранен!")
+        
     except Exception as e:
         logger.error(f"Error completing profile setup: {e}")
         await callback.answer("❌ Ошибка при сохранении профиля")
