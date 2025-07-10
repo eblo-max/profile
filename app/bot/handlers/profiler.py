@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKe
 from aiogram.fsm.context import FSMContext
 from loguru import logger
 
-from app.bot.states import ProfilerStates
+from app.bot.states import ProfilerStates, PartnerProfileStates
 from app.bot.keyboards.inline import profiler_menu_kb, get_profiler_keyboard, get_profiler_navigation_keyboard
 from app.services.ai_service import AIService
 from app.services.html_pdf_service import HTMLPDFService
@@ -93,19 +93,298 @@ async def show_profiler_menu(callback: CallbackQuery, state: FSMContext, profile
 
 @router.callback_query(F.data == "create_profile")
 async def create_new_profile(callback: CallbackQuery, state: FSMContext):
-    """Create new profile - show options"""
+    """Create new profile - show introduction and start data collection"""
     try:
         await callback.message.edit_text(
-            "📝 <b>Создание нового профиля</b>\n\n"
-            "Выберите тип профилирования:",
+            "📝 <b>Создание профиля партнера</b>\n\n"
+            "🎯 <b>Что будет происходить:</b>\n"
+            "• Сначала расскажите о партнере\n"
+            "• Затем ответите на 28 вопросов\n"
+            "• Получите детальный анализ\n"
+            "• Узнаете уровень риска\n"
+            "• Получите персональные рекомендации\n\n"
+            "⏱️ <b>Время:</b> 10-15 минут\n"
+            "🔒 <b>Конфиденциальность:</b> Все данные защищены\n\n"
+            "Готовы начать?",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🎯 Полный профиль (28 вопросов)", callback_data="start_profiler_full")],
+                [InlineKeyboardButton(text="🚀 Начать", callback_data="start_partner_info")],
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
             ])
         )
     except Exception as e:
         logger.error(f"Error in create_new_profile: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data == "start_partner_info")
+async def start_partner_info_collection(callback: CallbackQuery, state: FSMContext):
+    """Start collecting partner information"""
+    try:
+        await state.set_state(PartnerProfileStates.waiting_for_name)
+        await callback.message.edit_text(
+            "👤 <b>Информация о партнере</b>\n\n"
+            "Как зовут вашего партнера?\n\n"
+            "💡 <i>Можете использовать псевдоним или инициалы для конфиденциальности</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="create_profile")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in start_partner_info_collection: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+
+@router.message(PartnerProfileStates.waiting_for_name)
+async def process_partner_name(message: Message, state: FSMContext):
+    """Process partner name input"""
+    try:
+        partner_name = message.text.strip()
+        
+        if not partner_name or len(partner_name) < 1:
+            await message.answer(
+                "❌ <b>Имя не может быть пустым</b>\n\n"
+                "Пожалуйста, введите имя партнера:",
+                parse_mode="HTML"
+            )
+            return
+        
+        if len(partner_name) > 100:
+            await message.answer(
+                "❌ <b>Имя слишком длинное</b>\n\n"
+                "Пожалуйста, введите имя до 100 символов:",
+                parse_mode="HTML"
+            )
+            return
+        
+        await state.update_data(partner_name=partner_name)
+        await state.set_state(PartnerProfileStates.waiting_for_description)
+        
+        await message.answer(
+            f"✅ <b>Имя партнера:</b> {partner_name}\n\n"
+            "📝 <b>Опишите вашего партнера</b>\n\n"
+            "Расскажите о нем в свободной форме:\n"
+            "• Как вы познакомились?\n"
+            "• Какой он человек?\n"
+            "• Что вам в нем нравится?\n"
+            "• Есть ли что-то, что вас беспокоит?\n\n"
+            "💬 <i>Пишите как хотите, без ограничений</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_name")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in process_partner_name: {e}")
+        await message.answer("❌ Произошла ошибка")
+
+
+@router.message(PartnerProfileStates.waiting_for_description)
+async def process_partner_description(message: Message, state: FSMContext):
+    """Process partner description input"""
+    try:
+        description = message.text.strip()
+        
+        if not description or len(description) < 10:
+            await message.answer(
+                "❌ <b>Описание слишком короткое</b>\n\n"
+                "Пожалуйста, расскажите больше о партнере (минимум 10 символов):",
+                parse_mode="HTML"
+            )
+            return
+        
+        if len(description) > 2000:
+            await message.answer(
+                "❌ <b>Описание слишком длинное</b>\n\n"
+                "Пожалуйста, сократите описание до 2000 символов:",
+                parse_mode="HTML"
+            )
+            return
+        
+        await state.update_data(partner_description=description)
+        await state.set_state(PartnerProfileStates.waiting_for_basic_info)
+        
+        await message.answer(
+            "✅ <b>Описание сохранено</b>\n\n"
+            "📊 <b>Базовые данные партнера</b>\n\n"
+            "Укажите дополнительную информацию (одним сообщением):\n"
+            "• Возраст (примерно)\n"
+            "• Род деятельности/работа\n"
+            "• Семейное положение\n"
+            "• Сколько времени вы знакомы\n\n"
+            "📝 <b>Пример:</b>\n"
+            "<i>30 лет, программист, холост, знакомы 8 месяцев</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_description")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in process_partner_description: {e}")
+        await message.answer("❌ Произошла ошибка")
+
+
+@router.message(PartnerProfileStates.waiting_for_basic_info)
+async def process_partner_basic_info(message: Message, state: FSMContext):
+    """Process partner basic info and proceed to questions"""
+    try:
+        basic_info = message.text.strip()
+        
+        if not basic_info or len(basic_info) < 5:
+            await message.answer(
+                "❌ <b>Информация слишком короткая</b>\n\n"
+                "Пожалуйста, укажите хотя бы базовые данные:",
+                parse_mode="HTML"
+            )
+            return
+        
+        if len(basic_info) > 500:
+            await message.answer(
+                "❌ <b>Информация слишком длинная</b>\n\n"
+                "Пожалуйста, сократите до 500 символов:",
+                parse_mode="HTML"
+            )
+            return
+        
+        await state.update_data(partner_basic_info=basic_info)
+        
+        # Get saved data
+        data = await state.get_data()
+        partner_name = data.get('partner_name', 'Партнер')
+        
+        await message.answer(
+            f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
+            "🎯 <b>Переходим к вопросам</b>\n\n"
+            "Сейчас вам будет предложено 28 вопросов о поведении партнера.\n"
+            "Отвечайте честно - это поможет получить точный анализ.\n\n"
+            "⏱️ <b>Время:</b> 8-10 минут\n"
+            "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🚀 Начать вопросы", callback_data="start_questions_now")],
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in process_partner_basic_info: {e}")
+        await message.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data == "back_to_name")
+async def back_to_name_input(callback: CallbackQuery, state: FSMContext):
+    """Go back to name input"""
+    try:
+        await state.set_state(PartnerProfileStates.waiting_for_name)
+        await callback.message.edit_text(
+            "👤 <b>Информация о партнере</b>\n\n"
+            "Как зовут вашего партнера?\n\n"
+            "💡 <i>Можете использовать псевдоним или инициалы для конфиденциальности</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="create_profile")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in back_to_name_input: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data == "back_to_description")
+async def back_to_description_input(callback: CallbackQuery, state: FSMContext):
+    """Go back to description input"""
+    try:
+        data = await state.get_data()
+        partner_name = data.get('partner_name', 'вашего партнера')
+        
+        await state.set_state(PartnerProfileStates.waiting_for_description)
+        await callback.message.edit_text(
+            f"✅ <b>Имя партнера:</b> {partner_name}\n\n"
+            "📝 <b>Опишите вашего партнера</b>\n\n"
+            "Расскажите о нем в свободной форме:\n"
+            "• Как вы познакомились?\n"
+            "• Какой он человек?\n"
+            "• Что вам в нем нравится?\n"
+            "• Есть ли что-то, что вас беспокоит?\n\n"
+            "💬 <i>Пишите как хотите, без ограничений</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_name")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in back_to_description_input: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data == "back_to_basic_info")
+async def back_to_basic_info_input(callback: CallbackQuery, state: FSMContext):
+    """Go back to basic info input"""
+    try:
+        await state.set_state(PartnerProfileStates.waiting_for_basic_info)
+        await callback.message.edit_text(
+            "✅ <b>Описание сохранено</b>\n\n"
+            "📊 <b>Базовые данные партнера</b>\n\n"
+            "Укажите дополнительную информацию (одним сообщением):\n"
+            "• Возраст (примерно)\n"
+            "• Род деятельности/работа\n"
+            "• Семейное положение\n"
+            "• Сколько времени вы знакомы\n\n"
+            "📝 <b>Пример:</b>\n"
+            "<i>30 лет, программист, холост, знакомы 8 месяцев</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_description")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in back_to_basic_info_input: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data == "start_questions_now")
+async def start_questions_now(callback: CallbackQuery, state: FSMContext):
+    """Start profiler questions after collecting partner info"""
+    try:
+        # Get all questions
+        questions = get_all_questions()
+        question_order = [
+            "narcissism_q1", "narcissism_q2", "narcissism_q3", "narcissism_q4", "narcissism_q5", "narcissism_q6",
+            "control_q1", "control_q2", "control_q3", "control_q4", "control_q5", "control_q6",
+            "gaslighting_q1", "gaslighting_q2", "gaslighting_q3", "gaslighting_q4", "gaslighting_q5",
+            "emotion_q1", "emotion_q2", "emotion_q3", "emotion_q4",
+            "intimacy_q1", "intimacy_q2", "intimacy_q3",
+            "social_q1", "social_q2", "social_q3", "social_q4"
+        ]
+        
+        # Update state with questions data
+        await state.set_state(ProfilerStates.answering_questions)
+        await state.update_data(
+            questions=questions,
+            question_order=question_order,
+            current_question=0,
+            answers={}
+        )
+        
+        # Send first question
+        first_question_id = question_order[0]
+        first_question = questions[first_question_id]
+        
+        data = await state.get_data()
+        partner_name = data.get('partner_name', 'партнера')
+        
+        await callback.message.edit_text(
+            f"🎯 <b>Вопрос 1 из 28</b>\n\n"
+            f"📝 <b>О {partner_name}:</b>\n\n"
+            f"{first_question['question']}\n\n"
+            f"🔍 <b>Блок:</b> {first_question['block']}\n"
+            f"💡 <i>{first_question['description']}</i>",
+            parse_mode="HTML",
+            reply_markup=get_profiler_keyboard(first_question_id, 1, 28)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in start_questions_now: {e}")
         await callback.answer("❌ Произошла ошибка")
 
 
@@ -260,66 +539,7 @@ async def show_profile_recommendations(callback: CallbackQuery, state: FSMContex
         await callback.answer("❌ Произошла ошибка при загрузке рекомендаций")
 
 
-@router.callback_query(F.data == "start_profiler_full")
-async def start_profiler_full(callback: CallbackQuery, state: FSMContext):
-    """Start full profiler process"""
-    try:
-        # Get all questions
-        questions = get_all_questions()
-        question_order = [
-            "narcissism_q1", "narcissism_q2", "narcissism_q3", "narcissism_q4", "narcissism_q5", "narcissism_q6",
-            "control_q1", "control_q2", "control_q3", "control_q4", "control_q5", "control_q6",
-            "gaslighting_q1", "gaslighting_q2", "gaslighting_q3", "gaslighting_q4", "gaslighting_q5",
-            "emotion_q1", "emotion_q2", "emotion_q3", "emotion_q4",
-            "intimacy_q1", "intimacy_q2", "intimacy_q3",
-            "social_q1", "social_q2", "social_q3", "social_q4"
-        ]
-        
-        # Initialize state
-        await state.set_state(ProfilerStates.answering_questions)
-        await state.update_data(
-            questions=questions,
-            question_order=question_order,
-            current_question=0,
-            answers={}
-        )
-        
-        # Send first question
-        first_question_id = question_order[0]
-        first_question = questions[first_question_id]
-        
-        # Format question text
-        question_text = f"""🔍 <b>Профайлинг партнера</b>
 
-📋 Вопрос 1 из {len(question_order)}
-
-🧠 <b>Блок:</b> Нарциссизм и грандиозность
-
-<b>{first_question['text']}</b>
-
-💭 <i>{first_question['context']}</i>
-
-Выберите наиболее подходящий вариант:"""
-        
-        # Create options keyboard
-        options = []
-        for i, option in enumerate(first_question['options']):
-            options.append([InlineKeyboardButton(text=f"{i+1}. {option[:50]}{'...' if len(option) > 50 else ''}", callback_data=f"answer_{i}")])
-        
-        options.append([InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")])
-        
-        await callback.message.edit_text(
-            question_text,
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=options)
-        )
-        
-    except Exception as e:
-        logger.error(f"Error starting full profiler: {e}")
-        await callback.message.edit_text(
-            "❌ Произошла ошибка при запуске профайлера. Попробуйте позже.",
-            reply_markup=profiler_menu_kb()
-        )
 
 
 @router.callback_query(F.data.startswith("answer_"))
@@ -421,18 +641,14 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         data = await state.get_data()
         answers = data.get('answers', {})
         
-        # Get partner name if available
-        partner_name = "Партнер"
-        try:
-            user_profile = await profile_service.get_profile(user_id)
-            if user_profile and user_profile.partner_name:
-                partner_name = user_profile.partner_name
-        except:
-            pass
+        # Get partner info from state
+        partner_name = data.get('partner_name', 'Партнер')
+        partner_description = data.get('partner_description', '')
+        partner_basic_info = data.get('partner_basic_info', '')
         
         # Send analysis start message
         analysis_msg = await message.answer(
-            "🔍 <b>Анализ начат</b>\n\n"
+            f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
             "⏳ Обрабатываю ваши ответы...\n"
             "📊 Провожу психологический анализ...\n"
             "🎯 Выявляю красные флаги...\n\n"
@@ -455,11 +671,16 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         
         # Perform AI analysis
         try:
-            analysis_result = await ai_service.profile_partner(formatted_answers, user_id)
+            analysis_result = await ai_service.profile_partner(
+                answers=formatted_answers, 
+                user_id=user_id, 
+                partner_name=partner_name,
+                partner_description=partner_description
+            )
             
             # Update progress
             await analysis_msg.edit_text(
-                "🔍 <b>Анализ завершен</b>\n\n"
+                f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
                 "✅ Психологический профиль готов\n"
                 "📋 Генерирую PDF отчет...\n\n"
                 "<i>Почти готово!</i>",
@@ -473,7 +694,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
                 partner_name
             )
             
-            # Save analysis to database
+            # Save analysis to database (legacy format)
             try:
                 await user_service.save_analysis(
                     user_id=user_id,
@@ -483,6 +704,21 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
                 )
             except Exception as e:
                 logger.warning(f"Failed to save analysis to DB: {e}")
+            
+            # Save partner profile to database
+            try:
+                await profile_service.create_profile_from_profiler(
+                    user_id=user_id,
+                    partner_name=partner_name,
+                    partner_description=partner_description,
+                    partner_basic_info=partner_basic_info,
+                    questions=formatted_answers,
+                    answers=answers,
+                    analysis_result=analysis_result
+                )
+                logger.info(f"Partner profile saved for user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to save partner profile: {e}")
             
             # Send results
             await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
@@ -517,20 +753,27 @@ async def send_analysis_results(
     """Send analysis results to user"""
     try:
         # Extract key metrics
-        overall_risk = analysis_result.get('overall_risk_score', 0)
+        overall_risk = analysis_result.get('overall_risk_score', analysis_result.get('manipulation_risk', 0))
+        
+        # Convert to percentage if needed
+        if isinstance(overall_risk, float) and overall_risk <= 10:
+            overall_risk_percent = int(overall_risk * 10)  # Convert 0-10 scale to 0-100
+        else:
+            overall_risk_percent = int(overall_risk)
+            
         urgency_level = analysis_result.get('urgency_level', 'UNKNOWN')
         block_scores = analysis_result.get('block_scores', {})
         
         # Determine risk emoji and message
-        if overall_risk >= 80:
+        if overall_risk_percent >= 80:
             risk_emoji = "🚨"
             risk_level = "КРИТИЧЕСКИЙ"
             risk_message = "Обнаружены серьезные признаки токсичного поведения!"
-        elif overall_risk >= 60:
+        elif overall_risk_percent >= 60:
             risk_emoji = "⚠️"
             risk_level = "ВЫСОКИЙ"
             risk_message = "Выявлены значительные проблемы в поведении партнера."
-        elif overall_risk >= 40:
+        elif overall_risk_percent >= 40:
             risk_emoji = "🟡"
             risk_level = "СРЕДНИЙ"
             risk_message = "Есть некоторые тревожные признаки."
@@ -560,7 +803,7 @@ async def send_analysis_results(
 
 👤 <b>Партнер:</b> {partner_name}
 
-{risk_emoji} <b>Уровень риска:</b> {risk_level} ({overall_risk}%)
+{risk_emoji} <b>Уровень риска:</b> {risk_level} ({overall_risk_percent}%)
 
 {risk_message}
 

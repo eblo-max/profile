@@ -11,6 +11,7 @@ from app.models.user import User
 from app.services.ai_service import AIService
 from app.utils.enums import SubscriptionType
 from app.core.logging import logger
+from app.utils.enums import UrgencyLevel
 
 
 class ProfileService:
@@ -92,6 +93,108 @@ class ProfileService:
             
         except Exception as e:
             logger.error(f"Error creating profile: {e}")
+            await self.session.rollback()
+            return None
+
+    async def create_profile_from_profiler(
+        self,
+        user_id: int,
+        partner_name: str,
+        partner_description: str,
+        partner_basic_info: str,
+        questions: List[Dict[str, Any]],
+        answers: Dict[str, int],
+        analysis_result: Dict[str, Any]
+    ) -> Optional[PartnerProfile]:
+        """Create partner profile from profiler data"""
+        try:
+            # Check user subscription limits
+            user_result = await self.session.execute(
+                select(User).where(User.id == user_id)
+            )
+            user = user_result.scalar_one_or_none()
+            if not user:
+                return None
+            
+            # Check profile limits based on subscription
+            profile_count = await self._get_user_profile_count(user_id)
+            max_profiles = self._get_max_profiles(user.subscription_type)
+            
+            if profile_count >= max_profiles:
+                logger.warning(f"User {user_id} exceeded profile limit")
+                return None
+            
+            # Combine description and basic info
+            full_description = f"{partner_description}\n\nБазовая информация: {partner_basic_info}"
+            
+            # Extract data from analysis result
+            overall_risk = analysis_result.get('overall_risk_score', analysis_result.get('manipulation_risk', 0))
+            
+            # Ensure manipulation_risk is in 0-10 scale
+            if isinstance(overall_risk, float) and overall_risk <= 10:
+                manipulation_risk = float(overall_risk)  # Already in 0-10 scale
+            else:
+                manipulation_risk = float(overall_risk) / 10.0  # Convert 0-100 to 0-10 scale
+            
+            # Ensure it's within bounds
+            manipulation_risk = max(0.0, min(10.0, manipulation_risk))
+            
+            # Extract urgency level
+            urgency_map = {
+                'LOW': UrgencyLevel.LOW,
+                'MEDIUM': UrgencyLevel.MEDIUM,
+                'HIGH': UrgencyLevel.HIGH,
+                'CRITICAL': UrgencyLevel.CRITICAL
+            }
+            urgency_level = urgency_map.get(
+                analysis_result.get('urgency_level', 'LOW').upper(),
+                UrgencyLevel.LOW
+            )
+            
+            # Create profile
+            profile = PartnerProfile(
+                user_id=user_id,
+                partner_name=partner_name,
+                partner_description=full_description,
+                
+                # Questionnaire data
+                questionnaire_answers=answers,
+                
+                # Analysis results
+                personality_type=analysis_result.get('personality_type', ''),
+                manipulation_risk=manipulation_risk,
+                red_flags=analysis_result.get('red_flags', []),
+                positive_traits=analysis_result.get('positive_traits', []),
+                warning_signs=analysis_result.get('warning_signs', analysis_result.get('safety_alerts', [])),
+                
+                # Detailed analysis
+                psychological_profile=analysis_result.get('psychological_profile', ''),
+                relationship_advice=analysis_result.get('relationship_advice', ''),
+                communication_tips=analysis_result.get('communication_tips', ''),
+                
+                # Risk assessment
+                urgency_level=urgency_level,
+                overall_compatibility=analysis_result.get('compatibility_score', 0.0),
+                trust_indicators=analysis_result.get('trust_indicators', {}),
+                
+                # Metadata
+                confidence_score=analysis_result.get('confidence_score', 0.0),
+                ai_model_used=analysis_result.get('ai_model_used', 'claude-3-sonnet'),
+                
+                # Status
+                is_completed=True,
+                is_shared=False
+            )
+            
+            self.session.add(profile)
+            await self.session.commit()
+            await self.session.refresh(profile)
+            
+            logger.info(f"Partner profile created from profiler for user {user_id}: {partner_name}")
+            return profile
+            
+        except Exception as e:
+            logger.error(f"Error creating profile from profiler: {e}")
             await self.session.rollback()
             return None
     

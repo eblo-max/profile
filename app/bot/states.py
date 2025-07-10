@@ -28,6 +28,7 @@ class PartnerProfileStates(StatesGroup):
     privacy_consent = State()
     waiting_for_name = State()
     waiting_for_description = State()
+    waiting_for_basic_info = State()  # NEW: Age, occupation, etc.
     
     # Block 1: Narcissism and Grandiosity (7 questions)
     narcissism_q1 = State()  # Reaction to criticism
