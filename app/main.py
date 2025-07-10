@@ -108,20 +108,20 @@ async def lifespan(app: FastAPI):
                 
                 # Set webhook if configured
                 try:
-                webhook_url = getattr(settings, 'WEBHOOK_URL', None)
-                if webhook_url:
-                    webhook_secret = getattr(settings, 'WEBHOOK_SECRET', None)
-                    full_webhook_url = f"{webhook_url}/webhook"
-                    
-                    await bot.set_webhook(
-                        url=full_webhook_url,
-                        secret_token=webhook_secret,
-                        drop_pending_updates=True
-                    )
-                    logger.info(f"✅ Webhook set to {full_webhook_url}")
-                else:
-                    await bot.delete_webhook(drop_pending_updates=True)
-                    logger.info("✅ Webhook deleted, using polling mode")
+                    webhook_url = getattr(settings, 'WEBHOOK_URL', None)
+                    if webhook_url:
+                        webhook_secret = getattr(settings, 'WEBHOOK_SECRET', None)
+                        full_webhook_url = f"{webhook_url}/webhook"
+                        
+                        await bot.set_webhook(
+                            url=full_webhook_url,
+                            secret_token=webhook_secret,
+                            drop_pending_updates=True
+                        )
+                        logger.info(f"✅ Webhook set to {full_webhook_url}")
+                    else:
+                        await bot.delete_webhook(drop_pending_updates=True)
+                        logger.info("✅ Webhook deleted, using polling mode")
                 except Exception as webhook_error:
                     logger.error(f"❌ Webhook setup failed: {webhook_error}")
                     logger.info("⚠️ Bot will continue without proper webhook setup")
