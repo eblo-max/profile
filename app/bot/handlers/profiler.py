@@ -552,7 +552,8 @@ async def send_analysis_results(
         scores_text = ""
         for block, score in block_scores.items():
             block_name = block_names.get(block, block)
-            scores_text += f"• {block_name}: {score}/10\n"
+            # Round to 1 decimal place
+            scores_text += f"• {block_name}: {score:.1f}/10\n"
         
         # Create summary message
         summary_text = f"""📊 <b>Анализ завершен</b>
@@ -576,15 +577,28 @@ async def send_analysis_results(
         )
         
         # Send PDF report
-        from io import BytesIO
-        pdf_file = BytesIO(pdf_bytes)
-        pdf_file.name = f"profile_{partner_name}_{message.from_user.id}.pdf"
-        
-        await message.answer_document(
-            document=pdf_file,
-            caption=f"📄 Полный психологический профиль партнера {partner_name}",
-            reply_markup=get_profiler_keyboard()
-        )
+        try:
+            from aiogram.types import BufferedInputFile
+            
+            # Create BufferedInputFile for PDF
+            pdf_file = BufferedInputFile(
+                pdf_bytes,
+                filename=f"profile_{partner_name}_{message.from_user.id}.pdf"
+            )
+            
+            await message.answer_document(
+                document=pdf_file,
+                caption=f"📄 Полный психологический профиль партнера {partner_name}",
+                reply_markup=get_profiler_keyboard()
+            )
+            logger.info(f"PDF report sent successfully for user {message.from_user.id}")
+            
+        except Exception as pdf_error:
+            logger.error(f"Error sending PDF: {pdf_error}")
+            await message.answer(
+                "📄 PDF отчет сгенерирован, но не удалось отправить. Попробуйте еще раз.",
+                reply_markup=get_profiler_keyboard()
+            )
         
     except Exception as e:
         logger.error(f"Error sending analysis results: {e}")

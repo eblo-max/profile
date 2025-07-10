@@ -906,25 +906,35 @@ class AIService:
             # Extract Dark Triad scores
             dark_triad = data.get("dark_triad", {})
             if not dark_triad:
-                # Calculate based on risk score
+                # Calculate based on risk score with rounding
                 dark_triad = {
-                    "narcissism": min(10, risk_score / 10),
-                    "machiavellianism": min(10, (risk_score - 5) / 10),
-                    "psychopathy": min(10, (risk_score - 10) / 10)
+                    "narcissism": round(min(10, risk_score / 10), 1),
+                    "machiavellianism": round(min(10, (risk_score - 5) / 10), 1),
+                    "psychopathy": round(min(10, (risk_score - 10) / 10), 1)
                 }
+            else:
+                # Round existing values
+                for key in dark_triad:
+                    if isinstance(dark_triad[key], (int, float)):
+                        dark_triad[key] = round(float(dark_triad[key]), 1)
             
             # Extract block scores
             block_scores = data.get("block_scores", {})
             if not block_scores:
-                # Generate based on risk score
+                # Generate based on risk score with rounding
                 block_scores = {
-                    "narcissism": min(10, risk_score / 12),
-                    "control": min(10, risk_score / 10),
-                    "gaslighting": min(10, (risk_score - 5) / 12),
-                    "emotion": min(10, risk_score / 15),
-                    "intimacy": min(10, (risk_score - 10) / 12),
-                    "social": min(10, risk_score / 11)
+                    "narcissism": round(min(10, risk_score / 12), 1),
+                    "control": round(min(10, risk_score / 10), 1),
+                    "gaslighting": round(min(10, (risk_score - 5) / 12), 1),
+                    "emotion": round(min(10, risk_score / 15), 1),
+                    "intimacy": round(min(10, (risk_score - 10) / 12), 1),
+                    "social": round(min(10, risk_score / 11), 1)
                 }
+            else:
+                # Round existing values
+                for key in block_scores:
+                    if isinstance(block_scores[key], (int, float)):
+                        block_scores[key] = round(float(block_scores[key]), 1)
             
             return {
                 "psychological_profile": psychological_profile,
@@ -932,7 +942,7 @@ class AIService:
                 "survival_guide": survival_guide if isinstance(survival_guide, list) else [survival_guide],
                 "dark_triad": dark_triad,
                 "block_scores": block_scores,
-                "overall_risk_score": risk_score,
+                "overall_risk_score": round(risk_score, 1),
                 "urgency_level": urgency,
                 "safety_alerts": data.get("safety_alerts", ["Рекомендуется консультация с психологом"]),
                 "personality_type": data.get("personality_type", ""),
@@ -1196,16 +1206,22 @@ class AIService:
                 consensus = profile_data["consensus_analysis"]
                 expert_analyses = profile_data.get("expert_analyses", {})
                 
-                # Extract core information from consensus
+                # Extract core information from consensus and round numeric values
+                block_scores = profile_data.get("block_scores", {})
+                # Round block scores to 1 decimal place
+                for block in block_scores:
+                    if isinstance(block_scores[block], (int, float)):
+                        block_scores[block] = round(float(block_scores[block]), 1)
+                
                 result = {
                     "personality_type": consensus.get("personality_type", "Неопределен"),
-                    "manipulation_risk": consensus.get("manipulation_risk", 5),
+                    "manipulation_risk": round(float(consensus.get("manipulation_risk", 5)), 1),
                     "urgency_level": consensus.get("urgency_level", "medium"),
                     "psychological_profile": consensus.get("psychological_profile", "Профиль недоступен"),
                     "red_flags": consensus.get("red_flags", []),
                     "safety_alerts": consensus.get("safety_alerts", []),
-                    "block_scores": profile_data.get("block_scores", {}),
-                    "expert_agreement": consensus.get("expert_agreement", 0.5),
+                    "block_scores": block_scores,
+                    "expert_agreement": round(float(consensus.get("expert_agreement", 0.5)), 2),
                     "expert_analyses": expert_analyses
                 }
                 
@@ -1403,12 +1419,12 @@ class AIService:
                 "psychopathy": min(10, (risk_score - 20) / 10)
             },
             "block_scores": {
-                "narcissism": min(10, risk_score / 12),
-                "control": min(10, risk_score / 10),
-                "gaslighting": min(10, (risk_score - 5) / 12),
-                "emotion": min(10, risk_score / 15),
-                "intimacy": min(10, (risk_score - 10) / 12),
-                "social": min(10, risk_score / 11)
+                "narcissism": round(min(10, risk_score / 12), 1),
+                "control": round(min(10, risk_score / 10), 1),
+                "gaslighting": round(min(10, (risk_score - 5) / 12), 1),
+                "emotion": round(min(10, risk_score / 15), 1),
+                "intimacy": round(min(10, (risk_score - 10) / 12), 1),
+                "social": round(min(10, risk_score / 11), 1)
             },
             "overall_risk_score": risk_score,
             "urgency_level": urgency,
