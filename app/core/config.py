@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = Field(..., env="TELEGRAM_BOT_TOKEN")
     WEBHOOK_MODE: bool = Field(False, env="WEBHOOK_MODE")
     WEBHOOK_URL: Optional[str] = Field(None, env="WEBHOOK_URL")
+    WEBHOOK_SECRET: Optional[str] = Field(None, env="WEBHOOK_SECRET")
+    
+    @property
+    def BOT_TOKEN(self) -> str:
+        """Alias for TELEGRAM_BOT_TOKEN for backward compatibility"""
+        return self.TELEGRAM_BOT_TOKEN
     
     # AI Configuration
     CLAUDE_API_KEY: Optional[str] = Field(None, env="CLAUDE_API_KEY")

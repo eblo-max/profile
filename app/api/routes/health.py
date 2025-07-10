@@ -111,6 +111,35 @@ async def readiness_check(session: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=503, detail="Service not ready")
 
 
+@router.get("/health/config")
+async def config_check():
+    """Check configuration status"""
+    try:
+        config_status = {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "config": {
+                "bot_token_configured": bool(getattr(settings, 'TELEGRAM_BOT_TOKEN', None)),
+                "database_url_configured": bool(getattr(settings, 'DATABASE_URL', None)),
+                "redis_url_configured": bool(getattr(settings, 'REDIS_URL', None)),
+                "webhook_url_configured": bool(getattr(settings, 'WEBHOOK_URL', None)),
+                "claude_api_key_configured": bool(getattr(settings, 'CLAUDE_API_KEY', None)),
+                "environment": getattr(settings, 'ENVIRONMENT', 'unknown'),
+                "railway_environment": getattr(settings, 'RAILWAY_ENVIRONMENT', None)
+            }
+        }
+        
+        return config_status
+        
+    except Exception as e:
+        logger.error(f"Config check failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+
 @router.get("/health/live")
 async def liveness_check():
     """Kubernetes liveness probe"""

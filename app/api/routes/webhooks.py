@@ -15,9 +15,18 @@ async def telegram_webhook(request: Request):
     """Handle Telegram webhook updates"""
     
     try:
+        # Check if bot is available
+        if not hasattr(request.app.state, 'bot') or not hasattr(request.app.state, 'dp'):
+            logger.warning("WEBHOOK: Bot not initialized, skipping webhook processing")
+            return {"status": "bot_not_initialized", "message": "Bot not available"}
+        
         # Get bot and dispatcher from app state
         bot = request.app.state.bot
         dp = request.app.state.dp
+        
+        if not bot or not dp:
+            logger.warning("WEBHOOK: Bot or dispatcher is None")
+            return {"status": "bot_not_available", "message": "Bot or dispatcher not available"}
         
         # Debug app state
         logger.info(f"WEBHOOK: Bot object: {type(bot)} - {bot}")
@@ -53,6 +62,9 @@ async def webhook_info(request: Request):
     """Get webhook information"""
     
     try:
+        if not hasattr(request.app.state, 'bot') or not request.app.state.bot:
+            raise HTTPException(status_code=503, detail="Bot not initialized")
+            
         bot = request.app.state.bot
         webhook_info = await bot.get_webhook_info()
         
@@ -79,6 +91,9 @@ async def set_webhook(request: Request):
         raise HTTPException(status_code=400, detail="WEBHOOK_URL not configured")
     
     try:
+        if not hasattr(request.app.state, 'bot') or not request.app.state.bot:
+            raise HTTPException(status_code=503, detail="Bot not initialized")
+            
         bot = request.app.state.bot
         
         webhook_url = f"{settings.WEBHOOK_URL}/webhook"
@@ -105,6 +120,9 @@ async def delete_webhook(request: Request):
     """Delete webhook (switch to polling)"""
     
     try:
+        if not hasattr(request.app.state, 'bot') or not request.app.state.bot:
+            raise HTTPException(status_code=503, detail="Bot not initialized")
+            
         bot = request.app.state.bot
         
         success = await bot.delete_webhook(drop_pending_updates=True)
