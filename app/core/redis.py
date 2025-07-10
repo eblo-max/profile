@@ -90,6 +90,33 @@ class RedisClient:
             logger.error(f"Redis INCREMENT error for key {key}: {e}")
             return None
     
+    async def incr(self, key: str) -> Optional[int]:
+        """Increment counter by 1"""
+        return await self.increment(key, 1)
+    
+    async def expire(self, key: str, seconds: int) -> bool:
+        """Set expiration for key"""
+        if not self.redis:
+            return False
+        
+        try:
+            await self.redis.expire(key, seconds)
+            return True
+        except Exception as e:
+            logger.error(f"Redis EXPIRE error for key {key}: {e}")
+            return False
+    
+    async def keys(self, pattern: str) -> list:
+        """Get keys matching pattern"""
+        if not self.redis:
+            return []
+        
+        try:
+            return await self.redis.keys(pattern)
+        except Exception as e:
+            logger.error(f"Redis KEYS error for pattern {pattern}: {e}")
+            return []
+    
     async def set_rate_limit(
         self,
         key: str,
