@@ -8,8 +8,7 @@ from aiogram.fsm.context import FSMContext
 from loguru import logger
 
 from app.bot.states import ProfilerStates
-from app.bot.keyboards.inline import get_profiler_keyboard, get_profiler_navigation_keyboard
-from app.bot.middlewares.dependencies import get_dependencies
+from app.bot.keyboards.inline import get_profiler_keyboard, get_profiler_navigation_keyboard, profiler_menu_kb
 from app.services.ai_service import AIService
 from app.services.html_pdf_service import HTMLPDFService
 from app.services.user_service import UserService
@@ -22,12 +21,121 @@ from app.prompts.profiler_full_questions import get_all_questions
 router = Router()
 
 
-@router.callback_query(F.data == "profiler_full")
-async def start_profiler(callback: CallbackQuery, state: FSMContext):
-    """Start partner profiling process"""
+@router.callback_query(F.data == "profiler_menu")
+async def show_profiler_menu(callback: CallbackQuery, state: FSMContext):
+    """Show profiler menu"""
+    try:
+        await callback.answer()
+        await state.clear()  # Clear any existing state
+        
+        profiler_text = """
+👤 **Профиль партнера**
+
+Создайте психологический портрет вашего партнера на основе наблюдений и поведенческих паттернов.
+
+🎯 **Что вы получите:**
+• Детальный анализ личности партнера
+• Выявление потенциальных красных флагов
+• Рекомендации по взаимодействию
+• Оценка совместимости
+
+📊 **Процесс анализа:**
+1. Ответьте на вопросы о партнере
+2. Получите подробный анализ
+3. Изучите рекомендации
+4. Сохраните результаты
+
+Выберите действие:
+"""
+        
+        await callback.message.edit_text(
+            profiler_text,
+            reply_markup=profiler_menu_kb(),
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error showing profiler menu: {e}")
+        await callback.answer("❌ Ошибка при загрузке меню профайлера")
+
+
+@router.callback_query(F.data == "create_profile")
+async def create_new_profile(callback: CallbackQuery, state: FSMContext):
+    """Start creating a new partner profile"""
     try:
         await callback.answer()
         
+        # Start the full profiler process
+        await start_profiler_full(callback, state)
+        
+    except Exception as e:
+        logger.error(f"Error creating new profile: {e}")
+        await callback.answer("❌ Ошибка при создании профиля")
+
+
+@router.callback_query(F.data == "my_profiles")
+async def show_my_profiles(callback: CallbackQuery, state: FSMContext):
+    """Show user's saved profiles"""
+    try:
+        await callback.answer()
+        
+        # TODO: Implement profiles list from database
+        await callback.message.edit_text(
+            "📋 **Мои профили**\n\n"
+            "🚧 Функция в разработке\n\n"
+            "Скоро здесь будет список ваших сохраненных профилей партнеров.",
+            reply_markup=profiler_menu_kb(),
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error showing profiles: {e}")
+        await callback.answer("❌ Ошибка при загрузке профилей")
+
+
+@router.callback_query(F.data == "profile_recommendations")
+async def show_profile_recommendations(callback: CallbackQuery, state: FSMContext):
+    """Show general recommendations for profiling"""
+    try:
+        await callback.answer()
+        
+        recommendations_text = """
+🎯 **Рекомендации по профилированию**
+
+**Как получить точный анализ:**
+
+📝 **Подготовка:**
+• Вспомните конкретные ситуации и примеры
+• Будьте максимально честными в ответах
+• Не идеализируйте и не демонизируйте партнера
+
+🔍 **Наблюдения:**
+• Обращайте внимание на поведение в стрессе
+• Замечайте реакции на критику
+• Анализируйте общение с другими людьми
+
+⚠️ **Важно помнить:**
+• Анализ носит рекомендательный характер
+• Не принимайте серьезных решений только на основе теста
+• При серьезных проблемах обратитесь к психологу
+
+💡 **Совет:** Проходите профилирование периодически - люди меняются, и отношения развиваются.
+"""
+        
+        await callback.message.edit_text(
+            recommendations_text,
+            reply_markup=profiler_menu_kb(),
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error showing recommendations: {e}")
+        await callback.answer("❌ Ошибка при загрузке рекомендаций")
+
+
+async def start_profiler_full(callback: CallbackQuery, state: FSMContext):
+    """Start full profiler process"""
+    try:
         # Get all questions
         questions = get_all_questions()
         
@@ -51,15 +159,15 @@ async def start_profiler(callback: CallbackQuery, state: FSMContext):
         )
         
     except Exception as e:
-        logger.error(f"Error starting profiler: {e}")
+        logger.error(f"Error starting full profiler: {e}")
         await callback.message.edit_text(
             "❌ Произошла ошибка при запуске профайлера. Попробуйте позже.",
-            reply_markup=get_profiler_keyboard()
+            reply_markup=profiler_menu_kb()
         )
 
 
 @router.message(ProfilerStates.answering_questions)
-async def handle_answer(message: Message, state: FSMContext):
+async def handle_answer(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
     """Handle user answer to profiling question"""
     try:
         data = await state.get_data()
@@ -98,7 +206,7 @@ async def handle_answer(message: Message, state: FSMContext):
         else:
             # All questions answered - start analysis
             await state.update_data(answers=answers)
-            await start_analysis(message, state)
+            await start_analysis(message, state, ai_service, html_pdf_service, user_service, profile_service)
             
     except Exception as e:
         logger.error(f"Error handling answer: {e}")
@@ -107,16 +215,9 @@ async def handle_answer(message: Message, state: FSMContext):
         )
 
 
-async def start_analysis(message: Message, state: FSMContext):
+async def start_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
     """Start AI analysis of answers"""
     try:
-        # Get dependencies
-        deps = get_dependencies()
-        ai_service: AIService = deps['ai_service']
-        html_pdf_service: HTMLPDFService = deps['html_pdf_service']
-        user_service: UserService = deps['user_service']
-        profile_service: ProfileService = deps['profile_service']
-        
         # Get user data
         user_id = message.from_user.id
         data = await state.get_data()
