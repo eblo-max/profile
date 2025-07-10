@@ -1,0 +1,15 @@
+{
+  "all_passed": true,
+  "test_results": {
+    "questions_system": true,
+    "scoring_system": true,
+    "safety_system": true,
+    "ai_analysis": true,
+    "fallback_system": true,
+    "validation_system": true,
+    "ui_components": true
+  },
+  "errors": [],
+  "total_tests": 7,
+  "passed_tests": 7
+}
