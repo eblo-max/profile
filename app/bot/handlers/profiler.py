@@ -308,13 +308,16 @@ async def show_question(message: Message, state: FSMContext, question_state: str
 async def process_answer(callback: CallbackQuery, state: FSMContext):
     """Process question answer"""
     # Parse callback data: answer_{question_state}_{answer_index}
-    parts = callback.data.split("_", 2)
-    if len(parts) != 3:
+    # Example: answer_narcissism_q1_0
+    callback_parts = callback.data.split("_")
+    if len(callback_parts) < 4:
         await callback.answer("❌ Ошибка обработки ответа")
         return
     
-    question_state = parts[1] + "_" + parts[2].split("_")[0] + "_" + parts[2].split("_")[1]
-    answer_index = int(parts[2].split("_")[2])
+    # Reconstruct question_state from parts
+    # callback_parts = ['answer', 'narcissism', 'q1', '0']
+    question_state = f"{callback_parts[1]}_{callback_parts[2]}"  # narcissism_q1
+    answer_index = int(callback_parts[3])  # 0
     
     # Save answer
     data = await state.get_data()
@@ -964,11 +967,23 @@ async def show_visual_progress(callback: CallbackQuery, state: FSMContext):
 @handle_errors
 async def back_to_current_question(callback: CallbackQuery, state: FSMContext):
     """Return to current question from progress view"""
-    # Get current state and show appropriate question
-    current_state = await state.get_state()
-    if current_state:
-        state_name = current_state.state.split(":")[-1]
-        await show_question(callback.message, state, state_name)
+    # Get current state data and determine current question
+    data = await state.get_data()
+    answers = data.get("answers", {})
+    
+    # Find the next unanswered question
+    from app.prompts.profiler_full_questions import QUESTION_ORDER
+    
+    for question_id in QUESTION_ORDER:
+        if question_id not in answers:
+            # This is the next question to answer
+            await state.set_state(getattr(PartnerProfileStates, question_id))
+            await show_question(callback.message, state, question_id)
+            await callback.answer()
+            return
+    
+    # If all questions are answered, go to review
+    await show_review(callback.message, state)
     await callback.answer()
 
 
@@ -1318,16 +1333,125 @@ async def show_block_info(callback: CallbackQuery):
 @handle_errors
 async def show_my_profiles(callback: CallbackQuery):
     """Show user's saved profiles"""
-    # TODO: Get actual profiles count from database
-    profiles_count = 0
+    await callback.answer("🔄 Загрузка профилей...")
+    
+    # TODO: Implement profile listing from database
+    profiles_text = """📋 **Мои профили партнеров**
+
+🔍 У вас пока нет сохраненных профилей.
+Создайте первый профиль для анализа вашего партнера!
+
+**Возможности:**
+• Создание неограниченного количества профилей
+• Сравнение профилей между собой
+• Отслеживание изменений во времени
+• Экспорт результатов"""
+
+    await callback.message.edit_text(
+        profiles_text,
+        reply_markup=profiler_my_profiles_kb(0),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data == "prof_back_to_results")
+@handle_errors
+async def back_to_analysis_results(callback: CallbackQuery, state: FSMContext):
+    """Return to analysis results from detailed views"""
+    await show_analysis_results(callback.message, state)
+    await callback.answer()
+
+@router.callback_query(F.data == "prof_blocks_summary")
+@handle_errors
+async def show_blocks_summary(callback: CallbackQuery, state: FSMContext):
+    """Show summary of all blocks"""
+    data = await state.get_data()
+    analysis = data.get("analysis_result", {})
+    partner_name = data.get("partner_name", "партнер")
+    
+    if not analysis:
+        await callback.answer("❌ Данные анализа недоступны")
+        return
+    
+    block_scores = analysis.get("block_scores", {})
+    overall_risk = analysis.get("overall_risk_score", 0)
+    
+    summary_text = f"""📊 **Общая сводка анализа**
+
+👤 **Партнер:** {partner_name}
+🎯 **Общий риск:** {overall_risk:.1f}%
+
+**Детальные оценки по блокам:**
+
+🧠 **Нарциссизм:** {block_scores.get('narcissism', 0):.1f}/10
+🎯 **Контроль:** {block_scores.get('control', 0):.1f}/10
+🔄 **Газлайтинг:** {block_scores.get('gaslighting', 0):.1f}/10
+💭 **Эмоции:** {block_scores.get('emotion', 0):.1f}/10
+💕 **Интимность:** {block_scores.get('intimacy', 0):.1f}/10
+👥 **Социальное:** {block_scores.get('social', 0):.1f}/10
+
+**Интерпретация:**
+🟢 0-3 балла: Низкий риск
+🟡 4-6 баллов: Средний риск
+🔴 7-10 баллов: Высокий риск"""
     
     await callback.message.edit_text(
-        "📋 **Мои профили партнеров**\n\n" + 
-        ("У вас пока нет сохранённых профилей.\n\n"
-         "Создайте первый профиль для получения "
-         "персональных рекомендаций по безопасности отношений." if profiles_count == 0 
-         else f"У вас {profiles_count} сохранённых профилей."),
-        reply_markup=profiler_my_profiles_kb(profiles_count),
+        summary_text,
+        reply_markup=profiler_block_analysis_kb(block_scores),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "prof_blocks_compare")
+@handle_errors
+async def compare_blocks(callback: CallbackQuery, state: FSMContext):
+    """Compare blocks and show patterns"""
+    data = await state.get_data()
+    analysis = data.get("analysis_result", {})
+    
+    if not analysis:
+        await callback.answer("❌ Данные анализа недоступны")
+        return
+    
+    block_scores = analysis.get("block_scores", {})
+    
+    # Sort blocks by risk level
+    sorted_blocks = sorted(block_scores.items(), key=lambda x: x[1], reverse=True)
+    
+    compare_text = f"""⚖️ **Сравнение блоков по уровню риска**
+
+**Ранжирование от высокого к низкому:**"""
+    
+    block_names = {
+        "narcissism": "🧠 Нарциссизм",
+        "control": "🎯 Контроль",
+        "gaslighting": "🔄 Газлайтинг",
+        "emotion": "💭 Эмоции",
+        "intimacy": "💕 Интимность",
+        "social": "👥 Социальное"
+    }
+    
+    for i, (block, score) in enumerate(sorted_blocks, 1):
+        risk_emoji = "🔴" if score >= 7 else "🟡" if score >= 4 else "🟢"
+        name = block_names.get(block, block)
+        compare_text += f"\n{i}. {name}: {score:.1f}/10 {risk_emoji}"
+    
+    # Add interpretation
+    highest_risk = sorted_blocks[0]
+    lowest_risk = sorted_blocks[-1]
+    
+    compare_text += f"""
+
+**Ключевые выводы:**
+• Наибольший риск: {block_names.get(highest_risk[0], highest_risk[0])} ({highest_risk[1]:.1f}/10)
+• Наименьший риск: {block_names.get(lowest_risk[0], lowest_risk[0])} ({lowest_risk[1]:.1f}/10)
+• Разброс: {highest_risk[1] - lowest_risk[1]:.1f} балла"""
+    
+    if highest_risk[1] - lowest_risk[1] > 5:
+        compare_text += "\n\n⚠️ **Внимание:** Большой разброс между блоками может указывать на избирательные паттерны поведения."
+    
+    await callback.message.edit_text(
+        compare_text,
+        reply_markup=profiler_block_analysis_kb(block_scores),
         parse_mode="Markdown"
     )
     await callback.answer() 
