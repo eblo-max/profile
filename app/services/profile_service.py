@@ -270,12 +270,12 @@ class ProfileService:
     def _get_max_profiles(self, subscription_type: SubscriptionType) -> int:
         """Get maximum profiles allowed for subscription type"""
         if subscription_type == SubscriptionType.FREE:
-            return 1
+            return 51
         elif subscription_type == SubscriptionType.PREMIUM:
-            return 5
+            return 55
         elif subscription_type == SubscriptionType.VIP:
-            return 20
-        return 1
+            return 70
+        return 51
     
     async def generate_compatibility_report(
         self,

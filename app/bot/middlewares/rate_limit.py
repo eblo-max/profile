@@ -18,7 +18,7 @@ class RateLimitMiddleware(BaseMiddleware):
     # Rate limits for different actions (per day for free users)
     RATE_LIMITS = {
         'text_analysis': 5,      # Free: 5/day, Premium: 15/day, VIP: unlimited
-        'profile_creation': 5,    # Free: 5/day, Premium: 15/day, VIP: unlimited
+        'profile_creation': 55,    # Free: 55/day, Premium: 165/day, VIP: unlimited
         'compatibility_test': 3,  # Free: 3/day, Premium: 9/day, VIP: unlimited
         'ai_request': 10,         # Free: 10/day, Premium: 30/day, VIP: unlimited
     }

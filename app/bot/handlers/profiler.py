@@ -21,13 +21,68 @@ router = Router()
 
 
 @router.callback_query(F.data == "profiler_menu")
-async def show_profiler_menu(callback: CallbackQuery, state: FSMContext):
+async def show_profiler_menu(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
     """Show profiler menu"""
     try:
         await state.clear()
+        user_id = callback.from_user.id
+        
+        # Get user's profiles for statistics
+        profiles = await profile_service.get_user_profiles(user_id, limit=10)
+        
+        # Build profiler menu text with statistics
+        menu_text = "🔍 <b>Профайлер партнера</b>\n\n"
+        
+        if profiles:
+            # Statistics
+            total_profiles = len(profiles)
+            high_risk = len([p for p in profiles if p.manipulation_risk >= 7])
+            medium_risk = len([p for p in profiles if 4 <= p.manipulation_risk < 7])
+            low_risk = len([p for p in profiles if p.manipulation_risk < 4])
+            
+            menu_text += f"📊 <b>Ваша статистика:</b>\n"
+            menu_text += f"• Всего профилей: {total_profiles}\n"
+            
+            if high_risk > 0:
+                menu_text += f"• 🔴 Высокий риск: {high_risk}\n"
+            if medium_risk > 0:
+                menu_text += f"• 🟡 Средний риск: {medium_risk}\n"
+            if low_risk > 0:
+                menu_text += f"• 🟢 Низкий риск: {low_risk}\n"
+            
+            menu_text += "\n"
+            
+            # Latest profiles
+            menu_text += f"📋 <b>Последние профили:</b>\n"
+            for i, profile in enumerate(profiles[:3], 1):
+                risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
+                partner_name = profile.partner_name or f"Партнер #{profile.id}"
+                menu_text += f"{i}. {risk_emoji} {partner_name} ({profile.manipulation_risk:.1f}/10)\n"
+            menu_text += "\n"
+            
+            # Quick recommendations
+            if high_risk > 0:
+                menu_text += "⚠️ <b>Важное уведомление:</b>\n"
+                menu_text += "Обнаружены высокорисковые профили. Рекомендуется проконсультироваться с психологом.\n\n"
+            elif medium_risk > 0:
+                menu_text += "💡 <b>Рекомендация:</b>\n"
+                menu_text += "Изучите красные флаги в отношениях и развивайте эмоциональный интеллект.\n\n"
+            else:
+                menu_text += "✅ <b>Статус:</b>\n"
+                menu_text += "Хорошие показатели! Продолжайте развивать здоровые отношения.\n\n"
+        else:
+            menu_text += "👋 <b>Добро пожаловать!</b>\n\n"
+            menu_text += "Профайлер партнера поможет вам:\n"
+            menu_text += "• 🔍 Проанализировать поведение партнера\n"
+            menu_text += "• 🚨 Выявить красные флаги\n"
+            menu_text += "• 💡 Получить персональные рекомендации\n"
+            menu_text += "• 📊 Оценить совместимость\n\n"
+            menu_text += "Создайте первый профиль, чтобы начать анализ.\n\n"
+        
+        menu_text += "Выберите действие:"
+        
         await callback.message.edit_text(
-            "🔍 <b>Профайлер партнера</b>\n\n"
-            "Выберите действие:",
+            menu_text,
             parse_mode="HTML",
             reply_markup=profiler_menu_kb()
         )
@@ -55,39 +110,154 @@ async def create_new_profile(callback: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data == "my_profiles")
-async def show_my_profiles(callback: CallbackQuery, state: FSMContext):
+async def show_my_profiles(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
     """Show user's existing profiles"""
     try:
+        user_id = callback.from_user.id
+        
+        # Get user's profiles
+        profiles = await profile_service.get_user_profiles(user_id, limit=10)
+        
+        if not profiles:
+            await callback.message.edit_text(
+                "📂 <b>Мои профили</b>\n\n"
+                "У вас пока нет сохраненных профилей партнеров.\n\n"
+                "Создайте новый профиль, чтобы получить детальный анализ вашего партнера.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🆕 Создать профиль", callback_data="create_profile")],
+                    [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
+                ])
+            )
+            return
+        
+        # Build profiles list
+        profiles_text = "📂 <b>Мои профили</b>\n\n"
+        keyboard = []
+        
+        for i, profile in enumerate(profiles, 1):
+            # Get risk info
+            risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
+            partner_name = profile.partner_name or f"Партнер #{profile.id}"
+            
+            profiles_text += f"{i}. {risk_emoji} <b>{partner_name}</b>\n"
+            profiles_text += f"   Риск: {profile.manipulation_risk:.1f}/10\n"
+            profiles_text += f"   Создан: {profile.created_at.strftime('%d.%m.%Y')}\n\n"
+            
+            # Add profile button
+            keyboard.append([InlineKeyboardButton(
+                text=f"📋 {partner_name}", 
+                callback_data=f"view_profile_{profile.id}"
+            )])
+        
+        # Add control buttons
+        keyboard.append([
+            InlineKeyboardButton(text="🆕 Новый профиль", callback_data="create_profile"),
+            InlineKeyboardButton(text="🔄 Обновить", callback_data="my_profiles")
+        ])
+        keyboard.append([InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")])
+        
         await callback.message.edit_text(
-            "📂 <b>Мои профили</b>\n\n"
-            "🚧 Функция в разработке\n\n"
-            "Здесь будут отображаться ваши сохраненные профили партнеров.",
+            profiles_text,
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
-            ])
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
         )
+        
     except Exception as e:
         logger.error(f"Error in show_my_profiles: {e}")
-        await callback.answer("❌ Произошла ошибка")
+        await callback.answer("❌ Произошла ошибка при загрузке профилей")
 
 
 @router.callback_query(F.data == "profile_recommendations")
-async def show_profile_recommendations(callback: CallbackQuery, state: FSMContext):
+async def show_profile_recommendations(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
     """Show profile recommendations"""
     try:
+        user_id = callback.from_user.id
+        
+        # Get user's profiles
+        profiles = await profile_service.get_user_profiles(user_id, limit=5)
+        
+        if not profiles:
+            await callback.message.edit_text(
+                "💡 <b>Рекомендации</b>\n\n"
+                "У вас пока нет профилей для анализа.\n\n"
+                "Создайте профиль партнера, чтобы получить персональные рекомендации.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🆕 Создать профиль", callback_data="create_profile")],
+                    [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
+                ])
+            )
+            return
+        
+        # Analyze profiles and create recommendations
+        recommendations_text = "💡 <b>Рекомендации</b>\n\n"
+        
+        # Count risk levels
+        high_risk = len([p for p in profiles if p.manipulation_risk >= 7])
+        medium_risk = len([p for p in profiles if 4 <= p.manipulation_risk < 7])
+        low_risk = len([p for p in profiles if p.manipulation_risk < 4])
+        
+        # General recommendations
+        if high_risk > 0:
+            recommendations_text += "🔴 <b>ВНИМАНИЕ:</b> Обнаружены высокорисковые профили\n"
+            recommendations_text += "• Рекомендуется консультация с психологом\n"
+            recommendations_text += "• Изучите техники защиты от манипуляций\n"
+            recommendations_text += "• Установите четкие границы в отношениях\n\n"
+        
+        if medium_risk > 0:
+            recommendations_text += "🟡 <b>Средний риск:</b> Требуется внимание\n"
+            recommendations_text += "• Изучите красные флаги в отношениях\n"
+            recommendations_text += "• Развивайте эмоциональный интеллект\n"
+            recommendations_text += "• Обратите внимание на паттерны поведения\n\n"
+        
+        if low_risk > 0:
+            recommendations_text += "🟢 <b>Низкий риск:</b> Хорошие показатели\n"
+            recommendations_text += "• Продолжайте развивать здоровые отношения\n"
+            recommendations_text += "• Изучайте психологию совместимости\n"
+            recommendations_text += "• Делитесь опытом с другими\n\n"
+        
+        # Specific recommendations based on latest profile
+        latest_profile = profiles[0]
+        if latest_profile.red_flags:
+            recommendations_text += "🚨 <b>Основные красные флаги:</b>\n"
+            for flag in latest_profile.red_flags[:3]:  # Top 3
+                recommendations_text += f"• {flag}\n"
+            recommendations_text += "\n"
+        
+        if latest_profile.relationship_advice:
+            recommendations_text += "📋 <b>Персональные советы:</b>\n"
+            advice_lines = latest_profile.relationship_advice.split('\n')
+            for line in advice_lines[:3]:  # Top 3
+                if line.strip():
+                    recommendations_text += f"• {line.strip()}\n"
+            recommendations_text += "\n"
+        
+        # Add profile-specific buttons
+        keyboard = []
+        for profile in profiles[:3]:  # Show top 3 profiles
+            partner_name = profile.partner_name or f"Партнер #{profile.id}"
+            risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
+            keyboard.append([InlineKeyboardButton(
+                text=f"{risk_emoji} Советы для {partner_name}",
+                callback_data=f"recommendations_{profile.id}"
+            )])
+        
+        keyboard.append([
+            InlineKeyboardButton(text="📂 Мои профили", callback_data="my_profiles"),
+            InlineKeyboardButton(text="🔄 Обновить", callback_data="profile_recommendations")
+        ])
+        keyboard.append([InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")])
+        
         await callback.message.edit_text(
-            "💡 <b>Рекомендации</b>\n\n"
-            "🚧 Функция в разработке\n\n"
-            "Здесь будут персональные рекомендации на основе ваших профилей.",
+            recommendations_text,
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
-            ])
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
         )
+        
     except Exception as e:
         logger.error(f"Error in show_profile_recommendations: {e}")
-        await callback.answer("❌ Произошла ошибка")
+        await callback.answer("❌ Произошла ошибка при загрузке рекомендаций")
 
 
 @router.callback_query(F.data == "start_profiler_full")
@@ -449,16 +619,208 @@ async def handle_navigation(callback: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data == "profiler_back")
-async def back_to_profiler(callback: CallbackQuery, state: FSMContext):
+async def back_to_profiler(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
     """Go back to profiler menu"""
     try:
         await state.clear()
-        await callback.message.edit_text(
-            "🔍 <b>Профайлер партнера</b>\n\n"
-            "Выберите действие:",
-            parse_mode="HTML",
-            reply_markup=profiler_menu_kb()
-        )
+        # Use the same logic as show_profiler_menu
+        await show_profiler_menu(callback, state, profile_service)
     except Exception as e:
-        logger.error(f"Error going back to profiler: {e}")
+        logger.error(f"Error in back_to_profiler: {e}")
         await callback.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data.startswith("view_profile_"))
+async def view_profile_details(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
+    """View detailed profile information"""
+    try:
+        profile_id = int(callback.data.split("_")[2])
+        user_id = callback.from_user.id
+        
+        # Get profile details
+        profile = await profile_service.get_profile_by_id(profile_id, user_id)
+        
+        if not profile:
+            await callback.answer("❌ Профиль не найден")
+            return
+        
+        # Build profile details text
+        partner_name = profile.partner_name or f"Партнер #{profile.id}"
+        risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
+        
+        profile_text = f"📋 <b>{partner_name}</b>\n\n"
+        profile_text += f"{risk_emoji} <b>Оценка риска:</b> {profile.manipulation_risk:.1f}/10\n"
+        profile_text += f"📅 <b>Создан:</b> {profile.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+        
+        # Risk assessment
+        if profile.manipulation_risk >= 7:
+            profile_text += "🚨 <b>ВЫСОКИЙ РИСК</b>\n"
+            profile_text += "Обнаружены серьезные тревожные сигналы. Рекомендуется осторожность.\n\n"
+        elif profile.manipulation_risk >= 4:
+            profile_text += "⚠️ <b>СРЕДНИЙ РИСК</b>\n"
+            profile_text += "Есть некоторые тревожные моменты. Стоит обратить внимание.\n\n"
+        else:
+            profile_text += "✅ <b>НИЗКИЙ РИСК</b>\n"
+            profile_text += "В целом безопасный партнер. Хорошие показатели.\n\n"
+        
+        # Red flags
+        if profile.red_flags:
+            profile_text += "🚩 <b>Красные флаги:</b>\n"
+            for flag in profile.red_flags[:5]:  # Top 5
+                profile_text += f"• {flag}\n"
+            profile_text += "\n"
+        
+        # Positive traits
+        if profile.positive_traits:
+            profile_text += "✨ <b>Положительные черты:</b>\n"
+            for trait in profile.positive_traits[:5]:  # Top 5
+                profile_text += f"• {trait}\n"
+            profile_text += "\n"
+        
+        # Recommendations
+        if profile.relationship_advice:
+            profile_text += f"💡 <b>Рекомендации:</b>\n{profile.relationship_advice[:300]}...\n\n"
+        
+        # Create keyboard
+        keyboard = [
+            [InlineKeyboardButton(text="📊 Детальный анализ", callback_data=f"detailed_analysis_{profile_id}")],
+            [InlineKeyboardButton(text="💡 Рекомендации", callback_data=f"recommendations_{profile_id}")],
+            [InlineKeyboardButton(text="🗑️ Удалить профиль", callback_data=f"delete_profile_{profile_id}")],
+            [InlineKeyboardButton(text="🔙 К списку профилей", callback_data="my_profiles")]
+        ]
+        
+        await callback.message.edit_text(
+            profile_text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error viewing profile details: {e}")
+        await callback.answer("❌ Произошла ошибка при загрузке профиля")
+
+
+@router.callback_query(F.data.startswith("recommendations_"))
+async def show_detailed_recommendations(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
+    """Show detailed recommendations for specific profile"""
+    try:
+        profile_id = int(callback.data.split("_")[1])
+        user_id = callback.from_user.id
+        
+        # Get profile details
+        profile = await profile_service.get_profile_by_id(profile_id, user_id)
+        
+        if not profile:
+            await callback.answer("❌ Профиль не найден")
+            return
+        
+        partner_name = profile.partner_name or f"Партнер #{profile.id}"
+        risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
+        
+        # Build recommendations text
+        rec_text = f"💡 <b>Рекомендации для {partner_name}</b>\n\n"
+        rec_text += f"{risk_emoji} <b>Уровень риска:</b> {profile.manipulation_risk:.1f}/10\n\n"
+        
+        # Risk-based recommendations
+        if profile.manipulation_risk >= 7:
+            rec_text += "🚨 <b>КРИТИЧЕСКИ ВАЖНО:</b>\n"
+            rec_text += "• Обратитесь к психологу или консультанту\n"
+            rec_text += "• Не игнорируйте красные флаги\n"
+            rec_text += "• Установите четкие границы\n"
+            rec_text += "• Подумайте о безопасности выхода из отношений\n\n"
+        elif profile.manipulation_risk >= 4:
+            rec_text += "⚠️ <b>РЕКОМЕНДУЕТСЯ:</b>\n"
+            rec_text += "• Изучите техники распознавания манипуляций\n"
+            rec_text += "• Обратите внимание на паттерны поведения\n"
+            rec_text += "• Развивайте эмоциональную независимость\n"
+            rec_text += "• Обсудите проблемы с доверенными людьми\n\n"
+        else:
+            rec_text += "✅ <b>ПОДДЕРЖИВАЙТЕ:</b>\n"
+            rec_text += "• Продолжайте строить здоровые отношения\n"
+            rec_text += "• Развивайте открытое общение\n"
+            rec_text += "• Цените взаимное уважение\n"
+            rec_text += "• Изучайте психологию совместимости\n\n"
+        
+        # Specific recommendations
+        if profile.relationship_advice:
+            rec_text += f"📋 <b>Персональные советы:</b>\n{profile.relationship_advice}\n\n"
+        
+        # Communication tips
+        if profile.communication_tips:
+            rec_text += f"💬 <b>Советы по общению:</b>\n{profile.communication_tips}\n\n"
+        
+        # Warning signs
+        if profile.warning_signs:
+            rec_text += "🚨 <b>На что обратить внимание:</b>\n"
+            for warning in profile.warning_signs[:5]:
+                rec_text += f"• {warning}\n"
+            rec_text += "\n"
+        
+        # Create keyboard
+        keyboard = [
+            [InlineKeyboardButton(text="📋 Профиль", callback_data=f"view_profile_{profile_id}")],
+            [InlineKeyboardButton(text="📊 Детальный анализ", callback_data=f"detailed_analysis_{profile_id}")],
+            [InlineKeyboardButton(text="🔙 К списку профилей", callback_data="my_profiles")]
+        ]
+        
+        await callback.message.edit_text(
+            rec_text,
+            parse_mode="HTML", 
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error showing detailed recommendations: {e}")
+        await callback.answer("❌ Произошла ошибка при загрузке рекомендаций")
+
+
+@router.callback_query(F.data.startswith("delete_profile_"))
+async def delete_profile_confirm(callback: CallbackQuery, state: FSMContext):
+    """Confirm profile deletion"""
+    try:
+        profile_id = int(callback.data.split("_")[2])
+        
+        keyboard = [
+            [InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"confirm_delete_{profile_id}")],
+            [InlineKeyboardButton(text="❌ Отмена", callback_data=f"view_profile_{profile_id}")]
+        ]
+        
+        await callback.message.edit_text(
+            "🗑️ <b>Удаление профиля</b>\n\n"
+            "Вы уверены, что хотите удалить этот профиль?\n\n"
+            "❗️ Это действие нельзя отменить.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in delete_profile_confirm: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+
+@router.callback_query(F.data.startswith("confirm_delete_"))
+async def confirm_profile_deletion(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
+    """Actually delete the profile"""
+    try:
+        profile_id = int(callback.data.split("_")[2])
+        user_id = callback.from_user.id
+        
+        # Delete profile
+        success = await profile_service.delete_profile(profile_id, user_id)
+        
+        if success:
+            await callback.message.edit_text(
+                "✅ <b>Профиль удален</b>\n\n"
+                "Профиль успешно удален из вашего списка.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="📂 Мои профили", callback_data="my_profiles")],
+                    [InlineKeyboardButton(text="🔙 В меню", callback_data="profiler_menu")]
+                ])
+            )
+        else:
+            await callback.answer("❌ Не удалось удалить профиль")
+            
+    except Exception as e:
+        logger.error(f"Error confirming profile deletion: {e}")
+        await callback.answer("❌ Произошла ошибка при удалении")
