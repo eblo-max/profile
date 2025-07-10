@@ -4,7 +4,6 @@ import asyncio
 from typing import Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
-from playwright.async_api import async_playwright
 from loguru import logger
 
 from app.services.ai_service import AIService
@@ -861,31 +860,41 @@ class HTMLPDFService:
     
     async def _convert_html_to_pdf_playwright(self, html_content: str) -> bytes:
         """Convert HTML to PDF using Playwright"""
-        
         try:
+            from playwright.async_api import async_playwright
+            
             async with async_playwright() as p:
                 browser = await p.chromium.launch()
                 page = await browser.new_page()
                 
-                # Set content
+                # Set page content
                 await page.set_content(html_content, wait_until="networkidle")
                 
                 # Generate PDF
                 pdf_bytes = await page.pdf(
-                    format="A4",
-                    margin={
-                        "top": "1cm",
-                        "right": "1cm", 
-                        "bottom": "1cm",
-                        "left": "1cm"
-                    },
+                    format='A4',
                     print_background=True,
-                    prefer_css_page_size=True
+                    margin={
+                        'top': '0.5in',
+                        'right': '0.5in',
+                        'bottom': '0.5in',
+                        'left': '0.5in'
+                    }
                 )
                 
                 await browser.close()
                 return pdf_bytes
                 
+        except ImportError:
+            logger.error("Playwright not installed. Using fallback PDF service.")
+            # Fallback to reportlab service
+            from app.services.reportlab_pdf_service import ReportLabPDFService
+            fallback_service = ReportLabPDFService()
+            return await fallback_service.generate_partner_report(
+                analysis_data={'psychological_profile': 'HTML service unavailable'},
+                user_id=0,
+                partner_name="Partner"
+            )
         except Exception as e:
-            logger.error(f"Playwright HTML to PDF conversion failed: {e}")
-            raise ServiceError(f"Failed to convert HTML to PDF with Playwright: {str(e)}") 
+            logger.error(f"Playwright PDF conversion failed: {e}")
+            raise ServiceError(f"PDF conversion failed: {str(e)}") 
