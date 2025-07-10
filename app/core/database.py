@@ -71,7 +71,12 @@ async def get_session():
 async def init_db() -> None:
     """Initialize database tables"""
     try:
-        from app.models import base  # Import all models
+        # Import all models to register them with Base
+        from app.models import (
+            User, TextAnalysis, PartnerProfile, 
+            CompatibilityTest, Subscription, DailyContent,
+            UserActivity, UserAchievement
+        )
         
         async with engine.begin() as conn:
             # Create all tables

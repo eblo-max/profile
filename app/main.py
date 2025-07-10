@@ -34,82 +34,122 @@ from app.api.routes import health, analytics, webhooks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
+    # Setup logging first
+    setup_logging()
+    logger.info("Starting application...")
+    
+    # Initialize services with error handling
+    db_initialized = False
+    redis_initialized = False
+    bot_initialized = False
+    
     try:
-        # Setup logging
-        setup_logging()
-        logger.info("Starting application...")
-        
         # Initialize database
-        await init_db()
-        logger.info("Database initialized")
+        try:
+            await init_db()
+            db_initialized = True
+            logger.info("✅ Database initialized")
+        except Exception as e:
+            logger.error(f"❌ Database initialization failed: {e}")
+            # Don't fail the whole app, just log the error
         
         # Initialize Redis
-        await init_redis()
-        logger.info("Redis initialized")
+        try:
+            await init_redis()
+            redis_initialized = True
+            logger.info("✅ Redis initialized")
+        except Exception as e:
+            logger.error(f"❌ Redis initialization failed: {e}")
+            # Don't fail the whole app, just log the error
         
-        # Initialize bot
-        bot = Bot(
-            token=settings.BOT_TOKEN,
-            parse_mode=ParseMode.HTML
-        )
+        # Initialize bot (only if we have a bot token)
+        try:
+            if settings.BOT_TOKEN:
+                bot = Bot(
+                    token=settings.BOT_TOKEN,
+                    parse_mode=ParseMode.HTML
+                )
+                
+                # Create dispatcher
+                dp = Dispatcher()
+                
+                # Setup middlewares
+                dp.message.middleware(DependenciesMiddleware())
+                dp.callback_query.middleware(DependenciesMiddleware())
+                dp.message.middleware(AuthMiddleware())
+                dp.callback_query.middleware(AuthMiddleware())
+                dp.message.middleware(LoggingMiddleware())
+                dp.callback_query.middleware(LoggingMiddleware())
+                dp.message.middleware(RateLimitMiddleware())
+                dp.callback_query.middleware(RateLimitMiddleware())
+                dp.message.middleware(SubscriptionMiddleware())
+                dp.callback_query.middleware(SubscriptionMiddleware())
+                
+                # Register handlers
+                dp.include_router(start.router)
+                dp.include_router(profile.router)
+                dp.include_router(profiler.router)
+                dp.include_router(analysis.router)
+                dp.include_router(compatibility.router)
+                dp.include_router(daily.router)
+                dp.include_router(payments.router)
+                dp.include_router(admin.router)
+                
+                # Set webhook if configured
+                if settings.WEBHOOK_URL:
+                    await bot.set_webhook(
+                        url=f"{settings.WEBHOOK_URL}/webhook",
+                        secret_token=settings.WEBHOOK_SECRET
+                    )
+                    logger.info(f"✅ Webhook set to {settings.WEBHOOK_URL}/webhook")
+                else:
+                    # Delete webhook for polling mode
+                    await bot.delete_webhook(drop_pending_updates=True)
+                    logger.info("✅ Webhook deleted, using polling mode")
+                
+                # Store bot and dispatcher in app state
+                app.state.bot = bot
+                app.state.dp = dp
+                bot_initialized = True
+                logger.info("✅ Bot initialized")
+            else:
+                logger.warning("⚠️ No BOT_TOKEN provided, bot not initialized")
+                
+        except Exception as e:
+            logger.error(f"❌ Bot initialization failed: {e}")
+            # Don't fail the whole app, just log the error
         
-        # Create dispatcher
-        dp = Dispatcher()
-        
-        # Setup middlewares
-        dp.message.middleware(DependenciesMiddleware())
-        dp.callback_query.middleware(DependenciesMiddleware())
-        dp.message.middleware(AuthMiddleware())
-        dp.callback_query.middleware(AuthMiddleware())
-        dp.message.middleware(LoggingMiddleware())
-        dp.callback_query.middleware(LoggingMiddleware())
-        dp.message.middleware(RateLimitMiddleware())
-        dp.callback_query.middleware(RateLimitMiddleware())
-        dp.message.middleware(SubscriptionMiddleware())
-        dp.callback_query.middleware(SubscriptionMiddleware())
-        
-        # Register handlers
-        dp.include_router(start.router)
-        dp.include_router(profile.router)
-        dp.include_router(profiler.router)
-        dp.include_router(analysis.router)
-        dp.include_router(compatibility.router)
-        dp.include_router(daily.router)
-        dp.include_router(payments.router)
-        dp.include_router(admin.router)
-        
-        # Set webhook if configured
-        if settings.WEBHOOK_URL:
-            await bot.set_webhook(
-                url=f"{settings.WEBHOOK_URL}/webhook",
-                secret_token=settings.WEBHOOK_SECRET
-            )
-            logger.info(f"Webhook set to {settings.WEBHOOK_URL}/webhook")
-        else:
-            # Delete webhook for polling mode
-            await bot.delete_webhook(drop_pending_updates=True)
-            logger.info("Webhook deleted, using polling mode")
-        
-        # Store bot and dispatcher in app state
-        app.state.bot = bot
-        app.state.dp = dp
-        
-        logger.info("Application started successfully")
+        logger.info("🚀 Application started successfully")
         yield
         
     except Exception as e:
-        logger.error(f"Failed to start application: {e}")
-        raise
+        logger.error(f"❌ Failed to start application: {e}")
+        # Don't raise, just log the error
     finally:
         # Cleanup
+        logger.info("🔄 Starting application shutdown...")
         try:
-            if hasattr(app.state, 'bot'):
+            if bot_initialized and hasattr(app.state, 'bot'):
                 await app.state.bot.session.close()
-            await close_db()
-            await close_redis()
-            logger.info("Application shutdown complete")
+                logger.info("✅ Bot session closed")
         except Exception as e:
-            logger.error(f"Error during shutdown: {e}")
+            logger.error(f"❌ Error closing bot session: {e}")
+        
+        try:
+            if db_initialized:
+                await close_db()
+                logger.info("✅ Database connections closed")
+        except Exception as e:
+            logger.error(f"❌ Error closing database: {e}")
+        
+        try:
+            if redis_initialized:
+                await close_redis()
+                logger.info("✅ Redis connections closed")
+        except Exception as e:
+            logger.error(f"❌ Error closing Redis: {e}")
+        
+        logger.info("🏁 Application shutdown complete")
 
 
 def create_app() -> FastAPI:
@@ -216,4 +256,15 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    import os
+    import uvicorn
+    
+    # Проверяем, запускаемся ли мы на Railway (production)
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("PORT"):
+        # Production mode - запускаем FastAPI с uvicorn
+        port = int(os.getenv("PORT", 8000))
+        app = create_app()
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    else:
+        # Development mode - запускаем polling
+        asyncio.run(main()) 

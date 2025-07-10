@@ -16,12 +16,20 @@ router = APIRouter()
 @router.get("/health")
 async def health_check():
     """Basic health check"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0",
-        "environment": settings.ENVIRONMENT
-    }
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "environment": getattr(settings, 'ENVIRONMENT', 'production')
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 
 @router.get("/health/detailed")
