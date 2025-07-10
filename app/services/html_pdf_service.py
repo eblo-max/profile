@@ -13,17 +13,11 @@ class HTMLPDFService:
     """Service for generating beautiful PDF reports via HTML using Playwright"""
     
     def __init__(self):
-        self.playwright_available = None  # Will be checked lazily
+        self.playwright_available = None  # Will be checked on first use
         self.playwright_checked = False
+        self.fallback_service = None  # Initialize only if needed
         
-        # Initialize fallback service
-        try:
-            from app.services.reportlab_pdf_service import ReportLabPDFService
-            self.fallback_service = ReportLabPDFService()
-            logger.info("ReportLab fallback service initialized")
-        except ImportError:
-            logger.error("ReportLab service not available for PDF generation")
-            self.fallback_service = None
+        logger.info("HTMLPDFService initialized - will check Playwright availability on first use")
     
     async def _ensure_playwright_available(self) -> bool:
         """Ensure Playwright browser is available using async API"""
@@ -145,33 +139,48 @@ class HTMLPDFService:
             # Check Playwright availability first using async method
             playwright_available = await self._ensure_playwright_available()
             if not playwright_available:
-                logger.warning("Playwright not available, using fallback ReportLab service")
-                if self.fallback_service:
-                    return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
-                else:
-                    raise ServiceError("No PDF generation service available")
+                logger.warning("Playwright not available, initializing ReportLab fallback service")
+                # Initialize fallback service if not already done
+                if not self.fallback_service:
+                    try:
+                        from app.services.reportlab_pdf_service import ReportLabPDFService
+                        self.fallback_service = ReportLabPDFService()
+                        logger.info("ReportLab fallback service initialized")
+                    except ImportError:
+                        logger.error("ReportLab service not available for PDF generation")
+                        raise ServiceError("No PDF generation service available")
+                
+                return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
             
+            logger.info("✅ Using Playwright for beautiful PDF generation")
             # Generate complete HTML report matching mockup
             html_content = self._generate_beautiful_html_report(analysis_data, partner_name, user_id)
             
             # Convert HTML to PDF using Playwright
             pdf_bytes = await self._convert_html_to_pdf_playwright(html_content)
             
-            logger.info(f"Beautiful PDF generated successfully, size: {len(pdf_bytes)} bytes")
+            logger.info(f"✅ Beautiful PDF generated successfully with Playwright, size: {len(pdf_bytes)} bytes")
             return pdf_bytes
             
         except Exception as e:
             logger.error(f"HTML PDF generation failed: {e}")
             
-            # Try fallback service if available
-            if self.fallback_service:
-                logger.info("Attempting fallback PDF generation with ReportLab")
+            # Try fallback service if available or initialize it
+            if not self.fallback_service:
                 try:
-                    return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
-                except Exception as fallback_error:
-                    logger.error(f"Fallback PDF generation also failed: {fallback_error}")
+                    from app.services.reportlab_pdf_service import ReportLabPDFService
+                    self.fallback_service = ReportLabPDFService()
+                    logger.info("ReportLab fallback service initialized in exception handler")
+                except ImportError:
+                    logger.error("ReportLab service not available for PDF generation")
+                    raise ServiceError(f"Failed to generate PDF: {str(e)}")
             
-            raise ServiceError(f"Failed to generate PDF: {str(e)}")
+            logger.info("Attempting fallback PDF generation with ReportLab")
+            try:
+                return await self._generate_fallback_pdf(analysis_data, user_id, partner_name)
+            except Exception as fallback_error:
+                logger.error(f"Fallback PDF generation also failed: {fallback_error}")
+                raise ServiceError(f"Failed to generate PDF: {str(e)}")
     
     async def _generate_fallback_pdf(
         self,
