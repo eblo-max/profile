@@ -27,9 +27,14 @@ class RateLimitMiddleware(BaseMiddleware):
     RATE_LIMITED_ACTIONS = {
         'analyze_message',
         'analyze_chat',
-        'create_profile',
         'start_compatibility',
         'ai_coaching'
+    }
+    
+    # Actions that involve actual resource consumption (not navigation)
+    RESOURCE_INTENSIVE_ACTIONS = {
+        'start_questions_now',  # When actually starting the profiling process
+        'handle_answer',        # When processing answers (but this is callback handler name)
     }
     
     async def __call__(
@@ -92,7 +97,7 @@ class RateLimitMiddleware(BaseMiddleware):
         """Get rate limit type for action"""
         if action in ['analyze_message', 'analyze_chat']:
             return 'text_analysis'
-        elif action == 'create_profile':
+        elif action == 'start_questions_now':  # Rate limit actual profiling start, not navigation
             return 'profile_creation'
         elif action == 'start_compatibility':
             return 'compatibility_test'
