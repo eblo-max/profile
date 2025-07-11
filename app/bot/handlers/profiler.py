@@ -608,7 +608,7 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             # All questions answered - start analysis
             logger.info("All questions completed, starting analysis...")
             await state.update_data(answers=answers)
-            await start_analysis(callback.message, state, ai_service, html_pdf_service, user_service, profile_service)
+            await start_analysis(callback.message, state, ai_service, html_pdf_service, user_service, profile_service, callback.from_user.id)
         else:
             # Move to next question
             next_question = current_question + 1
@@ -674,11 +674,10 @@ def get_block_emoji(block: str) -> str:
     return block_emoji.get(block, "❓")
 
 
-async def start_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+async def start_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService, telegram_id: int):
     """Start AI analysis of answers"""
     try:
-        # Get user from database by telegram_id using our own session
-        telegram_id = message.from_user.id
+        # Use the provided telegram_id instead of extracting from message
         logger.info(f"Starting analysis for telegram_id: {telegram_id}")
         
         # Create our own session and services to avoid middleware session issues
