@@ -1439,41 +1439,31 @@ class AIService:
             if not psychological_profile:
                 psychological_profile = profile_data.get("psychological_profile", "Профиль недоступен")
             
-            # Ensure minimum length for psychological profile (TARGET: 1500+ words)
-            if len(psychological_profile) < 10000:  # ~1500 words
-                logger.warning(f"Psychological profile too short ({len(psychological_profile)} chars), enhancing to achieve 1500+ words...")
+            # Only enhance if profile is genuinely too short AND risk is VERY high
+            if len(psychological_profile) < 1000 and manipulation_risk > 8.0:  # Only for critical risk cases
+                logger.warning(f"High-risk psychological profile too short ({len(psychological_profile)} chars), adding targeted enhancement...")
                 
-                # Add comprehensive enhancement
-                enhancement = f"\n\n" + "="*60 + "\n🧠 **РАСШИРЕННЫЙ ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ ДЛЯ МАКСИМАЛЬНОЙ ДЕТАЛИЗАЦИИ**\n" + "="*60
-                enhancement += f"\n\n📋 **ДЕТАЛЬНЫЙ АНАЛИЗ ЛИЧНОСТНЫХ ХАРАКТЕРИСТИК:**\n"
-                enhancement += f"Комплексный анализ поведенческих паттернов выявляет многоуровневую структуру проблемных аспектов личности. "
-                enhancement += f"Нарушения эмоциональной регуляции проявляются в неспособности контролировать импульсивные реакции на критику и стресс. "
-                enhancement += f"Контролирующие тенденции указывают на глубокие проблемы с доверием и патологическую потребность в доминировании над партнером. "
-                enhancement += f"Манипулятивные стратегии свидетельствуют о развитых навыках психологического воздействия и эксплуатации эмоциональных потребностей других. "
+                # Add risk-appropriate enhancement
+                enhancement = f"\n\n📋 **ДЕТАЛЬНЫЙ АНАЛИЗ ВЫЯВЛЕННЫХ ПАТТЕРНОВ:**\n"
+                enhancement += f"На основе предоставленных ответов выявлены специфические поведенческие паттерны, требующие внимания. "
                 
-                enhancement += f"\n\n🔍 **АНАЛИЗ ЭМОЦИОНАЛЬНЫХ ПАТТЕРНОВ:**\n"
-                enhancement += f"Эмоциональная нестабильность проявляется в резких перепадах настроения и неадекватных реакциях на незначительные раздражители. "
-                enhancement += f"Отсутствие эмпатии демонстрируется через неспособность понимать и признавать эмоциональные потребности партнера. "
-                enhancement += f"Агрессивные тенденции выражаются как в вербальных нападках, так и в физических проявлениях запугивания. "
-                enhancement += f"Защитные механизмы включают отрицание, проекцию ответственности и рационализацию деструктивного поведения. "
+                if manipulation_risk > 7.0:
+                    enhancement += f"Высокий уровень манипулятивного риска ({manipulation_risk}/10) указывает на серьезные проблемы в отношениях. "
+                elif manipulation_risk > 5.0:
+                    enhancement += f"Умеренный уровень риска ({manipulation_risk}/10) требует осторожности и наблюдения. "
                 
-                enhancement += f"\n\n⚡ **ДЕТАЛИЗАЦИЯ ПОВЕДЕНЧЕСКИХ СТРАТЕГИЙ:**\n"
-                enhancement += f"Газлайтинг используется как основной инструмент для подрыва уверенности партнера в собственном восприятии реальности. "
-                enhancement += f"Социальная изоляция применяется для создания эмоциональной зависимости и устранения внешних источников поддержки. "
-                enhancement += f"Финансовый контроль служит дополнительным механизмом принуждения и ограничения автономии партнера. "
-                enhancement += f"Циклическое поведение включает периоды эскалации напряжения, взрывных реакций и временного примирения. "
+                # Add specific analysis based on actual findings
+                if all_red_flags and len(all_red_flags) > 0:
+                    enhancement += f"\n\n🚩 **ВЫЯВЛЕННЫЕ ТРЕВОЖНЫЕ ПРИЗНАКИ:**\n"
+                    for flag in all_red_flags[:3]:  # Only first 3
+                        enhancement += f"• {flag}\n"
                 
-                enhancement += f"\n\n🧬 **ГЛУБИННЫЙ АНАЛИЗ МОТИВАЦИОННЫХ СТРУКТУР:**\n"
-                enhancement += f"Потребность в контроле коренится в глубоких нарушениях самооценки и страхе быть отвергнутым или покинутым. "
-                enhancement += f"Доминирующие установки формируются под влиянием ранних травматических опытов и дисфункциональных семейных паттернов. "
-                enhancement += f"Отсутствие здоровых копинг-стратегий приводит к использованию деструктивных методов регуляции эмоций. "
-                enhancement += f"Нарциссические черты проявляются в грандиозных фантазиях о собственной важности и требованиях особого отношения. "
-                
-                enhancement += f"\n\n🎯 **ПРОГНОСТИЧЕСКИЙ АНАЛИЗ РАЗВИТИЯ СИТУАЦИИ:**\n"
-                enhancement += f"Без профессионального вмешательства поведенческие паттерны будут усиливаться и становиться более деструктивными. "
-                enhancement += f"Риск эскалации физического насилия возрастает при попытках партнера установить границы или получить независимость. "
-                enhancement += f"Долгосрочные последствия для психического здоровья жертвы включают посттравматическое стрессовое расстройство и депрессию. "
-                enhancement += f"Вероятность самостоятельного изменения поведения без внешнего давления крайне низка. "
+                if block_scores:
+                    high_risk_blocks = [block for block, score in block_scores.items() if score > 6.0]
+                    if high_risk_blocks:
+                        enhancement += f"\n\n⚠️ **ОБЛАСТИ ПОВЫШЕННОГО ВНИМАНИЯ:**\n"
+                        for block in high_risk_blocks:
+                            enhancement += f"• {block.title()}: {block_scores[block]}/10\n"
                 
                 enhancement += f"\n\n🛡️ **КОМПЛЕКСНАЯ ОЦЕНКА БЕЗОПАСНОСТИ:**\n"
                 enhancement += f"Текущий уровень угрозы требует немедленного вмешательства специалистов по домашнему насилию. "
@@ -1548,8 +1538,8 @@ class AIService:
                 
                 psychological_profile += enhancement
                 
-                # If still not enough, add another comprehensive layer
-                if len(psychological_profile) < 20000:
+                # If still not enough, add another comprehensive layer (DISABLED - only for extreme cases)
+                if False and len(psychological_profile) < 20000:
                     additional_enhancement = f"\n\n" + "="*60 + "\n💎 **МАКСИМАЛЬНО ДЕТАЛЬНЫЙ ДОПОЛНИТЕЛЬНЫЙ АНАЛИЗ**\n" + "="*60
                     additional_enhancement += f"\n\nДанный анализ представляет собой комплексную оценку всех аспектов поведенческих паттернов, "
                     additional_enhancement += f"выявленных в процессе детального изучения предоставленной информации. "
@@ -1580,8 +1570,8 @@ class AIService:
                     
                     psychological_profile += additional_enhancement
                     
-                    # Third layer for maximum detail to reach 3000+ words
-                    if len(psychological_profile) < 20000:
+                    # Third layer for maximum detail to reach 3000+ words (DISABLED)
+                    if False and len(psychological_profile) < 20000:
                         final_enhancement = f"\n\n" + "="*60 + "\n🎯 **ФИНАЛЬНЫЙ СЛОЙ МАКСИМАЛЬНОЙ ДЕТАЛИЗАЦИИ**\n" + "="*60
                         final_enhancement += f"\n\nКомплексный междисциплинарный анализ данного случая требует рассмотрения всех возможных аспектов "
                         final_enhancement += f"и их взаимодействия для формирования полной картины ситуации. "
@@ -1621,10 +1611,40 @@ class AIService:
                 
                 logger.info(f"Enhanced psychological profile to {len(psychological_profile)} characters (~{len(psychological_profile.split())} words)")
             
+            # Calculate manipulation_risk first
+            manipulation_risk = round(float((consensus.get("manipulation_risk") if consensus else None) or profile_data.get("manipulation_risk", 5)), 1)
+            
+            # Calculate overall_risk_score from manipulation_risk if not provided
+            overall_risk_score = (consensus.get("overall_risk_score") if consensus else None) or profile_data.get("overall_risk_score")
+            if overall_risk_score is None:
+                # Convert manipulation_risk (0-10) to overall_risk_score (0-100)
+                overall_risk_score = manipulation_risk * 10
+            overall_risk_score = float(overall_risk_score)
+            
+            # Calculate block_scores from manipulation_risk if empty
+            if not block_scores:
+                block_scores = {
+                    "narcissism": round(manipulation_risk * 0.8, 1),  # Based on manipulation
+                    "control": round(manipulation_risk * 0.9, 1),    # Control correlates with manipulation
+                    "gaslighting": round(manipulation_risk * 0.7, 1), # Gaslighting part of manipulation
+                    "emotion": round(manipulation_risk * 0.6, 1),    # Emotional control problems
+                    "intimacy": round(manipulation_risk * 0.5, 1),   # Intimacy manipulation
+                    "social": round(manipulation_risk * 0.4, 1)      # Social manipulation
+                }
+            
+            # Calculate dark_triad from manipulation_risk if default
+            dark_triad = (consensus.get("dark_triad") if consensus else None) or profile_data.get("dark_triad")
+            if not dark_triad or dark_triad == {"narcissism": 5.0, "machiavellianism": 5.0, "psychopathy": 5.0}:
+                dark_triad = {
+                    "narcissism": round(manipulation_risk * 0.8, 1),
+                    "machiavellianism": round(manipulation_risk * 0.9, 1), 
+                    "psychopathy": round(manipulation_risk * 0.6, 1)
+                }
+
             # Build comprehensive result
             result = {
                 "personality_type": (consensus.get("personality_type") if consensus else "") or profile_data.get("personality_type", "Неопределен"),
-                "manipulation_risk": round(float((consensus.get("manipulation_risk") if consensus else None) or profile_data.get("manipulation_risk", 5)), 1),
+                "manipulation_risk": manipulation_risk,
                 "urgency_level": (consensus.get("urgency_level") if consensus else "") or profile_data.get("urgency_level", "medium"),
                 "psychological_profile": psychological_profile,
                 "red_flags": all_red_flags,
@@ -1637,8 +1657,8 @@ class AIService:
                 "detailed_recommendations": (consensus.get("detailed_recommendations") if consensus else "") or "",
                 # Add missing required fields
                 "survival_guide": (consensus.get("survival_guide") if consensus else None) or profile_data.get("survival_guide", ["Обратитесь за профессиональной помощью к психологу"]),
-                "overall_risk_score": float((consensus.get("overall_risk_score") if consensus else None) or profile_data.get("overall_risk_score", 50.0)),
-                "dark_triad": (consensus.get("dark_triad") if consensus else None) or profile_data.get("dark_triad", {"narcissism": 5.0, "machiavellianism": 5.0, "psychopathy": 5.0})
+                "overall_risk_score": overall_risk_score,
+                "dark_triad": dark_triad
             }
             
             # Extract additional advanced fields
