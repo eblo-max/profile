@@ -846,7 +846,7 @@ class AIService:
             full_response = prefill + response.content[0].text if prefill else response.content[0].text
             
             return full_response
-            
+                
         except Exception as e:
             logger.error(f"Claude API error: {e}")
             raise AIServiceError(f"Claude API failed: {str(e)}")
@@ -1273,7 +1273,7 @@ class AIService:
             expert_analyses = generated_knowledge.get("expert_analyses", {})
             if not expert_analyses:
                 expert_analyses = profile_data.get("expert_analyses", {})
-            
+                
             # Try to get consensus_analysis from generated_knowledge first, then top-level
             consensus = generated_knowledge.get("consensus_analysis", {})
             if not consensus:
@@ -1776,7 +1776,7 @@ class AIService:
             })
             
             return result
-                
+            
         except Exception as e:
             logger.error(f"Failed to parse Ultra 2025 response: {e}")
             # Fallback to standard parsing
@@ -1852,7 +1852,7 @@ class AIService:
                 immediate_recommendations = [
                     "🚨 КРИТИЧЕСКИЙ УРОВЕНЬ РИСКА - обратитесь за профессиональной помощью немедленно",
                     "Рассмотрите план безопасности и возможность временного разъезда",
-                    "Свяжитесь с службами помощи жертвам домашнего насилия"
+                    "Свяжитесь со службами помощи жертвам домашнего насилия"
                 ]
             elif overall_risk >= 50:
                 immediate_recommendations = [

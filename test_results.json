@@ -1,21 +1,21 @@
 {
-  "timestamp": "2025-07-11T16:35:55.641171",
-  "duration_seconds": 57.707715,
-  "user_id": 11,
+  "timestamp": "2025-07-11T18:37:53.154713",
+  "duration_seconds": 63.365021,
+  "user_id": 13,
   "partner_name": "Анна Петрова",
   "quality_report": {
-    "total_score": 47.14285714285714,
+    "total_score": 27.142857142857142,
     "max_score": 100,
-    "percentage": 47.14285714285714,
+    "percentage": 27.142857142857142,
     "grade": "C",
     "structure_score": 17.142857142857142,
     "experts_count": 0,
     "insights_count": 0,
-    "evidence_count": 6,
-    "word_count": 1407
+    "evidence_count": 8,
+    "word_count": 233
   },
   "pdf_path": "partner_analysis_Анна_Петрова.pdf",
   "pdf_generated": true,
-  "analysis_size": 14859,
+  "analysis_size": 4057,
   "success": true
 }

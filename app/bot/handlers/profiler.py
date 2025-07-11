@@ -834,7 +834,7 @@ async def send_analysis_results(
                 pdf_bytes,
                 filename=f"profile_{partner_name}_{message.from_user.id}.pdf"
             )
-            
+        
             await message.answer_document(
                 document=pdf_file,
                 caption=f"📄 Полный психологический профиль партнера {partner_name}",
