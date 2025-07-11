@@ -659,108 +659,118 @@ def get_block_emoji(block: str) -> str:
 async def start_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
     """Start AI analysis of answers"""
     try:
-        # Get user from database by telegram_id
+        # Get user from database by telegram_id using our own session
         telegram_id = message.from_user.id
-        user = await user_service.get_user_by_telegram_id(telegram_id)
-        if not user:
-            await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
-            return
         
-        user_id = user.id  # Internal database ID
-        data = await state.get_data()
-        answers = data.get('answers', {})
+        # Create our own session and services to avoid middleware session issues
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        from app.services.profile_service import ProfileService
         
-        # Get partner info from state
-        partner_name = data.get('partner_name', 'Партнер')
-        partner_description = data.get('partner_description', '')
-        partner_basic_info = data.get('partner_basic_info', '')
-        
-        # Send analysis start message
-        analysis_msg = await message.answer(
-            f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
-            "⏳ Обрабатываю ваши ответы...\n"
-            "📊 Провожу психологический анализ...\n"
-            "🎯 Выявляю красные флаги...\n\n"
-            "<i>Это может занять до 2 минут</i>",
-            parse_mode="HTML"
-        )
-        
-        # Convert answers to format expected by AI service
-        formatted_answers = []
-        questions = data.get('questions', {})
-        for question_id, answer_index in answers.items():
-            question = questions.get(question_id, {})
-            options = question.get('options', [])
-            if answer_index < len(options):
-                formatted_answers.append({
-                    'question_id': question_id,
-                    'question': question.get('text', ''),
-                    'answer': options[answer_index]
-                })
-        
-        # Perform AI analysis
-        try:
-            analysis_result = await ai_service.profile_partner(
-                answers=formatted_answers, 
-                user_id=telegram_id,  # AI service uses telegram_id
-                partner_name=partner_name,
-                partner_description=partner_description
-            )
+        async with get_session() as session:
+            local_user_service = UserService(session)
+            local_profile_service = ProfileService(session)
             
-            # Update progress
-            await analysis_msg.edit_text(
+            user = await local_user_service.get_user_by_telegram_id(telegram_id)
+            if not user:
+                await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
+                return
+            
+            user_id = user.id  # Internal database ID
+            data = await state.get_data()
+            answers = data.get('answers', {})
+            
+            # Get partner info from state
+            partner_name = data.get('partner_name', 'Партнер')
+            partner_description = data.get('partner_description', '')
+            partner_basic_info = data.get('partner_basic_info', '')
+            
+            # Send analysis start message
+            analysis_msg = await message.answer(
                 f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
-                "✅ Психологический профиль готов\n"
-                "📋 Генерирую PDF отчет...\n\n"
-                "<i>Почти готово!</i>",
+                "⏳ Обрабатываю ваши ответы...\n"
+                "📊 Провожу психологический анализ...\n"
+                "🎯 Выявляю красные флаги...\n\n"
+                "<i>Это может занять до 2 минут</i>",
                 parse_mode="HTML"
             )
             
-            # Generate PDF report
-            pdf_bytes = await html_pdf_service.generate_partner_report_html(
-                analysis_result,
-                telegram_id,  # PDF service uses telegram_id
-                partner_name
-            )
+            # Convert answers to format expected by AI service
+            formatted_answers = []
+            questions = data.get('questions', {})
+            for question_id, answer_index in answers.items():
+                question = questions.get(question_id, {})
+                options = question.get('options', [])
+                if answer_index < len(options):
+                    formatted_answers.append({
+                        'question_id': question_id,
+                        'question': question.get('text', ''),
+                        'answer': options[answer_index]
+                    })
             
-            # Save analysis to database (legacy format)
+            # Perform AI analysis
             try:
-                await user_service.save_analysis(
-                    user_id=user_id,  # Use internal user_id
-                    analysis_type=AnalysisType.PARTNER_PROFILE,
-                    analysis_data=analysis_result,
-                    questions=formatted_answers
-                )
-            except Exception as e:
-                logger.warning(f"Failed to save analysis to DB: {e}")
-            
-            # Save partner profile to database
-            try:
-                await profile_service.create_profile_from_profiler(
-                    user_id=user_id,  # Use internal user_id
+                analysis_result = await ai_service.profile_partner(
+                    answers=formatted_answers, 
+                    user_id=telegram_id,  # AI service uses telegram_id
                     partner_name=partner_name,
-                    partner_description=partner_description,
-                    partner_basic_info=partner_basic_info,
-                    questions=formatted_answers,
-                    answers=answers,
-                    analysis_result=analysis_result
+                    partner_description=partner_description
                 )
-                logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
+                
+                # Update progress
+                await analysis_msg.edit_text(
+                    f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
+                    "✅ Психологический профиль готов\n"
+                    "📋 Генерирую PDF отчет...\n\n"
+                    "<i>Почти готово!</i>",
+                    parse_mode="HTML"
+                )
+                
+                # Generate PDF report
+                pdf_bytes = await html_pdf_service.generate_partner_report_html(
+                    analysis_result,
+                    telegram_id,  # PDF service uses telegram_id
+                    partner_name
+                )
+                
+                # Save analysis to database (legacy format) using our own service
+                try:
+                    await local_user_service.save_analysis(
+                        user_id=user_id,  # Use internal user_id
+                        analysis_type=AnalysisType.PARTNER_PROFILE,
+                        analysis_data=analysis_result,
+                        questions=formatted_answers
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to save analysis to DB: {e}")
+                
+                # Save partner profile to database using our own service
+                try:
+                    await local_profile_service.create_profile_from_profiler(
+                        user_id=user_id,  # Use internal user_id
+                        partner_name=partner_name,
+                        partner_description=partner_description,
+                        partner_basic_info=partner_basic_info,
+                        questions=formatted_answers,
+                        answers=answers,
+                        analysis_result=analysis_result
+                    )
+                    logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
+                except Exception as e:
+                    logger.error(f"Failed to save partner profile: {e}")
+                
+                # Send results
+                await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
+                
             except Exception as e:
-                logger.error(f"Failed to save partner profile: {e}")
-            
-            # Send results
-            await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
-            
-        except Exception as e:
-            logger.error(f"Analysis failed: {e}")
-            await analysis_msg.edit_text(
-                "❌ <b>Ошибка анализа</b>\n\n"
-                "Не удалось провести анализ. Попробуйте позже.\n\n"
-                f"Техническая информация: {str(e)[:100]}",
-                parse_mode="HTML",
-                reply_markup=get_profiler_keyboard()
-            )
+                logger.error(f"Analysis failed: {e}")
+                await analysis_msg.edit_text(
+                    "❌ <b>Ошибка анализа</b>\n\n"
+                    "Не удалось провести анализ. Попробуйте позже.\n\n"
+                    f"Техническая информация: {str(e)[:100]}",
+                    parse_mode="HTML",
+                    reply_markup=get_profiler_keyboard()
+                )
             
     except Exception as e:
         logger.error(f"Error in start_analysis: {e}")
