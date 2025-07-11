@@ -568,11 +568,14 @@ async def show_profile_recommendations(callback: CallbackQuery, state: FSMContex
 async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
     """Handle user answer to profiling question"""
     try:
+        # Acknowledge callback immediately to prevent duplicates
+        await callback.answer()
+        
         # Parse callback data: answer_{question_id}_{answer_index}
         # Question ID can contain underscores, so we split and take the last part as answer_index
         callback_parts = callback.data.split("_")
         if len(callback_parts) < 3:
-            await callback.answer("❌ Неверный формат ответа")
+            logger.error(f"Invalid callback format: {callback.data}")
             return
             
         # Last part is answer_index, everything between "answer" and last part is question_id
@@ -586,15 +589,31 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
         current_question = data.get('current_question', 0)
         answers = data.get('answers', {})
         
+        # Check if this answer was already processed (protection from duplicates)
+        if question_id in answers:
+            logger.warning(f"Answer for question {question_id} already exists, skipping duplicate")
+            return
+        
         # Save answer
         answers[question_id] = answer_index
         logger.info(f"Saved answer for question {question_id}: {answer_index}")
         
-        # Move to next question
-        next_question = current_question + 1
-        logger.info(f"Moving to question {next_question + 1} of {len(question_order)}")
+        # Check if this was the last question
+        total_questions = len(question_order)
+        is_last_question = current_question >= (total_questions - 1)
         
-        if next_question < len(question_order):
+        logger.info(f"Current question index: {current_question}, Total questions: {total_questions}, Is last: {is_last_question}")
+        
+        if is_last_question:
+            # All questions answered - start analysis
+            logger.info("All questions completed, starting analysis...")
+            await state.update_data(answers=answers)
+            await start_analysis(callback.message, state, ai_service, html_pdf_service, user_service, profile_service)
+        else:
+            # Move to next question
+            next_question = current_question + 1
+            logger.info(f"Moving to question {next_question + 1} of {total_questions}")
+            
             # Update state
             await state.update_data(
                 current_question=next_question,
@@ -607,7 +626,7 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             
             if not question:
                 logger.error(f"Question {next_question_id} not found in questions dict")
-                await callback.answer("❌ Вопрос не найден")
+                await callback.message.answer("❌ Вопрос не найден")
                 return
             
             # Get partner name
@@ -625,7 +644,7 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             block_name = block_names.get(question['block'], question['block'])
             
             await callback.message.edit_text(
-                f"🎯 <b>Вопрос {next_question + 1} из {len(question_order)}</b>\n\n"
+                f"🎯 <b>Вопрос {next_question + 1} из {total_questions}</b>\n\n"
                 f"📝 <b>О {partner_name}:</b>\n\n"
                 f"{question['text']}\n\n"
                 f"🔍 <b>Блок:</b> {block_name}\n"
@@ -633,14 +652,13 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
                 parse_mode="HTML",
                 reply_markup=get_profiler_question_keyboard(next_question_id, question['options'])
             )
-        else:
-            # All questions answered - start analysis
-            await state.update_data(answers=answers)
-            await start_analysis(callback.message, state, ai_service, html_pdf_service, user_service, profile_service)
             
     except Exception as e:
         logger.error(f"Error handling answer: {e}")
-        await callback.answer("❌ Произошла ошибка при обработке ответа")
+        try:
+            await callback.answer("❌ Произошла ошибка при обработке ответа")
+        except:
+            pass
 
 
 def get_block_emoji(block: str) -> str:
