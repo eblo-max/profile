@@ -16,12 +16,7 @@ redis[hiredis]==5.0.1
 anthropic==0.40.0
 openai==1.3.7
 
-# PDF Generation (CloudLayer.io API)
-# playwright removed - now using CloudLayer.io API
-weasyprint==60.2
-reportlab==4.0.4
-matplotlib==3.8.2
-pillow==10.1.0
+# PDF Generation (CloudLayer.io API only)
 jinja2==3.1.2
 
 # HTTP & Async
