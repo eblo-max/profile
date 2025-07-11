@@ -27,11 +27,8 @@ class HTMLPDFService:
         self.playwright_available = None
     
     async def _ensure_playwright_available(self) -> bool:
-        """Ensure Playwright browser is available using async API"""
-        logger.info(f"🔍 _ensure_playwright_available called: checked={self.playwright_checked}, available={self.playwright_available}")
-        
+        """Ensure Playwright is available and working"""
         if self.playwright_checked:
-            logger.info(f"⚡ Playwright already checked, returning cached result: {self.playwright_available}")
             return self.playwright_available
         
         try:
@@ -42,7 +39,19 @@ class HTMLPDFService:
             async with async_playwright() as p:
                 try:
                     logger.info("🚀 Attempting to launch Chromium browser...")
-                    browser = await p.chromium.launch(headless=True)
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        args=[
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                            '--disable-dev-shm-usage',
+                            '--disable-accelerated-2d-canvas',
+                            '--no-first-run',
+                            '--no-zygote',
+                            '--single-process',
+                            '--disable-gpu'
+                        ]
+                    )
                     await browser.close()
                     logger.info("✅ Playwright Chromium is available and working")
                     self.playwright_available = True
@@ -59,7 +68,19 @@ class HTMLPDFService:
                         # Recheck availability after installation
                         try:
                             async with async_playwright() as p_new:
-                                browser = await p_new.chromium.launch(headless=True)
+                                browser = await p_new.chromium.launch(
+                                    headless=True,
+                                    args=[
+                                        '--no-sandbox',
+                                        '--disable-setuid-sandbox',
+                                        '--disable-dev-shm-usage',
+                                        '--disable-accelerated-2d-canvas',
+                                        '--no-first-run',
+                                        '--no-zygote',
+                                        '--single-process',
+                                        '--disable-gpu'
+                                    ]
+                                )
                                 await browser.close()
                                 logger.info("✅ Playwright Chromium verified after installation")
                                 self.playwright_available = True
@@ -91,11 +112,11 @@ class HTMLPDFService:
             
             # Set environment for headless installation
             env = os.environ.copy()
-            env['PLAYWRIGHT_BROWSERS_PATH'] = '/tmp/playwright-browsers'
+            env['PLAYWRIGHT_BROWSERS_PATH'] = '/ms-playwright'
             
-            # Run subprocess asynchronously
+            # Run subprocess asynchronously  
             process = await asyncio.create_subprocess_exec(
-                'python', '-m', 'playwright', 'install', 'chromium',
+                'python', '-m', 'playwright', 'install', 'chromium', '--with-deps',
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env
@@ -109,7 +130,19 @@ class HTMLPDFService:
                 try:
                     from playwright.async_api import async_playwright
                     async with async_playwright() as p:
-                        browser = await p.chromium.launch(headless=True)
+                        browser = await p.chromium.launch(
+                            headless=True,
+                            args=[
+                                '--no-sandbox',
+                                '--disable-setuid-sandbox',
+                                '--disable-dev-shm-usage',
+                                '--disable-accelerated-2d-canvas',
+                                '--no-first-run',
+                                '--no-zygote',
+                                '--single-process',
+                                '--disable-gpu'
+                            ]
+                        )
                         await browser.close()
                         logger.info("✅ Playwright Chromium verified by successful launch")
                         return True
@@ -355,7 +388,23 @@ class HTMLPDFService:
             from playwright.async_api import async_playwright
             
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                # Launch browser with Docker-friendly settings
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-accelerated-2d-canvas',
+                        '--no-first-run',
+                        '--no-zygote',
+                        '--single-process',
+                        '--disable-gpu',
+                        '--disable-background-timer-throttling',
+                        '--disable-renderer-backgrounding',
+                        '--disable-backgrounding-occluded-windows'
+                    ]
+                )
                 page = await browser.new_page()
                 
                 # Set content and wait for it to load
