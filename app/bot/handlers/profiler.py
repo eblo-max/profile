@@ -22,72 +22,53 @@ router = Router()
 
 @router.callback_query(F.data == "profiler_menu")
 async def show_profiler_menu(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
-    """Show profiler menu"""
+    """Show profiler main menu"""
     try:
-        await state.clear()
-        user_id = callback.from_user.id
+        # Get user from database by telegram_id
+        telegram_id = callback.from_user.id
         
-        # Get user's profiles for statistics
-        profiles = await profile_service.get_user_profiles(user_id, limit=10)
+        # Get user service from middleware or create session
+        from app.core.database import get_session
+        from app.services.user_service import UserService
         
-        # Build profiler menu text with statistics
-        menu_text = "🔍 <b>Профайлер партнера</b>\n\n"
+        async with get_session() as session:
+            user_service = UserService(session)
+            user = await user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден. Используйте /start для регистрации.",
+                    reply_markup=get_profiler_keyboard()
+                )
+                return
         
-        if profiles:
-            # Statistics
-            total_profiles = len(profiles)
-            high_risk = len([p for p in profiles if p.manipulation_risk >= 7])
-            medium_risk = len([p for p in profiles if 4 <= p.manipulation_risk < 7])
-            low_risk = len([p for p in profiles if p.manipulation_risk < 4])
-            
-            menu_text += f"📊 <b>Ваша статистика:</b>\n"
-            menu_text += f"• Всего профилей: {total_profiles}\n"
-            
-            if high_risk > 0:
-                menu_text += f"• 🔴 Высокий риск: {high_risk}\n"
-            if medium_risk > 0:
-                menu_text += f"• 🟡 Средний риск: {medium_risk}\n"
-            if low_risk > 0:
-                menu_text += f"• 🟢 Низкий риск: {low_risk}\n"
-            
-            menu_text += "\n"
-            
-            # Latest profiles
-            menu_text += f"📋 <b>Последние профили:</b>\n"
-            for i, profile in enumerate(profiles[:3], 1):
-                risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
-                partner_name = profile.partner_name or f"Партнер #{profile.id}"
-                menu_text += f"{i}. {risk_emoji} {partner_name} ({profile.manipulation_risk:.1f}/10)\n"
-            menu_text += "\n"
-            
-            # Quick recommendations
-            if high_risk > 0:
-                menu_text += "⚠️ <b>Важное уведомление:</b>\n"
-                menu_text += "Обнаружены высокорисковые профили. Рекомендуется проконсультироваться с психологом.\n\n"
-            elif medium_risk > 0:
-                menu_text += "💡 <b>Рекомендация:</b>\n"
-                menu_text += "Изучите красные флаги в отношениях и развивайте эмоциональный интеллект.\n\n"
-            else:
-                menu_text += "✅ <b>Статус:</b>\n"
-                menu_text += "Хорошие показатели! Продолжайте развивать здоровые отношения.\n\n"
-        else:
-            menu_text += "👋 <b>Добро пожаловать!</b>\n\n"
-            menu_text += "Профайлер партнера поможет вам:\n"
-            menu_text += "• 🔍 Проанализировать поведение партнера\n"
-            menu_text += "• 🚨 Выявить красные флаги\n"
-            menu_text += "• 💡 Получить персональные рекомендации\n"
-            menu_text += "• 📊 Оценить совместимость\n\n"
-            menu_text += "Создайте первый профиль, чтобы начать анализ.\n\n"
+        user_id = user.id  # Internal database ID
         
-        menu_text += "Выберите действие:"
+        # Get user's profile count
+        profile_count = await profile_service._get_user_profile_count(user_id)
         
+        # Create menu text
+        menu_text = f"""🧠 <b>Psychological Profiler</b>
+
+👤 <b>Ваши профили:</b> {profile_count}
+
+<b>Что вы хотите сделать?</b>
+
+🆕 <b>Новый профиль</b> - создать психологический профиль партнера
+📂 <b>Мои профили</b> - просмотреть сохраненные профили
+💡 <b>Рекомендации</b> - получить советы по отношениям
+
+<i>Профилирование поможет вам лучше понять психологию партнера и принять правильные решения.</i>"""
+        
+        # Show menu
         await callback.message.edit_text(
             menu_text,
             parse_mode="HTML",
-            reply_markup=profiler_menu_kb()
+            reply_markup=get_profiler_keyboard()
         )
+        
     except Exception as e:
-        logger.error(f"Error showing profiler menu: {e}")
+        logger.error(f"Error in show_profiler_menu: {e}")
         await callback.answer("❌ Произошла ошибка")
 
 
@@ -397,7 +378,25 @@ async def start_questions_now(callback: CallbackQuery, state: FSMContext):
 async def show_my_profiles(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
     """Show user's existing profiles"""
     try:
-        user_id = callback.from_user.id
+        # Get user from database by telegram_id
+        telegram_id = callback.from_user.id
+        
+        # Get user service from middleware or create session
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        
+        async with get_session() as session:
+            user_service = UserService(session)
+            user = await user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден. Используйте /start для регистрации.",
+                    reply_markup=get_profiler_keyboard()
+                )
+                return
+        
+        user_id = user.id  # Internal database ID
         
         # Get user's profiles
         profiles = await profile_service.get_user_profiles(user_id, limit=10)
@@ -454,12 +453,30 @@ async def show_my_profiles(callback: CallbackQuery, state: FSMContext, profile_s
 
 @router.callback_query(F.data == "profile_recommendations")
 async def show_profile_recommendations(callback: CallbackQuery, state: FSMContext, profile_service: ProfileService):
-    """Show profile recommendations"""
+    """Show profile-based recommendations"""
     try:
-        user_id = callback.from_user.id
+        # Get user from database by telegram_id
+        telegram_id = callback.from_user.id
         
-        # Get user's profiles
-        profiles = await profile_service.get_user_profiles(user_id, limit=5)
+        # Get user service from middleware or create session
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        
+        async with get_session() as session:
+            user_service = UserService(session)
+            user = await user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден. Используйте /start для регистрации.",
+                    reply_markup=get_profiler_keyboard()
+                )
+                return
+        
+        user_id = user.id  # Internal database ID
+        
+        # Get user's profiles for analysis
+        profiles = await profile_service.get_user_profiles(user_id, limit=10)
         
         if not profiles:
             await callback.message.edit_text(
@@ -642,8 +659,14 @@ def get_block_emoji(block: str) -> str:
 async def start_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
     """Start AI analysis of answers"""
     try:
-        # Get user data
-        user_id = message.from_user.id
+        # Get user from database by telegram_id
+        telegram_id = message.from_user.id
+        user = await user_service.get_user_by_telegram_id(telegram_id)
+        if not user:
+            await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
+            return
+        
+        user_id = user.id  # Internal database ID
         data = await state.get_data()
         answers = data.get('answers', {})
         
@@ -679,7 +702,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         try:
             analysis_result = await ai_service.profile_partner(
                 answers=formatted_answers, 
-                user_id=user_id, 
+                user_id=telegram_id,  # AI service uses telegram_id
                 partner_name=partner_name,
                 partner_description=partner_description
             )
@@ -696,14 +719,14 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             # Generate PDF report
             pdf_bytes = await html_pdf_service.generate_partner_report_html(
                 analysis_result,
-                user_id,
+                telegram_id,  # PDF service uses telegram_id
                 partner_name
             )
             
             # Save analysis to database (legacy format)
             try:
                 await user_service.save_analysis(
-                    user_id=user_id,
+                    user_id=user_id,  # Use internal user_id
                     analysis_type=AnalysisType.PARTNER_PROFILE,
                     analysis_data=analysis_result,
                     questions=formatted_answers
@@ -714,7 +737,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             # Save partner profile to database
             try:
                 await profile_service.create_profile_from_profiler(
-                    user_id=user_id,
+                    user_id=user_id,  # Use internal user_id
                     partner_name=partner_name,
                     partner_description=partner_description,
                     partner_basic_info=partner_basic_info,
@@ -722,7 +745,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
                     answers=answers,
                     analysis_result=analysis_result
                 )
-                logger.info(f"Partner profile saved for user {user_id}")
+                logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
             except Exception as e:
                 logger.error(f"Failed to save partner profile: {e}")
             
@@ -905,7 +928,26 @@ async def view_profile_details(callback: CallbackQuery, state: FSMContext, profi
     """View detailed profile information"""
     try:
         profile_id = int(callback.data.split("_")[2])
-        user_id = callback.from_user.id
+        
+        # Get user from database by telegram_id
+        telegram_id = callback.from_user.id
+        
+        # Get user service from middleware or create session
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        
+        async with get_session() as session:
+            user_service = UserService(session)
+            user = await user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден. Используйте /start для регистрации.",
+                    reply_markup=get_profiler_keyboard()
+                )
+                return
+        
+        user_id = user.id  # Internal database ID
         
         # Get profile details
         profile = await profile_service.get_profile_by_id(profile_id, user_id)
@@ -914,60 +956,56 @@ async def view_profile_details(callback: CallbackQuery, state: FSMContext, profi
             await callback.answer("❌ Профиль не найден")
             return
         
-        # Build profile details text
+        # Format profile details
         partner_name = profile.partner_name or f"Партнер #{profile.id}"
         risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
         
-        profile_text = f"📋 <b>{partner_name}</b>\n\n"
-        profile_text += f"{risk_emoji} <b>Оценка риска:</b> {profile.manipulation_risk:.1f}/10\n"
-        profile_text += f"📅 <b>Создан:</b> {profile.created_at.strftime('%d.%m.%Y %H:%M')}\n\n"
+        # Build detailed text
+        details_text = f"""🔍 <b>Профиль: {partner_name}</b>
+
+{risk_emoji} <b>Риск манипуляций:</b> {profile.manipulation_risk:.1f}/10
+⚠️ <b>Уровень срочности:</b> {profile.urgency_level.value}
+
+<b>📋 Описание:</b>
+{profile.partner_description or 'Не указано'}
+
+<b>🚨 Красные флаги:</b>"""
         
-        # Risk assessment
-        if profile.manipulation_risk >= 7:
-            profile_text += "🚨 <b>ВЫСОКИЙ РИСК</b>\n"
-            profile_text += "Обнаружены серьезные тревожные сигналы. Рекомендуется осторожность.\n\n"
-        elif profile.manipulation_risk >= 4:
-            profile_text += "⚠️ <b>СРЕДНИЙ РИСК</b>\n"
-            profile_text += "Есть некоторые тревожные моменты. Стоит обратить внимание.\n\n"
-        else:
-            profile_text += "✅ <b>НИЗКИЙ РИСК</b>\n"
-            profile_text += "В целом безопасный партнер. Хорошие показатели.\n\n"
-        
-        # Red flags
+        # Add red flags
         if profile.red_flags:
-            profile_text += "🚩 <b>Красные флаги:</b>\n"
-            for flag in profile.red_flags[:5]:  # Top 5
-                profile_text += f"• {flag}\n"
-            profile_text += "\n"
+            for flag in profile.red_flags[:5]:  # Show first 5
+                details_text += f"\n• {flag}"
+            if len(profile.red_flags) > 5:
+                details_text += f"\n• ... и еще {len(profile.red_flags) - 5}"
+        else:
+            details_text += "\n• Не обнаружено"
         
-        # Positive traits
+        # Add positive traits
         if profile.positive_traits:
-            profile_text += "✨ <b>Положительные черты:</b>\n"
-            for trait in profile.positive_traits[:5]:  # Top 5
-                profile_text += f"• {trait}\n"
-            profile_text += "\n"
+            details_text += "\n\n<b>✅ Положительные черты:</b>"
+            for trait in profile.positive_traits[:3]:  # Show first 3
+                details_text += f"\n• {trait}"
+            if len(profile.positive_traits) > 3:
+                details_text += f"\n• ... и еще {len(profile.positive_traits) - 3}"
         
-        # Recommendations
-        if profile.relationship_advice:
-            profile_text += f"💡 <b>Рекомендации:</b>\n{profile.relationship_advice[:300]}...\n\n"
+        # Add creation date
+        details_text += f"\n\n📅 <b>Создан:</b> {profile.created_at.strftime('%d.%m.%Y в %H:%M')}"
         
-        # Create keyboard
-        keyboard = [
-            [InlineKeyboardButton(text="📊 Детальный анализ", callback_data=f"detailed_analysis_{profile_id}")],
-            [InlineKeyboardButton(text="💡 Рекомендации", callback_data=f"recommendations_{profile_id}")],
-            [InlineKeyboardButton(text="🗑️ Удалить профиль", callback_data=f"delete_profile_{profile_id}")],
-            [InlineKeyboardButton(text="🔙 К списку профилей", callback_data="my_profiles")]
-        ]
+        # Show buttons
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 К профилям", callback_data="my_profiles")],
+            [InlineKeyboardButton(text="🗑️ Удалить", callback_data=f"delete_profile_{profile.id}")]
+        ])
         
         await callback.message.edit_text(
-            profile_text,
+            details_text,
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+            reply_markup=keyboard
         )
         
     except Exception as e:
         logger.error(f"Error viewing profile details: {e}")
-        await callback.answer("❌ Произошла ошибка при загрузке профиля")
+        await callback.answer("❌ Произошла ошибка")
 
 
 @router.callback_query(F.data.startswith("recommendations_"))
@@ -975,73 +1013,69 @@ async def show_detailed_recommendations(callback: CallbackQuery, state: FSMConte
     """Show detailed recommendations for specific profile"""
     try:
         profile_id = int(callback.data.split("_")[1])
-        user_id = callback.from_user.id
         
-        # Get profile details
+        # Get user from database by telegram_id
+        telegram_id = callback.from_user.id
+        
+        # Get user service from middleware or create session
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        
+        async with get_session() as session:
+            user_service = UserService(session)
+            user = await user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден. Используйте /start для регистрации.",
+                    reply_markup=get_profiler_keyboard()
+                )
+                return
+        
+        user_id = user.id  # Internal database ID
+        
         profile = await profile_service.get_profile_by_id(profile_id, user_id)
         
         if not profile:
             await callback.answer("❌ Профиль не найден")
             return
         
+        # Get recommendations for this profile
+        recommendations = await profile_service.get_profile_recommendations(profile_id, user_id)
+        
+        if not recommendations:
+            await callback.answer("❌ Не удалось получить рекомендации")
+            return
+        
         partner_name = profile.partner_name or f"Партнер #{profile.id}"
-        risk_emoji = "🔴" if profile.manipulation_risk >= 7 else "🟡" if profile.manipulation_risk >= 4 else "🟢"
         
-        # Build recommendations text
-        rec_text = f"💡 <b>Рекомендации для {partner_name}</b>\n\n"
-        rec_text += f"{risk_emoji} <b>Уровень риска:</b> {profile.manipulation_risk:.1f}/10\n\n"
+        # Format recommendations
+        recommendations_text = f"""💡 <b>Рекомендации для {partner_name}</b>
+
+<b>📊 Анализ профиля:</b>
+• Риск манипуляций: {profile.manipulation_risk:.1f}/10
+• Уровень срочности: {profile.urgency_level.value}
+
+<b>🎯 Персональные рекомендации:</b>
+{recommendations.get('recommendations', 'Рекомендации недоступны')}
+
+<b>⚠️ Что следует помнить:</b>
+{recommendations.get('safety_tips', 'Советы недоступны')}"""
         
-        # Risk-based recommendations
-        if profile.manipulation_risk >= 7:
-            rec_text += "🚨 <b>КРИТИЧЕСКИ ВАЖНО:</b>\n"
-            rec_text += "• Обратитесь к психологу или консультанту\n"
-            rec_text += "• Не игнорируйте красные флаги\n"
-            rec_text += "• Установите четкие границы\n"
-            rec_text += "• Подумайте о безопасности выхода из отношений\n\n"
-        elif profile.manipulation_risk >= 4:
-            rec_text += "⚠️ <b>РЕКОМЕНДУЕТСЯ:</b>\n"
-            rec_text += "• Изучите техники распознавания манипуляций\n"
-            rec_text += "• Обратите внимание на паттерны поведения\n"
-            rec_text += "• Развивайте эмоциональную независимость\n"
-            rec_text += "• Обсудите проблемы с доверенными людьми\n\n"
-        else:
-            rec_text += "✅ <b>ПОДДЕРЖИВАЙТЕ:</b>\n"
-            rec_text += "• Продолжайте строить здоровые отношения\n"
-            rec_text += "• Развивайте открытое общение\n"
-            rec_text += "• Цените взаимное уважение\n"
-            rec_text += "• Изучайте психологию совместимости\n\n"
-        
-        # Specific recommendations
-        if profile.relationship_advice:
-            rec_text += f"📋 <b>Персональные советы:</b>\n{profile.relationship_advice}\n\n"
-        
-        # Communication tips
-        if profile.communication_tips:
-            rec_text += f"💬 <b>Советы по общению:</b>\n{profile.communication_tips}\n\n"
-        
-        # Warning signs
-        if profile.warning_signs:
-            rec_text += "🚨 <b>На что обратить внимание:</b>\n"
-            for warning in profile.warning_signs[:5]:
-                rec_text += f"• {warning}\n"
-            rec_text += "\n"
-        
-        # Create keyboard
-        keyboard = [
-            [InlineKeyboardButton(text="📋 Профиль", callback_data=f"view_profile_{profile_id}")],
-            [InlineKeyboardButton(text="📊 Детальный анализ", callback_data=f"detailed_analysis_{profile_id}")],
-            [InlineKeyboardButton(text="🔙 К списку профилей", callback_data="my_profiles")]
-        ]
+        # Show back button
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔙 К рекомендациям", callback_data="profile_recommendations")]
+        ])
         
         await callback.message.edit_text(
-            rec_text,
-            parse_mode="HTML", 
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard)
+            recommendations_text,
+            parse_mode="HTML",
+            reply_markup=keyboard
         )
         
     except Exception as e:
         logger.error(f"Error showing detailed recommendations: {e}")
-        await callback.answer("❌ Произошла ошибка при загрузке рекомендаций")
+        await callback.answer("❌ Произошла ошибка")
 
 
 @router.callback_query(F.data.startswith("delete_profile_"))
@@ -1073,7 +1107,26 @@ async def confirm_profile_deletion(callback: CallbackQuery, state: FSMContext, p
     """Actually delete the profile"""
     try:
         profile_id = int(callback.data.split("_")[2])
-        user_id = callback.from_user.id
+        
+        # Get user from database by telegram_id
+        telegram_id = callback.from_user.id
+        
+        # Get user service from middleware or create session
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        
+        async with get_session() as session:
+            user_service = UserService(session)
+            user = await user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                await callback.message.edit_text(
+                    "❌ Пользователь не найден. Используйте /start для регистрации.",
+                    reply_markup=get_profiler_keyboard()
+                )
+                return
+        
+        user_id = user.id  # Internal database ID
         
         # Delete profile
         success = await profile_service.delete_profile(profile_id, user_id)
@@ -1081,13 +1134,13 @@ async def confirm_profile_deletion(callback: CallbackQuery, state: FSMContext, p
         if success:
             await callback.message.edit_text(
                 "✅ <b>Профиль удален</b>\n\n"
-                "Профиль успешно удален из вашего списка.",
+                "Профиль партнера был успешно удален из базы данных.",
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="📂 Мои профили", callback_data="my_profiles")],
-                    [InlineKeyboardButton(text="🔙 В меню", callback_data="profiler_menu")]
+                    [InlineKeyboardButton(text="📂 Мои профили", callback_data="my_profiles")]
                 ])
             )
+            await callback.answer("✅ Профиль удален")
         else:
             await callback.answer("❌ Не удалось удалить профиль")
             
