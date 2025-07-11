@@ -28,7 +28,7 @@ from app.prompts.analysis_prompts import (
     get_self_refining_prompt
 )
 from app.prompts.advanced_prompting_2025 import AdvancedPromptingSystem
-from app.prompts.ultra_personalization_prompt import create_ultra_personalized_prompt_final, create_simplified_system_prompt
+from app.prompts.ultra_personalization_prompt import create_ultra_personalized_prompt_final, create_simplified_system_prompt, create_storytelling_analysis_prompt, create_storytelling_narrative_prompt
 from app.utils.enums import UrgencyLevel
 import traceback
 
@@ -323,7 +323,8 @@ class AIService:
             "self_refining": "refine",
             "field_aware": "field",
             "ultra_personalized_2025": "ultra2025",
-            "ultra_final": "ultra_final"
+            "ultra_final": "ultra_final",
+            "storytelling": "story"
         }
     
     async def analyze_text_advanced(
@@ -478,6 +479,9 @@ class AIService:
         # Check rate limiting
         await self._check_rate_limit(user_id)
         
+        # Устанавливаем имя партнера для использования в парсере
+        self._current_partner_name = partner_name
+        
         try:
             # Format answers for AI analysis
             answers_text = ""
@@ -502,6 +506,15 @@ class AIService:
                 
             elif technique == "ultra_final":
                 # Финальная ультра-персонализированная система
+                user_prompt = create_ultra_personalized_prompt_final(
+                    answers_text, partner_name, partner_description
+                )
+                system_prompt = create_simplified_system_prompt()
+                max_tokens = 8192  # Maximum for Claude 3.5 Sonnet
+                
+            elif technique == "storytelling":
+                # ИТЕРАТИВНЫЙ ПОДХОД: Сначала структурированные данные, затем storytelling
+                # Этап 1: Получить структурированные данные
                 user_prompt = create_ultra_personalized_prompt_final(
                     answers_text, partner_name, partner_description
                 )
@@ -558,6 +571,10 @@ class AIService:
             elif technique == "ultra_final":
                 profile = self._parse_ultra_final_response(result)
                 profile = self._validate_personalization_quality(profile, answers_text)
+            elif technique == "storytelling":
+                # ИТЕРАТИВНЫЙ ПОДХОД: Генерируем storytelling на основе структурированных данных
+                profile = await self._parse_storytelling_iterative_triple(result, partner_name, answers_text)
+                profile = self._validate_personalization_quality(profile, answers_text)
             else:
                 profile = self._parse_profile_response(result)
                 
@@ -613,7 +630,7 @@ class AIService:
         use_cache: bool = True
     ) -> Dict[str, Any]:
         """
-        Backward compatible partner profiling (uses Tree-of-Thoughts by default)
+        Backward compatible partner profiling (uses Storytelling by default)
         """
         try:
             return await self.profile_partner_advanced(
@@ -621,7 +638,7 @@ class AIService:
                 user_id=user_id,
                 partner_name=partner_name,
                 partner_description=partner_description,
-                technique="tree_of_thoughts",
+                technique="storytelling",
                 use_cache=use_cache
             )
         except Exception as e:
@@ -833,13 +850,16 @@ class AIService:
             if prefill:
                 messages.append({"role": "assistant", "content": prefill.strip()})
             
+            # Для storytelling narrative используем более высокую temperature
+            temp = 0.7 if technique == "storytelling_narrative" else 0.1
+            
             response = await self.claude_client.messages.create(
                 model=settings.CLAUDE_MODEL,
                 max_tokens=max_tokens,
                 system=system_prompt,
                 messages=messages,
-                temperature=0.1,
-                stop_sequences=["</analysis>"]
+                temperature=temp,
+                stop_sequences=["</analysis>"] if technique != "storytelling_narrative" else None
             )
             
             # Combine prefill with response
@@ -855,6 +875,9 @@ class AIService:
         """Generate prefill to guide structured JSON output based on technique"""
         if technique == "tree_of_thoughts":
             return ""
+        elif technique == "storytelling_narrative":
+            # Для storytelling нужен текстовый префилл, а не JSON
+            return "## 🧠 Знакомство с "
         else:
             return '''{
 "generated_knowledge": {
@@ -1827,11 +1850,330 @@ class AIService:
             })
             
             return result
-                
+            
         except Exception as e:
             logger.error(f"Failed to parse Ultra Final response: {e}")
             # Fallback to standard parsing
             return self._parse_profile_response(response)
+    
+    def _parse_storytelling_response(self, response: str) -> Dict[str, Any]:
+        """Parse storytelling response with advanced structural analysis following Anthropic SDK best practices"""
+        try:
+            # Extract JSON from response using proper parsing
+            data = extract_json_from_text(response)
+            if not data:
+                data = safe_json_loads(response, {})
+            
+            # Проверяем структуру psychological_profile
+            psychological_profile = data.get("psychological_profile", {})
+            
+            # Получаем имя партнера из метода - оно должно быть передано от вызывающего кода
+            partner_name = getattr(self, '_current_partner_name', 'партнер')
+            
+            # Если psychological_profile является объектом (структурированные данные)
+            if isinstance(psychological_profile, dict):
+                logger.info("Detected structured psychological_profile, converting to storytelling format")
+                
+                # Извлекаем компоненты
+                core_traits = psychological_profile.get("core_traits", [])
+                behavioral_patterns = psychological_profile.get("behavioral_patterns", [])
+                manipulation_tactics = psychological_profile.get("manipulation_tactics", [])
+                emotional_patterns = psychological_profile.get("emotional_patterns", [])
+                relationship_dynamics = psychological_profile.get("relationship_dynamics", [])
+                
+                # Создаем storytelling нарратив
+                storytelling_profile = self._create_storytelling_narrative(
+                    core_traits=core_traits,
+                    behavioral_patterns=behavioral_patterns,
+                    manipulation_tactics=manipulation_tactics,
+                    emotional_patterns=emotional_patterns,
+                    relationship_dynamics=relationship_dynamics,
+                    partner_name=partner_name
+                )
+                
+                # Сохраняем структурированные данные отдельно
+                result = {
+                    "personality_type": data.get("personality_type", "Неопределен"),
+                    "manipulation_risk": float(data.get("manipulation_risk", 5.0)),
+                    "urgency_level": data.get("urgency_level", "medium"),
+                    "psychological_profile": storytelling_profile,
+                    "red_flags": data.get("red_flags", []),
+                    "safety_alerts": data.get("safety_alerts", []),
+                    "block_scores": data.get("block_scores", {}),
+                    "dark_triad": data.get("dark_triad", {}),
+                    "personalized_insights": data.get("personalized_insights", []),
+                    "behavioral_evidence": data.get("behavioral_evidence", []),
+                    "manipulation_tactics": manipulation_tactics,
+                    "emotional_patterns": emotional_patterns,
+                    "control_mechanisms": data.get("control_mechanisms", []),
+                    "violence_indicators": data.get("violence_indicators", []),
+                    "escalation_triggers": data.get("escalation_triggers", []),
+                    
+                    # Дополнительные структурированные данные
+                    "structured_analysis": {
+                        "core_traits": core_traits,
+                        "behavioral_patterns": behavioral_patterns,
+                        "relationship_dynamics": relationship_dynamics
+                    }
+                }
+                
+            # Если psychological_profile является строкой (уже в storytelling формате)
+            elif isinstance(psychological_profile, str):
+                logger.info("Detected string psychological_profile, using as-is")
+                result = {
+                    "personality_type": data.get("personality_type", "Неопределен"),
+                    "manipulation_risk": float(data.get("manipulation_risk", 5.0)),
+                    "urgency_level": data.get("urgency_level", "medium"),
+                    "psychological_profile": psychological_profile,
+                    "red_flags": data.get("red_flags", []),
+                    "safety_alerts": data.get("safety_alerts", []),
+                    "block_scores": data.get("block_scores", {}),
+                    "dark_triad": data.get("dark_triad", {}),
+                    "personalized_insights": data.get("personalized_insights", []),
+                    "behavioral_evidence": data.get("behavioral_evidence", []),
+                    "manipulation_tactics": data.get("manipulation_tactics", []),
+                    "emotional_patterns": data.get("emotional_patterns", []),
+                    "control_mechanisms": data.get("control_mechanisms", []),
+                    "violence_indicators": data.get("violence_indicators", []),
+                    "escalation_triggers": data.get("escalation_triggers", [])
+                }
+            
+            else:
+                # Fallback к пустому профилю
+                logger.warning("Unexpected psychological_profile format, using fallback")
+                result = {
+                    "personality_type": data.get("personality_type", "Неопределен"),
+                    "manipulation_risk": float(data.get("manipulation_risk", 5.0)),
+                    "urgency_level": data.get("urgency_level", "medium"),
+                    "psychological_profile": "Профиль временно недоступен из-за технических проблем",
+                    "red_flags": data.get("red_flags", []),
+                    "safety_alerts": data.get("safety_alerts", []),
+                    "block_scores": data.get("block_scores", {}),
+                    "dark_triad": data.get("dark_triad", {}),
+                    "personalized_insights": data.get("personalized_insights", []),
+                    "behavioral_evidence": data.get("behavioral_evidence", []),
+                    "manipulation_tactics": data.get("manipulation_tactics", []),
+                    "emotional_patterns": data.get("emotional_patterns", []),
+                    "control_mechanisms": data.get("control_mechanisms", []),
+                    "violence_indicators": data.get("violence_indicators", []),
+                    "escalation_triggers": data.get("escalation_triggers", [])
+                }
+            
+            # Calculate overall risk score from manipulation_risk
+            overall_risk = result["manipulation_risk"] * 10
+            result["overall_risk_score"] = round(overall_risk, 1)
+            
+            # Round block scores using proper validation
+            block_scores = result.get("block_scores", {})
+            for block in block_scores:
+                if isinstance(block_scores[block], (int, float)):
+                    block_scores[block] = round(float(block_scores[block]), 1)
+            
+            # Quality validation with proper error handling
+            profile_text = result.get("psychological_profile", "")
+            if len(profile_text) < 1000:
+                logger.warning(f"Storytelling profile seems too short: {len(profile_text)} chars")
+                result["quality_warning"] = f"Profile may be too brief for storytelling format ({len(profile_text)} chars)"
+            
+            # Add compatibility fields
+            result.update({
+                "positive_traits": [],
+                "danger_assessment": f"Storytelling анализ: {result['urgency_level']}",
+                "relationship_forecast": "Прогноз основан на детальных повествовательных сценариях",
+                "exit_strategy": "См. персонализированные рекомендации с конкретными примерами",
+                "confidence_level": 0.8,
+                "survival_guide": data.get("survival_guide", ["Обратитесь за профессиональной помощью"]),
+                "parsing_method": "structured_to_storytelling" if isinstance(psychological_profile, dict) else "native_storytelling"
+            })
+            
+            logger.info(f"Storytelling parsing complete: {len(profile_text)} chars profile, {len(result['red_flags'])} red flags, method: {result['parsing_method']}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to parse storytelling response: {e}")
+            # Fallback to standard parsing
+            return self._parse_profile_response(response)
+    
+    def _create_storytelling_narrative(self, core_traits: list, behavioral_patterns: list, 
+                                     manipulation_tactics: list, emotional_patterns: list,
+                                     relationship_dynamics: list, partner_name: str = "партнер") -> str:
+        """Create a rich storytelling narrative from structured psychological data"""
+        
+        narrative_parts = []
+        
+        # Вступление с живым описанием
+        narrative_parts.append(f"## 🧠 Общая характеристика личности {partner_name}")
+        narrative_parts.append("")
+        narrative_parts.append(f"Когда вы впервые встретили {partner_name}, вас поразило его обаяние. Но со временем вы начали замечать тонкие детали - способ, которым он смотрит на вас, тон его голоса, когда он не согласен, мимолетные выражения лица. Каждый из этих элементов складывается в сложную мозаику личности, которую мы сейчас детально разберем.")
+        narrative_parts.append("")
+        
+        # Основные черты с живыми примерами и диалогами
+        if core_traits:
+            narrative_parts.append("### 🎭 Ключевые черты личности в действии")
+            narrative_parts.append("")
+            for i, trait in enumerate(core_traits[:4]):  # Увеличиваем до 4 черт
+                narrative_parts.append(f"**{trait}**")
+                narrative_parts.append("")
+                
+                # Живые сценарии для каждой черты
+                if 'контроль' in trait.lower() or 'доминирование' in trait.lower():
+                    narrative_parts.append("*Сценарий: Утро воскресенья*")
+                    narrative_parts.append("Вы просыпаетесь и хотите пойти к подруге на кофе. Но уже через несколько минут разворачивается знакомый сценарий:")
+                    narrative_parts.append("")
+                    narrative_parts.append(f"**{partner_name}:** 'Опять к своей подруге? Ты же знаешь, что она тебя плохо на меня настраивает.'")
+                    narrative_parts.append("**Вы:** 'Мы просто хотим поболтать...'")
+                    narrative_parts.append(f"**{partner_name}:** 'Если тебе со мной скучно, так и скажи. Я думал, мы проведем время вместе.'")
+                    narrative_parts.append("")
+                    narrative_parts.append("Вы чувствуете знакомое чувство вины. Ваши планы рушатся, и вы остаетесь дома. Так работает эта черта характера - через тонкие манипуляции и эмоциональное давление.")
+                    
+                elif 'нарцисс' in trait.lower() or 'грандиозность' in trait.lower():
+                    narrative_parts.append("*Сценарий: Семейный ужин*")
+                    narrative_parts.append("Вы рассказываете о своих успехах на работе. Но разговор быстро меняет направление:")
+                    narrative_parts.append("")
+                    narrative_parts.append(f"**{partner_name}:** 'Да, у меня тоже сегодня был отличный день. Кстати, босс опять сказал, что я незаменим.'")
+                    narrative_parts.append("**Вы:** 'Это здорово, но я хотела рассказать про свой проект...'")
+                    narrative_parts.append(f"**{partner_name}:** 'Ах да, твой проект. Знаешь, если бы ты послушала мой совет месяц назад, все было бы гораздо проще.'")
+                    narrative_parts.append("")
+                    narrative_parts.append("Ваши достижения снова остаются в тени. Вы чувствуете себя невидимой в собственной истории успеха.")
+                    
+                elif 'манипуляция' in trait.lower() or 'обман' in trait.lower():
+                    narrative_parts.append("*Сценарий: Конфликт и примирение*")
+                    narrative_parts.append("После очередной ссоры вы не разговариваете уже два дня. Вдруг он появляется с цветами:")
+                    narrative_parts.append("")
+                    narrative_parts.append(f"**{partner_name}:** 'Прости, дорогая. Я был неправ. Ты знаешь, как я тебя люблю.'")
+                    narrative_parts.append("**Вы:** 'Но ты сказал такие ужасные вещи...'")
+                    narrative_parts.append(f"**{partner_name}:** 'Я был в стрессе. Работа, проблемы... Ты же знаешь, что я не то имел в виду. Я бы никогда не причинил тебе боль специально.'")
+                    narrative_parts.append("")
+                    narrative_parts.append("Цикл повторяется. Боль забывается, но остается тревожное чувство, что что-то не так. Это мастерство эмоциональной манипуляции.")
+                    
+                else:
+                    narrative_parts.append("*Ежедневное проявление:*")
+                    narrative_parts.append(f"Эта черта пронизывает каждый день ваших отношений. Вы замечаете ее в мелочах - в том, как {partner_name} реагирует на ваши предложения, как он отвечает на ваши вопросы, как меняется его поведение в зависимости от настроения.")
+                    narrative_parts.append("")
+                    narrative_parts.append("Иногда вы думаете: 'Может, это нормально? Может, я слишком чувствительна?' Но интуиция подсказывает, что что-то не так.")
+                
+                narrative_parts.append("")
+                narrative_parts.append("---")
+                narrative_parts.append("")
+        
+        # Поведенческие паттерны как детальные сценарии
+        if behavioral_patterns:
+            narrative_parts.append("### 🎬 Поведенческие паттерны: жизнь как фильм")
+            narrative_parts.append("")
+            for pattern in behavioral_patterns[:3]:
+                narrative_parts.append(f"**Паттерн:** {pattern}")
+                narrative_parts.append("")
+                narrative_parts.append("*Камера наблюдения: Ваша гостиная, 20:30*")
+                narrative_parts.append("")
+                narrative_parts.append("Вы готовите ужин, он смотрит телевизор. Вроде бы обычная сцена, но вы чувствуете напряжение в воздухе. Его молчание тяжелое, многозначительное. Вы знаете - сейчас что-то произойдет.")
+                narrative_parts.append("")
+                narrative_parts.append("Вы слышите, как он встает. Шаги направляются к кухне. Ваше сердце учащается - почему? Вы делаете обычные вещи, но каждый звук кажется слишком громким.")
+                narrative_parts.append("")
+                narrative_parts.append("Именно так работает этот поведенческий паттерн. Он создает атмосферу постоянного напряжения, где вы всегда готовы к конфликту, даже когда его нет.")
+                narrative_parts.append("")
+        
+        # Манипулятивные тактики через живые диалоги
+        if manipulation_tactics:
+            narrative_parts.append("### 🎭 Манипулятивные стратегии: мастер-класс по контролю")
+            narrative_parts.append("")
+            for tactic in manipulation_tactics[:3]:
+                narrative_parts.append(f"**Тактика:** {tactic}")
+                narrative_parts.append("")
+                narrative_parts.append("*Диалог, который вы слышите слишком часто:*")
+                narrative_parts.append("")
+                
+                if 'газлайтинг' in tactic.lower():
+                    narrative_parts.append("**Вы:** 'Вчера ты сказал, что мы поедем к моим родителям на выходные.'")
+                    narrative_parts.append(f"**{partner_name}:** 'Я такого не говорил. У тебя проблемы с памятью в последнее время.'")
+                    narrative_parts.append("**Вы:** 'Я точно помню...'")
+                    narrative_parts.append(f"**{partner_name}:** 'Ты постоянно что-то выдумываешь. Может, стоит обратиться к врачу?'")
+                    narrative_parts.append("")
+                    narrative_parts.append("Вы начинаете сомневаться в своей памяти. Реальность становится размытой.")
+                    
+                elif 'обвинение' in tactic.lower() or 'вина' in tactic.lower():
+                    narrative_parts.append("**Вы:** 'Мне больно, когда ты кричишь на меня.'")
+                    narrative_parts.append(f"**{partner_name}:** 'Я не кричу. Ты просто слишком чувствительная.'")
+                    narrative_parts.append("**Вы:** 'Но твой тон...'")
+                    narrative_parts.append(f"**{partner_name}:** 'Если бы ты слушала с первого раза, мне не пришлось бы повышать голос. Это твоя вина.'")
+                    narrative_parts.append("")
+                    narrative_parts.append("Жертва становится виноватой. Классический разворот ситуации.")
+                    
+                else:
+                    narrative_parts.append(f"**{partner_name}:** 'Ты опять расстраиваешься из-за пустяков. Я же делаю это для твоего же блага.'")
+                    narrative_parts.append("**Вы:** 'Но мне кажется...'")
+                    narrative_parts.append(f"**{partner_name}:** 'Тебе кажется много чего. Хорошо, что у тебя есть я, чтобы помочь тебе разобраться.'")
+                    narrative_parts.append("")
+                    narrative_parts.append("Ваши чувства обесцениваются, а он представляется спасителем.")
+                
+                narrative_parts.append("")
+                narrative_parts.append("*Эмоциональные последствия:*")
+                narrative_parts.append("После таких разговоров вы чувствуете себя опустошенной. Вроде бы все логично, но внутри растет тревога. Вы начинаете сомневаться в себе, в своих чувствах, в своих воспоминаниях.")
+                narrative_parts.append("")
+        
+        # Эмоциональные паттерны
+        if emotional_patterns:
+            narrative_parts.append("### 💭 Эмоциональный мир: карта ваших чувств")
+            narrative_parts.append("")
+            for pattern in emotional_patterns[:3]:
+                narrative_parts.append(f"**Эмоциональный паттерн:** {pattern}")
+                narrative_parts.append("")
+                narrative_parts.append("*Внутренний монолог:*")
+                narrative_parts.append("")
+                narrative_parts.append(f"'Опять это чувство в животе. Он еще ничего не сказал, но я уже знаю - будет скандал. Как он это делает? Как он умудряется заставить меня чувствовать себя виноватой, даже когда я ничего не делала?'")
+                narrative_parts.append("")
+                narrative_parts.append("Вы стоите перед зеркалом и видите усталые глаза. Когда вы перестали узнавать себя? Когда ваши эмоции стали подчиняться его настроению?")
+                narrative_parts.append("")
+                narrative_parts.append("Этот эмоциональный паттерн работает как невидимая нить, которая связывает ваше самочувствие с его поведением. Вы живете в режиме постоянной готовности к эмоциональному урагану.")
+                narrative_parts.append("")
+        
+        # Динамика отношений
+        if relationship_dynamics:
+            narrative_parts.append("### 💕 Динамика отношений: танец двоих")
+            narrative_parts.append("")
+            for dynamic in relationship_dynamics[:3]:
+                narrative_parts.append(f"**Динамика:** {dynamic}")
+                narrative_parts.append("")
+                narrative_parts.append("*Хореография ваших отношений:*")
+                narrative_parts.append("")
+                narrative_parts.append("Представьте танец, где один партнер ведет, а другой следует. Но в вашем случае ведущий меняет шаги посреди танца, не предупреждая партнера. Вы спотыкаетесь, а он говорит, что вы плохо танцуете.")
+                narrative_parts.append("")
+                narrative_parts.append("Утром - нежность и извинения. Днем - холодность и претензии. Вечером - страсть и обещания. Вы никогда не знаете, какого партнера встретите, открыв глаза.")
+                narrative_parts.append("")
+                narrative_parts.append("Эта динамика создает состояние постоянной неопределенности. Вы ходите по минному полю, не зная, где взорвется следующая мина.")
+                narrative_parts.append("")
+        
+        # Заключение с призывом к действию
+        narrative_parts.append("### 🎯 Общая картина: время принимать решения")
+        narrative_parts.append("")
+        narrative_parts.append(f"Анализируя все эти элементы вместе, мы видим сложную и тревожную картину. {partner_name} - это не просто 'сложный характер' или 'особенности личности'. Это система поведения, которая систематически подрывает ваше эмоциональное благополучие.")
+        narrative_parts.append("")
+        narrative_parts.append("*Момент истины:*")
+        narrative_parts.append("")
+        narrative_parts.append("Представьте себя через пять лет. Вы все еще ходите на цыпочках, все еще сомневаетесь в своей реальности, все еще надеетесь, что он изменится? Или вы видите себя свободной, уверенной, живущей полной жизнью?")
+        narrative_parts.append("")
+        narrative_parts.append("Каждый день, который вы проводите в таких отношениях, - это день, украденный у вашего настоящего счастья. Вы заслуживаете любви, которая не требует отказа от себя.")
+        narrative_parts.append("")
+        narrative_parts.append("*Помните: понимание этих паттернов дает вам силу. Не для того, чтобы лучше приспособиться к ним, а для того, чтобы принять решение о своем будущем. Вы не обязаны танцевать под чужую музыку всю жизнь.*")
+        
+        final_narrative = "\n".join(narrative_parts)
+        
+        # Добавляем дополнительный контент если нарратив слишком короткий
+        if len(final_narrative) < 5000:
+            narrative_parts.append("")
+            narrative_parts.append("### 🌟 Послесловие: путь к свободе")
+            narrative_parts.append("")
+            narrative_parts.append("Чтение этого анализа может быть болезненным. Возможно, вы узнаете в нем свою жизнь, свои отношения, свою боль. Это нормально. Это первый шаг к освобождению.")
+            narrative_parts.append("")
+            narrative_parts.append("Многие женщины говорят: 'Я знала, что что-то не так, но не могла понять, что именно.' Теперь у вас есть слова для ваших чувств, названия для ваших переживаний.")
+            narrative_parts.append("")
+            narrative_parts.append("Вы не одиноки. Миллионы женщин прошли через подобные отношения. Многие из них нашли силы изменить свою жизнь. Вы тоже можете.")
+            narrative_parts.append("")
+            narrative_parts.append("Помните: любовь не должна причинять боль. Отношения не должны разрушать вашу личность. Вы имеете право на счастье, уважение, и покой.")
+            narrative_parts.append("")
+            narrative_parts.append("Первый шаг - это признание проблемы. Вы его уже сделали. Теперь каждый следующий шаг приближает вас к свободе.")
+        
+        return "\n".join(narrative_parts)
 
     def _create_full_fallback_analysis(self, answers: Dict[str, int], scores: Dict[str, Any], partner_name: str) -> Dict[str, Any]:
         """Create fallback analysis for full profiler when AI fails"""
@@ -2259,6 +2601,320 @@ class AIService:
                 found_keywords.append(quote.lower())
         
         return found_keywords[:20]  # Return top 20 keywords
+
+    async def _parse_storytelling_iterative(self, structured_response: str, partner_name: str, original_answers: str) -> Dict[str, Any]:
+        """
+        ИТЕРАТИВНЫЙ ПОДХОД: Парсинг storytelling в два этапа
+        1. Получить структурированные данные из первого ответа
+        2. Генерировать storytelling narrative на основе структурированных данных
+        """
+        try:
+            # Этап 1: Парсим структурированные данные
+            logger.info("Step 1: Parsing structured data for storytelling")
+            structured_data = extract_json_from_text(structured_response)
+            if not structured_data:
+                structured_data = safe_json_loads(structured_response, {})
+            
+            # Проверяем, что получили структурированные данные
+            if not structured_data or not isinstance(structured_data, dict):
+                logger.error("Failed to parse structured data, falling back to standard parsing")
+                return self._parse_storytelling_response(structured_response)
+            
+            # Этап 2: Генерируем storytelling narrative
+            logger.info("Step 2: Generating storytelling narrative from structured data")
+            
+            # Создаем промпт для storytelling generation
+            storytelling_prompt = create_storytelling_narrative_prompt(
+                structured_data=structured_data,
+                partner_name=partner_name,
+                original_answers=original_answers
+            )
+            
+            # Генерируем storytelling narrative
+            async with self._request_semaphore:
+                storytelling_narrative = await self._get_ai_response(
+                    system_prompt="Ты - мастер storytelling. ВАЖНО: Возвращай ТОЛЬКО чистый текст без JSON, объектов или мета-данных. Начинай ответ сразу с заголовка '## 🧠'. Пиши МАКСИМАЛЬНО ПОДРОБНО, минимум 1500 слов!",
+                    user_prompt=storytelling_prompt,
+                    response_format="text",  # Не JSON, а обычный текст
+                    max_tokens=8192,  # Максимальный лимит для Claude
+                    technique="storytelling_narrative"
+                )
+            
+            # Этап 3: Объединяем результаты
+            logger.info(f"Step 3: Combining results - narrative length: {len(storytelling_narrative)} chars")
+            
+            # Проверяем, не вернул ли Claude JSON вместо текста
+            if storytelling_narrative.strip().startswith('{'):
+                logger.warning("Claude returned JSON instead of text, attempting to extract story")
+                try:
+                    json_response = extract_json_from_text(storytelling_narrative)
+                    if json_response and 'story' in json_response:
+                        storytelling_narrative = json_response['story']
+                        logger.info(f"Extracted story from JSON: {len(storytelling_narrative)} chars")
+                    else:
+                        logger.error("Could not extract story from JSON response")
+                except Exception as e:
+                    logger.error(f"Failed to parse JSON response: {e}")
+            
+            # Создаем финальный результат
+            result = {
+                "personality_type": structured_data.get("personality_type", "Неопределен"),
+                "manipulation_risk": float(structured_data.get("manipulation_risk", 5.0)),
+                "urgency_level": structured_data.get("urgency_level", "medium"),
+                "psychological_profile": storytelling_narrative.strip(),  # Готовый storytelling текст
+                "red_flags": structured_data.get("red_flags", []),
+                "safety_alerts": structured_data.get("safety_alerts", []),
+                "block_scores": structured_data.get("block_scores", {}),
+                "dark_triad": structured_data.get("dark_triad", {}),
+                "personalized_insights": structured_data.get("personalized_insights", []),
+                "behavioral_evidence": structured_data.get("behavioral_evidence", []),
+                "manipulation_tactics": structured_data.get("manipulation_tactics", []),
+                "emotional_patterns": structured_data.get("emotional_patterns", []),
+                "control_mechanisms": structured_data.get("control_mechanisms", []),
+                "violence_indicators": structured_data.get("violence_indicators", []),
+                "escalation_triggers": structured_data.get("escalation_triggers", []),
+                
+                # Метаданные итеративного подхода
+                "structured_analysis": structured_data,
+                "narrative_length": len(storytelling_narrative),
+                "narrative_words": len(storytelling_narrative.split()),
+                "generation_method": "iterative_storytelling"
+            }
+            
+            # Calculate overall risk score from manipulation_risk
+            overall_risk = result["manipulation_risk"] * 10
+            result["overall_risk_score"] = round(overall_risk, 1)
+            
+            # Round block scores using proper validation
+            block_scores = result.get("block_scores", {})
+            for block in block_scores:
+                if isinstance(block_scores[block], (int, float)):
+                    block_scores[block] = round(float(block_scores[block]), 1)
+            
+            # Add compatibility fields
+            result.update({
+                "positive_traits": [],
+                "danger_assessment": f"Итеративный storytelling анализ: {result['urgency_level']}",
+                "relationship_forecast": "Прогноз основан на детальном двухэтапном анализе",
+                "exit_strategy": "См. персонализированные рекомендации с конкретными примерами",
+                "confidence_level": 0.9,  # Выше из-за двухэтапного подхода
+                "survival_guide": structured_data.get("survival_guide", ["Обратитесь за профессиональной помощью"])
+            })
+            
+            logger.info(f"Iterative storytelling complete: {result['narrative_words']} words, {len(result['red_flags'])} red flags")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Iterative storytelling failed: {e}")
+            # Fallback к стандартному парсингу
+            return self._parse_storytelling_response(structured_response)
+
+    async def _parse_storytelling_iterative_triple(self, structured_response: str, partner_name: str, original_answers: str) -> Dict[str, Any]:
+        """
+        ТРЕХЭТАПНЫЙ ПОДХОД: Парсинг storytelling в три этапа
+        1. Получить структурированные данные из первого ответа
+        2. Генерировать первую половину storytelling (750 слов)
+        3. Генерировать вторую половину storytelling (750 слов)
+        """
+        try:
+            # Этап 1: Парсим структурированные данные
+            logger.info("Step 1: Parsing structured data for storytelling")
+            structured_data = extract_json_from_text(structured_response)
+            if not structured_data:
+                structured_data = safe_json_loads(structured_response, {})
+            
+            # Проверяем, что получили структурированные данные
+            if not structured_data or not isinstance(structured_data, dict):
+                logger.error("Failed to parse structured data, falling back to standard parsing")
+                return self._parse_storytelling_response(structured_response)
+            
+            # Этап 2: Генерируем первую половину storytelling
+            logger.info("Step 2: Generating first half of storytelling narrative")
+            
+            # Создаем промпт для первой половины
+            first_half_prompt = self._create_storytelling_first_half_prompt(
+                structured_data=structured_data,
+                partner_name=partner_name,
+                original_answers=original_answers
+            )
+            
+            # Генерируем первую половину
+            async with self._request_semaphore:
+                first_half_narrative = await self._get_ai_response(
+                    system_prompt="Ты - мастер storytelling. ВАЖНО: Возвращай ТОЛЬКО чистый текст без JSON. Начинай ответ сразу с заголовка '## 🧠'. Пиши МАКСИМАЛЬНО ПОДРОБНО, 800+ слов! НЕ ОСТАНАВЛИВАЙСЯ - пиши ВСЕ разделы полностью с диалогами и сценариями!",
+                    user_prompt=first_half_prompt,
+                    response_format="text",
+                    max_tokens=8192,
+                    technique="storytelling_narrative"
+                )
+            
+            # Этап 3: Генерируем вторую половину storytelling
+            logger.info("Step 3: Generating second half of storytelling narrative")
+            
+            # Создаем промпт для второй половины
+            second_half_prompt = self._create_storytelling_second_half_prompt(
+                structured_data=structured_data,
+                partner_name=partner_name,
+                original_answers=original_answers,
+                first_half_narrative=first_half_narrative
+            )
+            
+            # Генерируем вторую половину
+            async with self._request_semaphore:
+                second_half_narrative = await self._get_ai_response(
+                    system_prompt="Ты - мастер storytelling. ВАЖНО: Возвращай ТОЛЬКО чистый текст без JSON. Продолжай storytelling с раздела '## 🎯'. Пиши МАКСИМАЛЬНО ПОДРОБНО, 800+ слов! НЕ ОСТАНАВЛИВАЙСЯ - пиши ВСЕ разделы полностью с диалогами и сценариями!",
+                    user_prompt=second_half_prompt,
+                    response_format="text",
+                    max_tokens=8192,
+                    technique="storytelling_narrative"
+                )
+            
+            # Объединяем две части
+            full_narrative = first_half_narrative.strip() + "\n\n" + second_half_narrative.strip()
+            
+            # Этап 4: Объединяем результаты
+            logger.info(f"Step 4: Combining results - full narrative length: {len(full_narrative)} chars")
+            
+            # Создаем финальный результат
+            result = {
+                "personality_type": structured_data.get("personality_type", "Неопределен"),
+                "manipulation_risk": float(structured_data.get("manipulation_risk", 5.0)),
+                "urgency_level": structured_data.get("urgency_level", "medium"),
+                "psychological_profile": full_narrative,  # Полный storytelling текст
+                "red_flags": structured_data.get("red_flags", []),
+                "safety_alerts": structured_data.get("safety_alerts", []),
+                "block_scores": structured_data.get("block_scores", {}),
+                "dark_triad": structured_data.get("dark_triad", {}),
+                "personalized_insights": structured_data.get("personalized_insights", []),
+                "behavioral_evidence": structured_data.get("behavioral_evidence", []),
+                "manipulation_tactics": structured_data.get("manipulation_tactics", []),
+                "emotional_patterns": structured_data.get("emotional_patterns", []),
+                "control_mechanisms": structured_data.get("control_mechanisms", []),
+                "violence_indicators": structured_data.get("violence_indicators", []),
+                "escalation_triggers": structured_data.get("escalation_triggers", []),
+                
+                # Метаданные трехэтапного подхода
+                "structured_analysis": structured_data,
+                "narrative_length": len(full_narrative),
+                "narrative_words": len(full_narrative.split()),
+                "first_half_words": len(first_half_narrative.split()),
+                "second_half_words": len(second_half_narrative.split()),
+                "generation_method": "triple_iterative_storytelling"
+            }
+            
+            # Calculate overall risk score from manipulation_risk
+            overall_risk = result["manipulation_risk"] * 10
+            result["overall_risk_score"] = round(overall_risk, 1)
+            
+            # Round block scores using proper validation
+            block_scores = result.get("block_scores", {})
+            for block in block_scores:
+                if isinstance(block_scores[block], (int, float)):
+                    block_scores[block] = round(float(block_scores[block]), 1)
+            
+            # Add compatibility fields
+            result.update({
+                "positive_traits": [],
+                "danger_assessment": f"Трехэтапный storytelling анализ: {result['urgency_level']}",
+                "relationship_forecast": "Прогноз основан на детальном трехэтапном анализе",
+                "exit_strategy": "См. персонализированные рекомендации с конкретными примерами",
+                "confidence_level": 0.95,  # Выше из-за трехэтапного подхода
+                "survival_guide": structured_data.get("survival_guide", ["Обратитесь за профессиональной помощью"])
+            })
+            
+            logger.info(f"Triple iterative storytelling complete: {result['narrative_words']} words, {len(result['red_flags'])} red flags")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Triple iterative storytelling failed: {e}")
+            # Fallback к двухэтапному подходу
+            return await self._parse_storytelling_iterative(structured_response, partner_name, original_answers)
+    
+    def _create_storytelling_first_half_prompt(self, structured_data: dict, partner_name: str, original_answers: str) -> str:
+        """Создает промпт для первой половины storytelling"""
+        
+        prompt = f"""Ты - мастер storytelling. Твоя задача - создать ПЕРВУЮ ПОЛОВИНУ захватывающего психологического рассказа о партнере {partner_name}.
+
+СТРУКТУРИРОВАННЫЕ ДАННЫЕ:
+- Тип личности: {structured_data.get('personality_type', 'Неопределен')}
+- Ключевые черты: {structured_data.get('core_traits', [])}
+- Поведенческие паттерны: {structured_data.get('behavioral_patterns', [])}
+- Красные флаги: {structured_data.get('red_flags', [])}
+
+ОРИГИНАЛЬНЫЕ ОТВЕТЫ:
+{original_answers}
+
+ТВОЯ ЗАДАЧА: Создать ПЕРВУЮ ПОЛОВИНУ storytelling анализа (750+ слов).
+
+СТРУКТУРА ПЕРВОЙ ПОЛОВИНЫ:
+## 🧠 Знакомство с {partner_name}: первые впечатления и скрытая правда
+[Детальная история знакомства с диалогами - 200+ слов]
+
+## 🎭 Ключевые черты личности в действии
+[Живые сценарии с диалогами для каждой черты - 300+ слов]
+
+## 🎬 Поведенческие паттерны: как разворачивается контроль
+[Пошаговое описание эскалации - 250+ слов]
+
+ТРЕБОВАНИЯ:
+- МИНИМУМ 750 слов в первой половине
+- Каждый раздел с живыми диалогами
+- Конкретные сценарии с деталями
+- Используй имя {partner_name} в диалогах
+- Создавай атмосферу реальности
+
+ВАЖНО: Пиши ТОЛЬКО первую половину! Заканчивай на разделе "Поведенческие паттерны".
+
+ВЕРНИ ТОЛЬКО ЧИСТЫЙ STORYTELLING ТЕКСТ БЕЗ JSON!"""
+        
+        return prompt
+    
+    def _create_storytelling_second_half_prompt(self, structured_data: dict, partner_name: str, original_answers: str, first_half_narrative: str) -> str:
+        """Создает промпт для второй половины storytelling"""
+        
+        prompt = f"""Ты - мастер storytelling. Твоя задача - создать ВТОРУЮ ПОЛОВИНУ захватывающего психологического рассказа о партнере {partner_name}.
+
+У тебя есть ПЕРВАЯ ПОЛОВИНА рассказа:
+{first_half_narrative[:1000]}...
+
+СТРУКТУРИРОВАННЫЕ ДАННЫЕ:
+- Манипулятивные тактики: {structured_data.get('manipulation_tactics', [])}
+- Эмоциональные паттерны: {structured_data.get('emotional_patterns', [])}
+- Динамика отношений: {structured_data.get('relationship_dynamics', [])}
+- Красные флаги: {structured_data.get('red_flags', [])}
+
+ТВОЯ ЗАДАЧА: Создать ВТОРУЮ ПОЛОВИНУ storytelling анализа (750+ слов).
+
+СТРУКТУРА ВТОРОЙ ПОЛОВИНЫ:
+## 🎯 Мастерство манипуляций: разбор техник
+[Детальный анализ каждой тактики с диалогами - 200+ слов]
+
+## 💭 Эмоциональный мир {partner_name}: что происходит внутри
+[Глубинная психология через наблюдаемое поведение - 150+ слов]
+
+## 💕 Динамика отношений: танец двоих
+[Циклы насилия и контроля - 200+ слов]
+
+## 🚨 Красные флаги: сигналы опасности
+[Каждый флаг через живую историю - 150+ слов]
+
+## 🔮 Прогноз: что ждет впереди
+[Научно обоснованные выводы - 100+ слов]
+
+ТРЕБОВАНИЯ:
+- МИНИМУМ 750 слов во второй половине
+- Каждый раздел с живыми диалогами
+- Конкретные сценарии с деталями
+- Используй имя {partner_name} в диалогах
+- Логично продолжай первую половину
+
+ВАЖНО: Пиши ТОЛЬКО вторую половину! Начинай с раздела "## 🎯 Мастерство манипуляций".
+
+ВЕРНИ ТОЛЬКО ЧИСТЫЙ STORYTELLING ТЕКСТ БЕЗ JSON!"""
+        
+        return prompt
 
 
 # Global AI service instance

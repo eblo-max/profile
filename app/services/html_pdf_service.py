@@ -18,6 +18,9 @@ class HTMLPDFService:
     """Service for generating PDF reports from HTML using CloudLayer.io API"""
     
     def __init__(self):
+        logger.info("🎨 Initializing HTMLPDFService")
+        self._cloudlayer_available = None
+        self.template = None
         self.api_key = settings.CLOUDLAYER_API_KEY
         self.api_url = "https://api.cloudlayer.io"
         if not self.api_key:
@@ -26,6 +29,179 @@ class HTMLPDFService:
     def reset_cloudlayer_check(self):
         """Reset CloudLayer availability check (for testing)"""
         pass
+    
+    def _decline_name(self, name: str, case: str = "nominative") -> str:
+        """
+        Склоняет имя по падежам
+        
+        Args:
+            name: имя для склонения
+            case: падеж (nominative, genitive, dative, accusative, instrumental, prepositional)
+        
+        Returns:
+            склоненное имя
+        """
+        if not name or not isinstance(name, str):
+            return name or "партнер"
+        
+        name = name.strip()
+        if not name:
+            return "партнер"
+        
+        # Словарь популярных женских имен
+        female_names = {
+            "анна": {
+                "nominative": "Анна", "genitive": "Анны", "dative": "Анне",
+                "accusative": "Анну", "instrumental": "Анной", "prepositional": "Анне"
+            },
+            "мария": {
+                "nominative": "Мария", "genitive": "Марии", "dative": "Марии", 
+                "accusative": "Марию", "instrumental": "Марией", "prepositional": "Марии"
+            },
+            "елена": {
+                "nominative": "Елена", "genitive": "Елены", "dative": "Елене",
+                "accusative": "Елену", "instrumental": "Еленой", "prepositional": "Елене"
+            },
+            "татьяна": {
+                "nominative": "Татьяна", "genitive": "Татьяны", "dative": "Татьяне",
+                "accusative": "Татьяну", "instrumental": "Татьяной", "prepositional": "Татьяне"
+            },
+            "ольга": {
+                "nominative": "Ольга", "genitive": "Ольги", "dative": "Ольге",
+                "accusative": "Ольгу", "instrumental": "Ольгой", "prepositional": "Ольге"
+            },
+            "наталья": {
+                "nominative": "Наталья", "genitive": "Натальи", "dative": "Наталье",
+                "accusative": "Наталью", "instrumental": "Натальей", "prepositional": "Наталье"
+            },
+            "ирина": {
+                "nominative": "Ирина", "genitive": "Ирины", "dative": "Ирине",
+                "accusative": "Ирину", "instrumental": "Ириной", "prepositional": "Ирине"
+            },
+            "светлана": {
+                "nominative": "Светлана", "genitive": "Светланы", "dative": "Светлане",
+                "accusative": "Светлану", "instrumental": "Светланой", "prepositional": "Светлане"
+            },
+            "юлия": {
+                "nominative": "Юлия", "genitive": "Юлии", "dative": "Юлии",
+                "accusative": "Юлию", "instrumental": "Юлией", "prepositional": "Юлии"
+            },
+            "екатерина": {
+                "nominative": "Екатерина", "genitive": "Екатерины", "dative": "Екатерине",
+                "accusative": "Екатерину", "instrumental": "Екатериной", "prepositional": "Екатерине"
+            }
+        }
+        
+        # Словарь популярных мужских имен
+        male_names = {
+            "александр": {
+                "nominative": "Александр", "genitive": "Александра", "dative": "Александру",
+                "accusative": "Александра", "instrumental": "Александром", "prepositional": "Александре"
+            },
+            "алексей": {
+                "nominative": "Алексей", "genitive": "Алексея", "dative": "Алексею",
+                "accusative": "Алексея", "instrumental": "Алексеем", "prepositional": "Алексее"
+            },
+            "андрей": {
+                "nominative": "Андрей", "genitive": "Андрея", "dative": "Андрею",
+                "accusative": "Андрея", "instrumental": "Андреем", "prepositional": "Андрее"
+            },
+            "дмитрий": {
+                "nominative": "Дмитрий", "genitive": "Дмитрия", "dative": "Дмитрию",
+                "accusative": "Дмитрия", "instrumental": "Дмитрием", "prepositional": "Дмитрии"
+            },
+            "сергей": {
+                "nominative": "Сергей", "genitive": "Сергея", "dative": "Сергею",
+                "accusative": "Сергея", "instrumental": "Сергеем", "prepositional": "Сергее"
+            },
+            "владимир": {
+                "nominative": "Владимир", "genitive": "Владимира", "dative": "Владимиру",
+                "accusative": "Владимира", "instrumental": "Владимиром", "prepositional": "Владимире"
+            },
+            "михаил": {
+                "nominative": "Михаил", "genitive": "Михаила", "dative": "Михаилу",
+                "accusative": "Михаила", "instrumental": "Михаилом", "prepositional": "Михаиле"
+            },
+            "николай": {
+                "nominative": "Николай", "genitive": "Николая", "dative": "Николаю",
+                "accusative": "Николая", "instrumental": "Николаем", "prepositional": "Николае"
+            },
+            "игорь": {
+                "nominative": "Игорь", "genitive": "Игоря", "dative": "Игорю",
+                "accusative": "Игоря", "instrumental": "Игорем", "prepositional": "Игоре"
+            },
+            "евгений": {
+                "nominative": "Евгений", "genitive": "Евгения", "dative": "Евгению",
+                "accusative": "Евгения", "instrumental": "Евгением", "prepositional": "Евгении"
+            }
+        }
+        
+        name_lower = name.lower()
+        
+        # Проверяем точное совпадение с известными именами
+        if name_lower in female_names:
+            return female_names[name_lower].get(case, name)
+        elif name_lower in male_names:
+            return male_names[name_lower].get(case, name)
+        
+        # Эвристические правила для неизвестных имен
+        return self._decline_name_heuristic(name, case)
+    
+    def _decline_name_heuristic(self, name: str, case: str) -> str:
+        """Склонение имен по эвристическим правилам"""
+        if case == "nominative":
+            return name
+        
+        name_lower = name.lower()
+        
+        # Женские имена на -а/-я
+        if name_lower.endswith(('а', 'я')):
+            if case == "genitive":
+                if name_lower.endswith('я'):
+                    return name[:-1] + 'и'
+                else:
+                    return name[:-1] + 'ы'
+            elif case == "dative":
+                return name[:-1] + 'е'
+            elif case == "accusative":
+                if name_lower.endswith('я'):
+                    return name[:-1] + 'ю'
+                else:
+                    return name[:-1] + 'у'
+            elif case == "instrumental":
+                if name_lower.endswith('я'):
+                    return name[:-1] + 'ей'
+                else:
+                    return name[:-1] + 'ой'
+            elif case == "prepositional":
+                return name[:-1] + 'е'
+        
+        # Мужские имена на согласную
+        elif not name_lower.endswith(('а', 'я', 'ь')):
+            if case in ["genitive", "accusative"]:
+                return name + 'а'
+            elif case == "dative":
+                return name + 'у'
+            elif case == "instrumental":
+                return name + 'ом'
+            elif case == "prepositional":
+                return name + 'е'
+        
+        # Имена на -ь (могут быть мужскими или женскими)
+        elif name_lower.endswith('ь'):
+            if case == "genitive":
+                return name[:-1] + 'я'
+            elif case == "dative":
+                return name[:-1] + 'ю'
+            elif case == "accusative":
+                return name[:-1] + 'я'
+            elif case == "instrumental":
+                return name[:-1] + 'ем'
+            elif case == "prepositional":
+                return name[:-1] + 'е'
+        
+        # Если не удалось определить, возвращаем исходное имя
+        return name
     
     async def _ensure_cloudlayer_available(self) -> bool:
         """Ensure CloudLayer.io API is available"""
@@ -312,6 +488,11 @@ class HTMLPDFService:
         # Prepare template data
         template_data = {
             'partner_name': partner_name,
+            'partner_name_genitive': self._decline_name(partner_name, "genitive"),      # кого? чего? - анализ Анны
+            'partner_name_dative': self._decline_name(partner_name, "dative"),          # кому? чему? - советы Анне
+            'partner_name_accusative': self._decline_name(partner_name, "accusative"),  # кого? что? - анализирую Анну
+            'partner_name_instrumental': self._decline_name(partner_name, "instrumental"), # кем? чем? - работа с Анной
+            'partner_name_prepositional': self._decline_name(partner_name, "prepositional"), # о ком? о чем? - о Анне
             'date': current_date,
             'report_id': report_id,
             'risk_score': int(overall_risk),
@@ -326,7 +507,15 @@ class HTMLPDFService:
                 'blocks_chart': None,  # Could be generated dynamically
                 'dark_triad_chart': None,
                 'risk_circle': None
-            }
+            },
+            # Additional data for new sections
+            'manipulation_tactics': analysis_data.get('manipulation_tactics', []),
+            'escalation_triggers': analysis_data.get('escalation_triggers', []),
+            'emotional_patterns': analysis_data.get('emotional_patterns', []),
+            'violence_indicators': analysis_data.get('violence_indicators', []),
+            'control_mechanisms': analysis_data.get('control_mechanisms', []),
+            'behavioral_evidence': analysis_data.get('behavioral_evidence', []),
+            'personalized_insights': analysis_data.get('personalized_insights', [])
         }
         
         # Load and render template
@@ -711,18 +900,111 @@ class HTMLPDFService:
         personality_type = self._determine_personality_type(risk_score)
         dark_triad = analysis_data.get('dark_triad', {})
         
-        # DON'T add original profile as raw text - only use structured HTML
-        expanded = ""
-        
-        # Add detailed analysis based on risk level with full HTML structure
-        if risk_score >= 70:
-            expanded = self._generate_high_risk_analysis(partner_name, risk_score, block_scores, red_flags, dark_triad)
-        elif risk_score >= 40:
-            expanded = self._generate_medium_risk_analysis(partner_name, risk_score, block_scores, red_flags, dark_triad)
+        # ПРИОРИТЕТ: Использовать реальный ИИ-анализ!
+        if original_profile and len(original_profile.strip()) > 100:
+            # Форматируем реальный ИИ-анализ в HTML
+            expanded = self._format_ai_analysis_to_html(
+                original_profile, 
+                partner_name, 
+                risk_score, 
+                analysis_data
+            )
         else:
-            expanded = self._generate_low_risk_analysis(partner_name, risk_score, block_scores, analysis_data)
+            # Fallback: используем статичные шаблоны только если ИИ-анализ отсутствует
+            logger.warning(f"No AI analysis found, using static templates as fallback")
+            if risk_score >= 70:
+                expanded = self._generate_high_risk_analysis(partner_name, risk_score, block_scores, red_flags, dark_triad)
+            elif risk_score >= 40:
+                expanded = self._generate_medium_risk_analysis(partner_name, risk_score, block_scores, red_flags, dark_triad)
+            else:
+                expanded = self._generate_low_risk_analysis(partner_name, risk_score, block_scores, analysis_data)
         
         return expanded
+    
+    def _format_ai_analysis_to_html(
+        self,
+        ai_analysis: str,
+        partner_name: str,
+        risk_score: float,
+        analysis_data: Dict[str, Any]
+    ) -> str:
+        """Форматирует реальный ИИ-анализ в красивый HTML"""
+        
+        # Разбиваем анализ на параграфы для лучшего форматирования
+        paragraphs = ai_analysis.split('\n\n')
+        formatted_paragraphs = []
+        
+        for paragraph in paragraphs:
+            if paragraph.strip():
+                # Ищем заголовки (строки с ключевыми словами)
+                if any(keyword in paragraph.lower() for keyword in ['нарциссизм', 'контроль', 'газлайтинг', 'эмоциональн', 'интимность', 'социальн']):
+                    if paragraph.count(':') == 1 and len(paragraph.split(':')[0]) < 100:
+                        # Это заголовок
+                        formatted_paragraphs.append(f'<h3 class="section-title">{paragraph.strip()}</h3>')
+                    else:
+                        # Это обычный параграф
+                        formatted_paragraphs.append(f'<p>{paragraph.strip()}</p>')
+                else:
+                    formatted_paragraphs.append(f'<p>{paragraph.strip()}</p>')
+        
+        # Обертываем в структуру
+        html_analysis = f"""
+<div class="detailed-profile ai-generated">
+    <div class="profile-section">
+        <h3 class="section-title">🧠 Персонализированный психологический анализ</h3>
+        <p><em>Анализ основан на конкретных ответах пользователя и создан с помощью ИИ</em></p>
+        <div class="ai-analysis-content">
+            {''.join(formatted_paragraphs)}
+        </div>
+    </div>
+    
+    <div class="profile-section">
+        <h3 class="section-title">📊 Дополнительные данные</h3>
+        <div class="risk-summary">
+            <p><strong>Уровень риска:</strong> {risk_score}%</p>
+            <p><strong>Тип личности:</strong> {self._determine_personality_type(risk_score)}</p>
+        </div>
+        
+        {self._generate_additional_insights(analysis_data)}
+    </div>
+</div>"""
+        
+        return html_analysis
+    
+    def _generate_additional_insights(self, analysis_data: Dict[str, Any]) -> str:
+        """Генерирует дополнительные инсайты из данных анализа"""
+        
+        insights = []
+        
+        # Добавляем экспертные мнения если есть
+        if 'experts' in analysis_data:
+            experts = analysis_data['experts']
+            if isinstance(experts, dict):
+                for expert_name, expert_opinion in experts.items():
+                    insights.append(f'''
+                    <div class="expert-insight">
+                        <h4>{expert_name}</h4>
+                        <p>{expert_opinion}</p>
+                    </div>
+                    ''')
+        
+        # Добавляем персонализированные инсайты
+        if 'personalized_insights' in analysis_data:
+            personalized = analysis_data['personalized_insights']
+            if isinstance(personalized, list):
+                for insight in personalized:
+                    insights.append(f'<div class="personalized-insight"><p>{insight}</p></div>')
+        
+        # Добавляем поведенческие доказательства
+        if 'behavioral_evidence' in analysis_data:
+            evidence = analysis_data['behavioral_evidence']
+            if isinstance(evidence, list):
+                insights.append('<div class="behavioral-evidence"><h4>Поведенческие доказательства:</h4><ul>')
+                for item in evidence:
+                    insights.append(f'<li>{item}</li>')
+                insights.append('</ul></div>')
+        
+        return ''.join(insights) if insights else '<p>Дополнительные инсайты не найдены</p>'
     
     def _generate_high_risk_analysis(
         self, 

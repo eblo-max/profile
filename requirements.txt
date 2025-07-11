@@ -13,7 +13,7 @@ psycopg2-binary==2.9.9
 redis[hiredis]==5.0.1
 
 # AI Services
-anthropic==0.40.0
+anthropic==0.57.1
 openai==1.3.7
 
 # PDF Generation (CloudLayer.io API only)
