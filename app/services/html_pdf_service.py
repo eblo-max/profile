@@ -1,162 +1,145 @@
-"""HTML to PDF service using Playwright for PDF conversion with beautiful design"""
+"""HTML to PDF conversion service using CloudLayer.io API"""
 
 import asyncio
 import logging
-from typing import Dict, Any
-import os
+from typing import Dict, Any, Optional
 from datetime import datetime
+import aiohttp
+import base64
+import json
 
+from app.core.config import settings
 from app.utils.exceptions import ServiceError
 
 logger = logging.getLogger(__name__)
 
 
 class HTMLPDFService:
-    """Service for generating beautiful PDF reports via HTML using Playwright"""
+    """Service for generating PDF reports from HTML using CloudLayer.io API"""
     
     def __init__(self):
-        self.playwright_available = None  # Will be checked on first use
-        self.playwright_checked = False
-        
-        logger.info("🚀 HTMLPDFService initialized - Playwright ONLY (no fallbacks)")
+        self.api_key = settings.CLOUDLAYER_API_KEY
+        self.api_url = "https://api.cloudlayer.io"
+        if not self.api_key:
+            logger.warning("⚠️ CloudLayer.io API key not configured! Set CLOUDLAYER_API_KEY environment variable.")
     
-    def reset_playwright_check(self):
-        """Force re-check of Playwright availability"""
-        logger.info("🔄 Resetting Playwright availability check")
-        self.playwright_checked = False
-        self.playwright_available = None
+    def reset_cloudlayer_check(self):
+        """Reset CloudLayer availability check (for testing)"""
+        pass
     
-    async def _ensure_playwright_available(self) -> bool:
-        """Ensure Playwright is available and working"""
-        if self.playwright_checked:
-            return self.playwright_available
+    async def _ensure_cloudlayer_available(self) -> bool:
+        """Ensure CloudLayer.io API is available"""
+        if not self.api_key:
+            logger.error("❌ CloudLayer.io API key not configured!")
+            return False
         
         try:
-            logger.info("🔍 Checking Playwright availability...")
-            from playwright.async_api import async_playwright
+            logger.info("🔍 Checking CloudLayer.io API availability...")
             
-            # Try to launch browser to verify availability
-            async with async_playwright() as p:
-                try:
-                    logger.info("🚀 Attempting to launch Chromium browser...")
-                    browser = await p.chromium.launch(
-                        headless=True,
-                        args=[
-                            '--no-sandbox',
-                            '--disable-setuid-sandbox',
-                            '--disable-dev-shm-usage',
-                            '--disable-accelerated-2d-canvas',
-                            '--no-first-run',
-                            '--no-zygote',
-                            '--single-process',
-                            '--disable-gpu'
-                        ]
-                    )
-                    await browser.close()
-                    logger.info("✅ Playwright Chromium is available and working")
-                    self.playwright_available = True
-                    self.playwright_checked = True
-                    return True
-                except Exception as browser_error:
-                    logger.warning(f"❌ Playwright browser launch failed: {browser_error}")
-                    # Try to install browser automatically
-                    logger.info("🔧 Attempting to install Playwright browser...")
-                    success = await self._install_playwright_browser_async()
-                    
-                    if success:
-                        logger.info("✅ Playwright installation successful, rechecking availability...")
-                        # Recheck availability after installation
-                        try:
-                            async with async_playwright() as p_new:
-                                browser = await p_new.chromium.launch(
-                                    headless=True,
-                                    args=[
-                                        '--no-sandbox',
-                                        '--disable-setuid-sandbox',
-                                        '--disable-dev-shm-usage',
-                                        '--disable-accelerated-2d-canvas',
-                                        '--no-first-run',
-                                        '--no-zygote',
-                                        '--single-process',
-                                        '--disable-gpu'
-                                    ]
-                                )
-                                await browser.close()
-                                logger.info("✅ Playwright Chromium verified after installation")
-                                self.playwright_available = True
-                                self.playwright_checked = True
-                                return True
-                        except Exception as verify_error:
-                            logger.error(f"❌ Playwright verification failed after installation: {verify_error}")
-                            self.playwright_available = False
-                            self.playwright_checked = True
-                            return False
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    'x-api-key': self.api_key,
+                    'Content-Type': 'application/json'
+                }
+                
+                # Test with minimal HTML (base64 encoded)
+                test_html = '<html><body><h1>Test</h1></body></html>'
+                test_html_b64 = base64.b64encode(test_html.encode('utf-8')).decode('utf-8')
+                
+                test_data = {
+                    'html': test_html_b64
+                }
+                
+                async with session.post(
+                    f'{self.api_url}/v2/html/pdf',
+                    headers=headers,
+                    json=test_data,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status in [200, 202]:  # 202 = async processing
+                        logger.info("✅ CloudLayer.io API is available and working")
+                        return True
                     else:
-                        logger.error("❌ Playwright installation failed")
-                        self.playwright_available = False
-                        self.playwright_checked = True
+                        error_text = await response.text()
+                        logger.error(f"❌ CloudLayer.io API test failed with status {response.status}: {error_text}")
                         return False
                         
         except Exception as e:
-            logger.error(f"💥 Playwright availability check failed: {e}")
-            self.playwright_available = False
-            self.playwright_checked = True
+            logger.error(f"💥 CloudLayer.io API availability check failed: {e}")
             return False
-    
-    async def _install_playwright_browser_async(self) -> bool:
-        """Try to install Playwright browser automatically using async API"""
-        try:
-            logger.info("Attempting to install Playwright Chromium browser...")
-            import subprocess
-            import os
-            
-            # Set environment for headless installation
-            env = os.environ.copy()
-            env['PLAYWRIGHT_BROWSERS_PATH'] = '/ms-playwright'
-            
-            # Run subprocess asynchronously  
-            process = await asyncio.create_subprocess_exec(
-                'python', '-m', 'playwright', 'install', 'chromium', '--with-deps',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env
-            )
-            
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
-            
-            if process.returncode == 0:
-                logger.info("Playwright Chromium installed successfully")
-                # Verify installation by actually launching browser
-                try:
-                    from playwright.async_api import async_playwright
-                    async with async_playwright() as p:
-                        browser = await p.chromium.launch(
-                            headless=True,
-                            args=[
-                                '--no-sandbox',
-                                '--disable-setuid-sandbox',
-                                '--disable-dev-shm-usage',
-                                '--disable-accelerated-2d-canvas',
-                                '--no-first-run',
-                                '--no-zygote',
-                                '--single-process',
-                                '--disable-gpu'
-                            ]
-                        )
-                        await browser.close()
-                        logger.info("✅ Playwright Chromium verified by successful launch")
-                        return True
-                except Exception as e:
-                    logger.error(f"Failed to verify Playwright browser by launch: {e}")
-                    return False
-            else:
-                logger.error(f"Failed to install Playwright browser: {stderr.decode()}")
-                return False
+
+    async def _wait_for_job_completion(self, session: aiohttp.ClientSession, job_id: str) -> str:
+        """Wait for CloudLayer.io job completion and return download URL"""
+        max_attempts = 30  # Max 30 attempts (30 seconds with 1 second delay)
+        attempt = 0
+        
+        while attempt < max_attempts:
+            try:
+                headers = {'x-api-key': self.api_key}
                 
-        except Exception as e:
-            logger.error(f"Error installing Playwright browser: {e}")
-            return False
-    
+                async with session.get(
+                    f'{self.api_url}/v2/jobs/{job_id}',
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    
+                    if response.status == 200:
+                        job_data = await response.json()
+                        status = job_data.get('status')
+                        
+                        if status in ['completed', 'success']:
+                            # Log full response to understand structure
+                            logger.debug(f"📋 CloudLayer.io job response: {job_data}")
+                            
+                            # First check for assetUrl specifically
+                            download_url = job_data.get('assetUrl')
+                            logger.debug(f"🔍 Checking assetUrl: {download_url}")
+                            
+                            # If not found, try other fields
+                            if not download_url:
+                                download_url = job_data.get('url')
+                                logger.debug(f"🔍 Checking url: {download_url}")
+                            
+                            if not download_url:
+                                download_url = job_data.get('download_url')
+                                logger.debug(f"🔍 Checking download_url: {download_url}")
+                            
+                            if not download_url:
+                                download_url = job_data.get('file_url')
+                                logger.debug(f"🔍 Checking file_url: {download_url}")
+                            
+                            if download_url:
+                                logger.info(f"✅ CloudLayer.io job {job_id} completed successfully! URL: {download_url}")
+                                return download_url
+                            else:
+                                logger.error(f"Job completed but no download URL found in response: {job_data}")
+                                raise ServiceError(f"Job completed but no download URL provided")
+                        
+                        elif status == 'failed':
+                            error_message = job_data.get('error', 'Unknown error')
+                            raise ServiceError(f"CloudLayer.io job failed: {error_message}")
+                        
+                        elif status in ['processing', 'pending']:
+                            logger.debug(f"🔄 CloudLayer.io job {job_id} is {status}, waiting...")
+                            await asyncio.sleep(1)
+                            attempt += 1
+                            continue
+                        
+                        else:
+                            raise ServiceError(f"Unknown job status: {status}")
+                    
+                    else:
+                        error_text = await response.text()
+                        raise ServiceError(f"Failed to check job status: {response.status} - {error_text}")
+                        
+            except asyncio.TimeoutError:
+                logger.warning(f"⏰ Timeout checking job {job_id} status, retrying...")
+                await asyncio.sleep(1)
+                attempt += 1
+                continue
+        
+        raise ServiceError(f"Job {job_id} did not complete within {max_attempts} seconds")
+
     async def generate_partner_report_html(
         self,
         analysis_data: Dict[str, Any],
@@ -164,7 +147,7 @@ class HTMLPDFService:
         partner_name: str
     ) -> bytes:
         """
-        Generate beautiful partner analysis PDF report using ONLY Playwright
+        Generate professional partner analysis PDF report using CloudLayer.io API
         
         Args:
             analysis_data: Analysis results from AI
@@ -178,21 +161,21 @@ class HTMLPDFService:
             logger.info(f"Starting PROFESSIONAL PDF generation for user {user_id}, partner: {partner_name}")
             logger.debug(f"Analysis data keys: {list(analysis_data.keys())}")
             
-            # Check Playwright availability first using async method
-            logger.info("🔄 About to check Playwright availability...")
-            playwright_available = await self._ensure_playwright_available()
-            logger.info(f"🎯 Playwright availability result: {playwright_available}")
+            # Check CloudLayer.io availability
+            logger.info("🔄 Checking CloudLayer.io API availability...")
+            cloudlayer_available = await self._ensure_cloudlayer_available()
             
-            if not playwright_available:
-                logger.error("❌ Playwright is required for professional PDF generation!")
-                raise ServiceError("Playwright browser is required for PDF generation. Please ensure Docker environment has proper Playwright setup.")
+            if not cloudlayer_available:
+                logger.error("❌ CloudLayer.io API is required for professional PDF generation!")
+                raise ServiceError("CloudLayer.io API is not available. Please check your API key and internet connection.")
             
-            logger.info("✅ Using Playwright for beautiful PDF generation")
-            # Generate complete HTML report matching mockup
+            logger.info("✅ Using CloudLayer.io for professional PDF generation")
+            
+            # Generate complete HTML report
             html_content = self._generate_beautiful_html_report(analysis_data, partner_name, user_id)
             
-            # Convert HTML to PDF using Playwright
-            pdf_bytes = await self._convert_html_to_pdf_playwright(html_content)
+            # Convert HTML to PDF using CloudLayer.io
+            pdf_bytes = await self._convert_html_to_pdf_cloudlayer(html_content)
             
             logger.info(f"✅ Professional PDF generated successfully! Size: {len(pdf_bytes)} bytes")
             return pdf_bytes
@@ -200,7 +183,100 @@ class HTMLPDFService:
         except Exception as e:
             logger.error(f"💥 Professional PDF generation failed: {e}")
             raise ServiceError(f"Failed to generate professional PDF: {str(e)}")
-    
+
+    async def _convert_html_to_pdf_cloudlayer(self, html_content: str) -> bytes:
+        """Convert HTML to PDF using CloudLayer.io API"""
+        try:
+            logger.info("🔄 Converting HTML to PDF using CloudLayer.io...")
+            
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    'x-api-key': self.api_key,
+                    'Content-Type': 'application/json'
+                }
+                
+                # Encode HTML to base64 as required by CloudLayer.io
+                html_b64 = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+                
+                # CloudLayer.io API v2 payload
+                payload = {
+                    'html': html_b64,
+                    'viewPort': {
+                        'width': 1200,
+                        'height': 800
+                    },
+                    'format': 'A4',
+                    'landscape': False,
+                    'printBackground': True,
+                    'margin': {
+                        'top': '0.5in',
+                        'right': '0.5in',
+                        'bottom': '0.5in',
+                        'left': '0.5in'
+                    },
+                    'preferCSSPageSize': True
+                }
+                
+                logger.debug(f"📤 Sending request to CloudLayer.io API v2...")
+                
+                async with session.post(
+                    f'{self.api_url}/v2/html/pdf',
+                    headers=headers,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=60)
+                ) as response:
+                    
+                    if response.status == 200:
+                        # Synchronous response - PDF ready immediately
+                        response_data = await response.json()
+                        file_url = response_data.get('url')
+                        
+                        if file_url:
+                            # Download PDF file
+                            async with session.get(file_url) as file_response:
+                                if file_response.status == 200:
+                                    pdf_bytes = await file_response.read()
+                                    logger.info(f"✅ PDF generated successfully via CloudLayer.io! Size: {len(pdf_bytes)} bytes")
+                                    return pdf_bytes
+                                else:
+                                    raise ServiceError(f"Failed to download PDF from CloudLayer.io CDN: {file_response.status}")
+                        else:
+                            raise ServiceError("CloudLayer.io response missing file URL")
+                    
+                    elif response.status == 202:
+                        # Asynchronous response - need to wait for job completion
+                        job_data = await response.json()
+                        job_id = job_data.get('id')
+                        
+                        if not job_id:
+                            raise ServiceError("CloudLayer.io did not return job ID")
+                        
+                        logger.info(f"🔄 CloudLayer.io job {job_id} started, waiting for completion...")
+                        
+                        # Wait for job completion
+                        download_url = await self._wait_for_job_completion(session, job_id)
+                        
+                        # Download the completed PDF
+                        async with session.get(download_url) as file_response:
+                            if file_response.status == 200:
+                                pdf_bytes = await file_response.read()
+                                logger.info(f"✅ PDF generated successfully via CloudLayer.io! Size: {len(pdf_bytes)} bytes")
+                                return pdf_bytes
+                            else:
+                                raise ServiceError(f"Failed to download PDF from CloudLayer.io CDN: {file_response.status}")
+                    
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"❌ CloudLayer.io API error {response.status}: {error_text}")
+                        raise ServiceError(f"CloudLayer.io API error {response.status}: {error_text}")
+                        
+        except aiohttp.ClientError as e:
+            logger.error(f"❌ CloudLayer.io API request failed: {e}")
+            raise ServiceError(f"CloudLayer.io API request failed: {str(e)}")
+        except Exception as e:
+            logger.error(f"💥 CloudLayer.io PDF conversion failed: {e}")
+            raise ServiceError(f"Failed to convert HTML to PDF: {str(e)}")
+
     def _generate_beautiful_html_report(
         self,
         analysis_data: Dict[str, Any],
@@ -381,55 +457,6 @@ class HTMLPDFService:
             return "СРЕДНИЙ РИСК", "#ffc107", "#ffc107"
         else:
             return "НИЗКИЙ РИСК", "#28a745", "#28a745"
-    
-    async def _convert_html_to_pdf_playwright(self, html_content: str) -> bytes:
-        """Convert HTML to PDF using Playwright"""
-        try:
-            from playwright.async_api import async_playwright
-            
-            async with async_playwright() as p:
-                # Launch browser with Docker-friendly settings
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-accelerated-2d-canvas',
-                        '--no-first-run',
-                        '--no-zygote',
-                        '--single-process',
-                        '--disable-gpu',
-                        '--disable-background-timer-throttling',
-                        '--disable-renderer-backgrounding',
-                        '--disable-backgrounding-occluded-windows'
-                    ]
-                )
-                page = await browser.new_page()
-                
-                # Set content and wait for it to load
-                await page.set_content(html_content, wait_until="networkidle")
-                
-                # Generate PDF with high quality settings
-                pdf_bytes = await page.pdf(
-                    format='A4',
-                    print_background=True,
-                    margin={
-                        'top': '0.5in',
-                        'right': '0.5in',
-                        'bottom': '0.5in',
-                        'left': '0.5in'
-                    },
-                    prefer_css_page_size=True
-                )
-                
-                await browser.close()
-                
-                return pdf_bytes
-                
-        except Exception as e:
-            logger.error(f"Playwright PDF conversion failed: {e}")
-            raise ServiceError(f"Failed to convert HTML to PDF: {str(e)}")
     
     def _determine_personality_type(self, risk_score: float) -> str:
         """Determine personality type based on risk score"""

@@ -17,8 +17,8 @@ anthropic==0.40.0
 openai==1.3.7
 sentence-transformers==2.2.2
 
-# PDF Generation
-playwright==1.40.0
+# PDF Generation (CloudLayer.io API)
+# playwright removed - now using CloudLayer.io API
 weasyprint==60.2
 reportlab==4.0.4
 matplotlib==3.8.2

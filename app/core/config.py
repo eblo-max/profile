@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     CLAUDE_MODEL: str = Field("claude-3-5-sonnet-20241022", env="CLAUDE_MODEL")
     OPENAI_MODEL: str = Field("gpt-4-turbo-preview", env="OPENAI_MODEL")
     
+    # PDF Generation
+    CLOUDLAYER_API_KEY: Optional[str] = Field(None, env="CLOUDLAYER_API_KEY")
+    
     # AI Performance
     MAX_CONCURRENT_AI_REQUESTS: int = Field(10, env="MAX_CONCURRENT_AI_REQUESTS")
     AI_REQUEST_TIMEOUT: int = Field(30, env="AI_REQUEST_TIMEOUT")

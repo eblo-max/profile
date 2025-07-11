@@ -825,7 +825,7 @@ async def send_analysis_results(
             reply_markup=get_profiler_keyboard()
         )
         
-                # Send PDF report
+        # Send PDF report
         try:
             from aiogram.types import BufferedInputFile
             
