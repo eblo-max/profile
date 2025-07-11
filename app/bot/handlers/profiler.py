@@ -679,6 +679,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
     try:
         # Get user from database by telegram_id using our own session
         telegram_id = message.from_user.id
+        logger.info(f"Starting analysis for telegram_id: {telegram_id}")
         
         # Create our own session and services to avoid middleware session issues
         from app.core.database import get_session
@@ -689,10 +690,15 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             local_user_service = UserService(session)
             local_profile_service = ProfileService(session)
             
+            logger.info(f"Searching for user with telegram_id: {telegram_id}")
             user = await local_user_service.get_user_by_telegram_id(telegram_id)
+            
             if not user:
+                logger.error(f"User not found in database for telegram_id: {telegram_id}")
                 await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
                 return
+            
+            logger.info(f"Found user: id={user.id}, telegram_id={user.telegram_id}, name={user.first_name}")
             
             user_id = user.id  # Internal database ID
             data = await state.get_data()
@@ -778,10 +784,12 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
                     logger.error(f"Failed to save partner profile: {e}")
                 
                 # Send results
+                logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
                 await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
                 
             except Exception as e:
                 logger.error(f"Analysis failed: {e}")
+                logger.error(f"Analysis error details: {str(e)}")
                 await analysis_msg.edit_text(
                     "❌ <b>Ошибка анализа</b>\n\n"
                     "Не удалось провести анализ. Попробуйте позже.\n\n"
@@ -792,6 +800,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             
     except Exception as e:
         logger.error(f"Error in start_analysis: {e}")
+        logger.error(f"Critical error details: {str(e)}")
         await message.answer(
             "❌ Произошла критическая ошибка. Попробуйте начать заново.",
             reply_markup=get_profiler_keyboard()
