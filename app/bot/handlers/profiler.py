@@ -896,8 +896,7 @@ async def send_analysis_results(
         
             await message.answer_document(
                 document=pdf_file,
-                caption=f"📄 Полный психологический профиль партнера {partner_name}",
-                reply_markup=get_profiler_keyboard()
+                caption=f"📄 Полный психологический профиль партнера {partner_name}"
             )
             logger.info(f"PDF report sent successfully for user {message.from_user.id}")
             
