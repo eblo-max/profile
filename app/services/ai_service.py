@@ -14,10 +14,8 @@ from app.utils.exceptions import AIServiceError
 from app.utils.helpers import safe_json_loads, create_cache_key, extract_json_from_text
 from app.prompts.analysis_prompts import (
     ANALYSIS_SYSTEM_PROMPT,
-    PROFILER_SYSTEM_PROMPT, 
     COMPATIBILITY_SYSTEM_PROMPT,
     get_text_analysis_prompt,
-    get_profiler_prompt,
     get_compatibility_prompt
 )
 from app.utils.enums import UrgencyLevel
