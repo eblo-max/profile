@@ -8,11 +8,11 @@
     <style>
         @page {
             size: A4;
-            margin: 12mm;
+            margin: 15mm;
 
             @bottom-center {
-                content: counter(page);
-                font-size: 10px;
+                content: "Страница " counter(page);
+                font-size: 9px;
                 color: #666;
             }
         }
@@ -24,205 +24,105 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.5;
-            color: #2c3e50;
-            font-size: 10px;
+            color: #333;
+            font-size: 11px;
             background: #fff;
         }
 
-        /* Prevent page breaks inside important elements */
-        .header-section,
-        .risk-overview,
-        .content-card,
-        .block-item,
-        .red-flag-item,
-        .profile-section,
-        .methodology-info,
-        .recommendations-section,
-        .action-plan,
-        .contact-info,
-        .chart-container,
-        .statistics-grid,
-        .blocks-grid,
-        .blocks-section,
-        .behavioral-patterns-section,
-        .risk-forecast-section,
-        .protection-strategies-section,
-        .population-comparison-section,
-        .personalized-recommendations,
-        .pattern-item,
-        .forecast-item,
-        .strategy-item,
-        .comparison-item,
-        .recommendation-item {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            -webkit-column-break-inside: avoid;
-        }
-
-        /* Header Section */
-        .header-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Headers */
+        .header {
+            background: #2563eb;
             color: white;
             text-align: center;
-            padding: 25px 20px;
-            margin: -12mm -12mm 20px -12mm;
+            padding: 25px;
+            margin: -15mm -15mm 20px -15mm;
             border-radius: 0 0 10px 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        .header-logo {
-            font-size: 20px;
+        .header h1 {
+            font-size: 24px;
             margin-bottom: 10px;
-        }
-
-        .header-title {
-            font-size: 22px;
-            font-weight: 300;
-            margin-bottom: 6px;
-            letter-spacing: 1px;
-        }
-
-        .header-subtitle {
-            font-size: 11px;
-            opacity: 0.9;
-            margin-bottom: 15px;
+            font-weight: 700;
         }
 
         .header-info {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.1);
             padding: 15px;
             border-radius: 8px;
-            backdrop-filter: blur(10px);
-            display: inline-block;
-            font-size: 9px;
+            margin-top: 15px;
+            font-size: 10px;
         }
 
-        /* Risk Overview with Scientific Design */
+        .header-info div {
+            margin: 5px 0;
+        }
+
+        /* Risk Overview */
         .risk-overview {
             text-align: center;
             margin: 20px 0;
-            padding: 25px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
         }
 
-        .risk-score-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 30px;
-            margin: 20px 0;
-        }
-
-        .risk-score-circle {
-            position: relative;
+        .risk-circle {
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background: conic-gradient(from 0deg, #ef4444 0% 25%, #f97316 25% 50%, #eab308 50% 75%, #22c55e 75% 100%);
+            background: #dc3545;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .risk-score-circle.low {
-            background: conic-gradient(from 0deg, #22c55e 0% 25%, #e5e7eb 25% 100%);
-        }
-
-        .risk-score-circle.medium {
-            background: conic-gradient(from 0deg, #eab308 0% 50%, #e5e7eb 50% 100%);
-        }
-
-        .risk-score-circle.high {
-            background: conic-gradient(from 0deg, #ef4444 0% 25%, #f97316 25% 70%, #e5e7eb 70% 100%);
-        }
-
-        .risk-score-circle.critical {
-            background: conic-gradient(from 0deg, #ef4444 0% 85%, #e5e7eb 85% 100%);
-        }
-
-        .risk-score-inner {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            background: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .risk-score {
+            margin: 0 auto 15px;
+            color: white;
             font-size: 28px;
             font-weight: bold;
-            margin-bottom: 2px;
         }
 
-        .risk-score.low {
-            color: #22c55e;
+        .risk-circle.medium {
+            background: #fd7e14;
         }
 
-        .risk-score.medium {
-            color: #eab308;
-        }
-
-        .risk-score.high {
-            color: #f97316;
-        }
-
-        .risk-score.critical {
-            color: #ef4444;
-        }
-
-        .risk-label {
-            font-size: 8px;
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        .risk-details {
-            flex: 1;
-            text-align: left;
+        .risk-circle.low {
+            background: #28a745;
         }
 
         .risk-badge {
             display: inline-block;
             padding: 8px 16px;
+            background: #dc3545;
             color: white;
             border-radius: 20px;
             font-weight: bold;
-            font-size: 11px;
-            margin: 8px 0;
-        }
-
-        .risk-badge.critical {
-            background: #ef4444;
-        }
-
-        .risk-badge.high {
-            background: #f97316;
+            font-size: 12px;
+            margin: 10px 0;
         }
 
         .risk-badge.medium {
-            background: #eab308;
-            color: #1f2937;
+            background: #fd7e14;
         }
 
         .risk-badge.low {
-            background: #22c55e;
+            background: #28a745;
         }
 
-        .population-comparison {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border-left: 4px solid #667eea;
+        /* Sections */
+        .section {
+            margin: 25px 0;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 16px;
+            color: #2563eb;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #2563eb;
+            text-align: center;
         }
 
         /* Content Grid */
@@ -233,925 +133,335 @@
             margin: 20px 0;
         }
 
-        .content-card {
-            background: #fff;
+        .card {
+            background: #f8f9fa;
             padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
-        }
-
-        .card-icon {
-            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
         }
 
         .card-title {
             font-size: 14px;
-            font-weight: bold;
-            color: #667eea;
+            color: #2563eb;
+            margin-bottom: 10px;
+            font-weight: 600;
         }
 
-        /* Personality Type with Visual Elements */
-        .personality-display {
-            text-align: center;
+        /* Blocks Grid */
+        .blocks-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
             margin: 15px 0;
         }
 
-        .personality-type {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            padding: 12px;
-            border-radius: 8px;
-            border: 2px solid;
-        }
-
-        .personality-type.critical {
-            background: linear-gradient(135deg, #fef2f2, #fee2e2);
-            color: #dc2626;
-            border-color: #fca5a5;
-        }
-
-        .personality-type.warning {
-            background: linear-gradient(135deg, #fffbeb, #fef3c7);
-            color: #d97706;
-            border-color: #fcd34d;
-        }
-
-        .personality-type.positive {
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            color: #16a34a;
-            border-color: #86efac;
-        }
-
-        /* Scientific Block Scores with Charts */
-        .blocks-section {
-            margin: 25px 0;
-            break-inside: avoid;
-            page-break-inside: avoid;
-            -webkit-column-break-inside: avoid;
-            orphans: 2;
-            widows: 2;
-        }
-
-        .section-title {
-            font-size: 16px;
-            color: #667eea;
-            text-align: center;
-            margin: 25px 0 20px 0;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #667eea;
-            font-weight: 600;
-            break-after: avoid;
-            page-break-after: avoid;
-            -webkit-column-break-after: avoid;
-        }
-
-        .blocks-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px;
-            margin: 12px 0;
-            break-inside: avoid;
-            page-break-inside: avoid;
-            -webkit-column-break-inside: avoid;
-            orphans: 2;
-            widows: 2;
-        }
-
         .block-item {
-            background: #f8fafc;
-            padding: 10px;
+            background: #f8f9fa;
+            padding: 15px;
             border-radius: 8px;
-            border-left: 4px solid;
-            position: relative;
-            min-height: 75px;
-            break-inside: avoid;
-            page-break-inside: avoid;
-            -webkit-column-break-inside: avoid;
-            page-break-before: auto;
-            page-break-after: auto;
-        }
-
-        .block-item.critical {
-            border-left-color: #ef4444;
+            border-left: 4px solid #dc3545;
         }
 
         .block-item.high {
-            border-left-color: #f97316;
+            border-left-color: #fd7e14;
         }
 
         .block-item.medium {
-            border-left-color: #eab308;
+            border-left-color: #ffc107;
         }
 
         .block-item.low {
-            border-left-color: #22c55e;
+            border-left-color: #28a745;
         }
 
         .block-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .block-name {
-            font-weight: bold;
-            font-size: 10px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            font-weight: 600;
+            font-size: 12px;
         }
 
         .block-score {
-            font-size: 12px;
+            font-size: 18px;
             font-weight: bold;
+            color: #dc3545;
         }
 
-        .block-level {
-            font-size: 8px;
-            padding: 2px 6px;
-            border-radius: 10px;
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-        }
-
-        /* Advanced Progress Bars */
-        .progress-container {
-            position: relative;
+        .progress-bar {
             height: 8px;
-            background: #e5e7eb;
+            background: #e9ecef;
             border-radius: 4px;
             overflow: hidden;
-            margin: 8px 0;
+            margin-top: 8px;
         }
 
         .progress-fill {
             height: 100%;
-            border-radius: 4px;
-            position: relative;
+            background: #dc3545;
             transition: width 0.3s ease;
         }
 
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-            animation: shimmer 2s infinite;
+        .progress-fill.high {
+            background: #fd7e14;
         }
 
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
+        .progress-fill.medium {
+            background: #ffc107;
         }
 
-        .progress-critical {
-            background: linear-gradient(90deg, #dc2626, #ef4444);
+        .progress-fill.low {
+            background: #28a745;
+        }
+
+        .progress-fill.critical {
             width: 95%;
         }
 
-        .progress-high {
-            background: linear-gradient(90deg, #ea580c, #f97316);
+        .progress-fill.high {
             width: 80%;
         }
 
-        .progress-medium {
-            background: linear-gradient(90deg, #ca8a04, #eab308);
+        .progress-fill.medium {
             width: 60%;
         }
 
-        .progress-low {
-            background: linear-gradient(90deg, #16a34a, #22c55e);
+        .progress-fill.low {
             width: 30%;
         }
 
-        /* Red Flags Section */
-        .red-flags-section {
-            margin: 25px 0;
+        .personality-type-text {
+            font-weight: 600;
+            color: #2563eb;
+            font-size: 14px;
         }
 
+        /* Red Flags */
         .red-flags-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin: 15px 0;
         }
 
-        .red-flag-item {
-            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        .red-flag {
+            background: #fff5f5;
             padding: 12px;
-            border-left: 4px solid #ef4444;
             border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #dc3545;
+            font-size: 10px;
         }
 
         .red-flag-title {
             font-weight: bold;
-            color: #dc2626;
-            font-size: 10px;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .red-flag-title::before {
-            content: '⚠️';
-            font-size: 12px;
-        }
-
-        /* Detailed Profile Styles */
-        .detailed-profile {
-            margin: 25px 0;
-        }
-
-        .profile-section {
-            margin: 15px 0;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 10px;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-        }
-
-        .profile-section.critical-section {
-            background: linear-gradient(135deg, #fef2f2, #fee2e2);
-            border-left-color: #ef4444;
-        }
-
-        .profile-section.warning-section {
-            background: linear-gradient(135deg, #fffbeb, #fef3c7);
-            border-left-color: #f59e0b;
-        }
-
-        .profile-section.positive-section {
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            border-left-color: #22c55e;
-        }
-
-        .profile-section h3 {
-            font-size: 14px;
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .critical-section h3 {
-            color: #dc2626;
-        }
-
-        .warning-section h3 {
-            color: #d97706;
-        }
-
-        .positive-section h3 {
-            color: #16a34a;
-        }
-
-        .profile-section p {
-            margin: 10px 0;
-            line-height: 1.6;
-            text-align: justify;
-            font-size: 9px;
-        }
-
-        .profile-section strong {
-            color: #374151;
-            font-weight: 600;
-        }
-
-        .profile-section em {
-            font-style: italic;
-            color: #64748b;
-            background: rgba(102, 126, 234, 0.05);
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-
-        .behavior-list,
-        .critical-list,
-        .recommendation-list,
-        .positive-list {
-            margin: 12px 0;
-            padding-left: 15px;
-        }
-
-        .behavior-list li,
-        .critical-list li,
-        .recommendation-list li,
-        .positive-list li {
-            margin: 6px 0;
-            line-height: 1.5;
-            font-size: 9px;
-        }
-
-        /* Action boxes */
-        .critical-actions {
-            background: linear-gradient(135deg, #fef2f2, #fee2e2);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #fca5a5;
-            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
-        }
-
-        .critical-actions h4 {
-            color: #dc2626;
-            margin-bottom: 10px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .recommendations {
-            background: linear-gradient(135deg, #fffbeb, #fef3c7);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #fcd34d;
-        }
-
-        .recommendations h4 {
-            color: #d97706;
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
-
-        .positive-recommendations {
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #86efac;
-        }
-
-        .positive-recommendations h4 {
-            color: #16a34a;
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
-
-        /* Recommendations Section */
-        .recommendations-section {
-            margin: 25px 0;
-            padding: 25px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 12px;
-            color: white;
-            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.3);
-        }
-
-        .urgent-box {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-        }
-
-        .urgent-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
-        .action-plan {
-            background: #fff;
-            color: #374151;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 15px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .action-plan h4 {
-            color: #667eea;
-            margin-bottom: 12px;
-            font-size: 12px;
-        }
-
-        .action-plan ul {
-            margin-left: 15px;
-            margin-bottom: 15px;
-        }
-
-        .action-plan li {
-            margin: 6px 0;
-            line-height: 1.5;
-            font-size: 9px;
-        }
-
-        /* Contact Info */
-        .contact-info {
-            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #93c5fd;
-        }
-
-        .contact-info h4 {
-            color: #1d4ed8;
-            margin-bottom: 10px;
-            font-size: 12px;
-        }
-
-        .contact-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        /* Scientific Charts and Diagrams */
-        .chart-container {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #e5e7eb;
-            text-align: center;
-        }
-
-        .chart-title {
-            font-size: 12px;
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 10px;
-        }
-
-        .dark-triad-chart {
-            display: flex;
-            justify-content: space-around;
-            margin: 15px 0;
-        }
-
-        .triad-item {
-            text-align: center;
-            flex: 1;
-        }
-
-        .triad-circle {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin: 0 auto 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            color: white;
-        }
-
-        .narcissism {
-            background: linear-gradient(135deg, #ec4899, #be185d);
-        }
-
-        .machiavellianism {
-            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-        }
-
-        .psychopathy {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-        }
-
-        .triad-label {
-            font-size: 8px;
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        /* Statistics Grid */
-        .statistics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .stat-box {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
+            color: #dc3545;
             margin-bottom: 5px;
         }
 
-        .stat-label {
-            font-size: 10px;
-            color: #64748b;
-        }
-
-        /* Methodology Section */
-        .methodology-info {
-            margin: 25px 0;
+        /* Psychological Profile */
+        .profile-content {
+            background: #f8f9fa;
             padding: 20px;
-            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-            border-radius: 10px;
-            border: 1px solid #7dd3fc;
+            border-radius: 8px;
+            margin: 15px 0;
         }
 
-        .methodology-info h4 {
-            color: #0369a1;
-            margin-bottom: 12px;
-            font-size: 12px;
-        }
-
-        .methodology-list {
-            margin: 12px 0;
-            padding-left: 15px;
-        }
-
-        .methodology-list li {
-            margin: 6px 0;
-            line-height: 1.5;
-            font-size: 9px;
-        }
-
-        /* Footer */
-        .document-footer {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 10px;
-            text-align: center;
-            color: #64748b;
-            font-size: 8px;
-            border-top: 3px solid #667eea;
-        }
-
-        /* Typography improvements */
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
+        .profile-content h4 {
+            color: #2563eb;
+            font-size: 13px;
             margin-bottom: 10px;
-            line-height: 1.2;
         }
 
-        h2 {
-            font-size: 16px;
-            color: #667eea;
-            text-align: center;
-            margin: 25px 0 20px 0;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #667eea;
+        .profile-content h5 {
+            color: #495057;
+            font-size: 11px;
+            margin: 15px 0 8px 0;
+            font-weight: 600;
         }
 
-        h3 {
-            font-size: 14px;
-            margin-bottom: 12px;
+        .profile-content p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            font-size: 10px;
         }
 
-        /* Page break controls */
-        .page-break-before {
-            page-break-before: always;
+        .profile-content ul {
+            margin-left: 20px;
+            margin-bottom: 10px;
         }
 
-        .page-break-after {
-            page-break-after: always;
+        .profile-content li {
+            margin-bottom: 5px;
+            font-size: 10px;
         }
 
-        .no-break {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-
-        /* Behavioral Patterns Section */
-        .behavioral-patterns-section {
-            margin: 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #fef2f2, #fee2e2);
-            border-radius: 10px;
-            border: 1px solid #fca5a5;
-        }
-
+        /* Patterns Grid */
         .patterns-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             margin: 15px 0;
         }
 
         .pattern-item {
-            background: white;
-            padding: 12px;
+            background: #fff;
+            padding: 15px;
             border-radius: 8px;
-            border-left: 4px solid #dc2626;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #dee2e6;
         }
 
         .pattern-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .pattern-icon {
-            font-size: 14px;
-        }
-
-        .pattern-title {
-            font-weight: bold;
-            font-size: 10px;
-            color: #374151;
-        }
-
-        .pattern-content {
-            margin: 8px 0;
-        }
-
-        .pattern-point {
-            font-size: 8px;
-            line-height: 1.4;
-            margin: 4px 0;
-            color: #64748b;
-        }
-
-        /* Risk Forecast Section */
-        .risk-forecast-section {
-            margin: 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #fffbeb, #fef3c7);
-            border-radius: 10px;
-            border: 1px solid #fcd34d;
-        }
-
-        .forecast-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .forecast-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .forecast-item.critical {
-            border-left-color: #ef4444;
-        }
-
-        .forecast-item.warning {
-            border-left-color: #f59e0b;
-        }
-
-        .forecast-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .forecast-icon {
-            font-size: 14px;
-        }
-
-        .forecast-title {
-            font-weight: bold;
-            font-size: 10px;
-            color: #374151;
-        }
-
-        .forecast-content {
-            margin: 8px 0;
-        }
-
-        .forecast-point {
-            font-size: 8px;
-            line-height: 1.4;
-            margin: 4px 0;
-            color: #64748b;
-        }
-
-        /* Protection Strategies Section */
-        .protection-strategies-section {
-            margin: 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-            border-radius: 10px;
-            border: 1px solid #86efac;
-        }
-
-        .strategies-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .strategy-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            border-left: 4px solid #16a34a;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .strategy-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .strategy-icon {
-            font-size: 14px;
-        }
-
-        .strategy-title {
-            font-weight: bold;
-            font-size: 10px;
-            color: #374151;
-        }
-
-        .strategy-content {
-            margin: 8px 0;
-        }
-
-        .strategy-point {
-            font-size: 8px;
-            line-height: 1.4;
-            margin: 4px 0;
-            color: #64748b;
-        }
-
-        /* Population Comparison Section */
-        .population-comparison-section {
-            margin: 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-            border-radius: 10px;
-            border: 1px solid #7dd3fc;
-        }
-
-        .comparison-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .comparison-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #0369a1;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .comparison-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .comparison-icon {
-            font-size: 16px;
-        }
-
-        .comparison-title {
-            font-weight: bold;
-            font-size: 11px;
-            color: #374151;
-        }
-
-        .comparison-content {
-            margin: 12px 0;
-        }
-
-        .comparison-stat {
-            text-align: center;
             margin-bottom: 10px;
         }
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #0369a1;
-            margin-bottom: 4px;
+        .pattern-title {
+            font-weight: 600;
+            font-size: 11px;
+            color: #495057;
         }
 
-        .stat-desc {
+        .pattern-point {
             font-size: 9px;
-            color: #64748b;
-            margin-bottom: 8px;
+            margin: 5px 0;
+            color: #6c757d;
         }
 
-        .comparison-detail {
-            font-size: 9px;
-            line-height: 1.5;
-            color: #374151;
-            text-align: justify;
-        }
-
-        /* Personalized Recommendations Section */
-        .personalized-recommendations {
-            background: #fff;
-            color: #374151;
+        /* Recommendations */
+        .recommendations {
+            background: #e7f3ff;
             padding: 20px;
-            border-radius: 10px;
-            margin: 15px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #b3d9ff;
         }
 
-        .personalized-recommendations h4 {
-            color: #667eea;
-            margin-bottom: 12px;
-            font-size: 12px;
+        .recommendations h3 {
+            color: #0056b3;
+            margin-bottom: 15px;
         }
 
-        .recommendations-grid {
+        .recommendations ul {
+            margin-left: 20px;
+        }
+
+        .recommendations li {
+            margin: 8px 0;
+            font-size: 10px;
+        }
+
+        /* Methodology */
+        .methodology {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .methodology h4 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .methodology ul {
+            margin-left: 20px;
+        }
+
+        .methodology li {
+            margin: 5px 0;
+            font-size: 9px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 9px;
+            color: #6c757d;
+        }
+
+        /* Dark Triad Chart */
+        .dark-triad {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .triad-item {
+            text-align: center;
+        }
+
+        .triad-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #dc3545;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin: 0 auto 8px;
+        }
+
+        .triad-label {
+            font-size: 9px;
+            color: #6c757d;
+        }
+
+        /* Statistics */
+        .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin: 15px 0;
         }
 
-        .recommendation-item {
-            background: #f8fafc;
-            padding: 12px;
+        .stat-item {
+            text-align: center;
+            background: #f8f9fa;
+            padding: 15px;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
-        .recommendation-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .recommendation-icon {
-            font-size: 14px;
-        }
-
-        .recommendation-title {
+        .stat-number {
+            font-size: 20px;
             font-weight: bold;
-            font-size: 10px;
-            color: #374151;
+            color: #2563eb;
+            margin-bottom: 5px;
         }
 
-        .recommendation-content {
-            margin: 8px 0;
-        }
-
-        .recommendation-point {
+        .stat-label {
             font-size: 9px;
-            line-height: 1.5;
-            margin: 4px 0;
-            color: #64748b;
+            color: #6c757d;
+        }
+
+        /* Page breaks */
+        .page-break {
+            page-break-before: always;
+        }
+
+        .no-break {
+            page-break-inside: avoid;
         }
     </style>
 </head>
 
 <body>
-    <!-- Document Header -->
-    <div class="header-section no-break">
-        <div class="header-logo">🧠</div>
-        <div class="header-title">ПСИХОЛОГИЧЕСКИЙ ПРОФИЛЬ ПАРТНЕРА</div>
-        <div class="header-subtitle">Научный анализ личности и рисков в отношениях</div>
+    <!-- Header -->
+    <div class="header">
+        <h1>🧠 ПСИХОЛОГИЧЕСКИЙ ПРОФИЛЬ ПАРТНЕРА</h1>
+        <div>Научный анализ личности и рисков в отношениях</div>
         <div class="header-info">
             <div><strong>Партнер:</strong> {{ partner_name }}</div>
             <div><strong>Дата анализа:</strong> {{ date }}</div>
@@ -1159,647 +469,239 @@
         </div>
     </div>
 
-    <!-- Risk Overview with Scientific Charts -->
+    <!-- Risk Overview -->
     <div class="risk-overview no-break">
-        <div class="risk-score-container">
-            <div
-                class="risk-score-circle {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}high{% elif risk_score >= 20 %}medium{% else %}low{% endif %}">
-                <div class="risk-score-inner">
-                    <div
-                        class="risk-score {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}high{% elif risk_score >= 20 %}medium{% else %}low{% endif %}">
-                        {{ risk_score }}
-                    </div>
-                    <div class="risk-label">РИСК</div>
-                </div>
-            </div>
-            <div class="risk-details">
-                <div
-                    class="risk-badge {% if urgency == 'CRITICAL' %}critical{% elif urgency == 'HIGH' %}high{% elif urgency == 'MEDIUM' %}medium{% else %}low{% endif %}">
-                    {% if urgency == 'CRITICAL' %}КРИТИЧЕСКИЙ РИСК{% elif urgency == 'HIGH' %}ВЫСОКИЙ РИСК{% elif
-                    urgency == 'MEDIUM' %}СРЕДНИЙ РИСК{% else %}НИЗКИЙ РИСК{% endif %}
-                </div>
-                <div style="font-size: 11px; margin: 10px 0;">
-                    {% if risk_score >= 70 %}
-                    Обнаружены серьезные признаки токсичного поведения
-                    {% elif risk_score >= 40 %}
-                    Выявлены проблемные паттерны поведения
-                    {% elif risk_score >= 20 %}
-                    Некоторые аспекты требуют внимания
-                    {% else %}
-                    Показатели в пределах здоровых отношений
-                    {% endif %}
-                </div>
-                <div class="population-comparison">
-                    <strong>Сравнение с популяцией:</strong><br>
-                    Более проблематичен чем {{ population_percentile }}% людей
-                </div>
-            </div>
+        <h2>ОЦЕНКА РИСКОВ</h2>
+        <div
+            class="risk-circle {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}medium{% else %}low{% endif %}">
+            {{ risk_score }}%
         </div>
-
-        <!-- Dark Triad Scientific Chart -->
-        <div class="chart-container no-break">
-            <div class="chart-title">🎭 Dark Triad Analysis</div>
-            <div class="dark-triad-chart">
-                <div class="triad-item">
-                    <div class="triad-circle narcissism">8.5</div>
-                    <div class="triad-label">Нарциссизм</div>
-                </div>
-                <div class="triad-item">
-                    <div class="triad-circle machiavellianism">7.2</div>
-                    <div class="triad-label">Макиавеллизм</div>
-                </div>
-                <div class="triad-item">
-                    <div class="triad-circle psychopathy">6.8</div>
-                    <div class="triad-label">Психопатия</div>
-                </div>
-            </div>
+        <div
+            class="risk-badge {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}medium{% else %}low{% endif %}">
+            {% if risk_score >= 70 %}КРИТИЧЕСКИЙ РИСК{% elif risk_score >= 40 %}ВЫСОКИЙ РИСК{% else %}НИЗКИЙ РИСК{%
+            endif %}
         </div>
+        <p>
+            {% if risk_score >= 70 %}
+            Обнаружены серьезные признаки токсичного поведения. Требуется немедленное внимание.
+            {% elif risk_score >= 40 %}
+            Выявлены проблемные паттерны поведения, которые требуют внимания.
+            {% else %}
+            Показатели в пределах здоровых отношений.
+            {% endif %}
+        </p>
     </div>
 
-    <!-- Main Content Grid -->
+    <!-- Content Grid -->
     <div class="content-grid">
-        <!-- Personality Type Card -->
-        <div class="content-card no-break">
-            <div class="card-header">
-                <span class="card-icon">👤</span>
-                <span class="card-title">ТИП ЛИЧНОСТИ</span>
-            </div>
-            <div class="personality-display">
-                <div
-                    class="personality-type {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}warning{% else %}positive{% endif %}">
-                    {{ personality_type }}
-                </div>
+        <!-- Personality Type -->
+        <div class="card">
+            <div class="card-title">👤 ТИП ЛИЧНОСТИ</div>
+            <div class="personality-type-text">
+                {{ personality_type }}
             </div>
         </div>
 
         <!-- Statistics -->
-        <div class="content-card no-break">
-            <div class="card-header">
-                <span class="card-icon">📊</span>
-                <span class="card-title">СТАТИСТИКА</span>
-            </div>
-            <div class="statistics-grid">
-                <div class="stat-box">
+        <div class="card">
+            <div class="card-title">📊 СТАТИСТИКА</div>
+            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="stat-item">
                     <div class="stat-number">{{ population_percentile }}%</div>
-                    <div class="stat-label">Популяция</div>
+                    <div class="stat-label">Популяция хуже</div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-number">87%</div>
-                    <div class="stat-label">Точность</div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ red_flags|length }}</div>
+                    <div class="stat-label">Красных флагов</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Block Scores Section with Scientific Design -->
-    <h2 class="section-title">📊 ДЕТАЛИЗАЦИЯ ПО БЛОКАМ</h2>
-    <div class="blocks-grid">
-        {% for block in blocks %}
-        <div
-            class="block-item {% if block.score >= 8 %}critical{% elif block.score >= 6 %}high{% elif block.score >= 4 %}medium{% else %}low{% endif %} no-break">
-            <div class="block-header">
-                <div class="block-name">{{ block.emoji }} {{ block.name }}</div>
-                <div class="block-level">{{ block.level }}</div>
+    <!-- Dark Triad Analysis -->
+    <div class="section no-break">
+        <h2 class="section-title">🎭 DARK TRIAD АНАЛИЗ</h2>
+        <div class="dark-triad">
+            <div class="triad-item">
+                <div class="triad-circle">{{ narcissism_score }}</div>
+                <div class="triad-label">Нарциссизм</div>
             </div>
-            <div class="block-score">{{ block.score }}/10</div>
-            <div class="progress-container">
-                <div
-                    class="progress-fill {% if block.score >= 8 %}progress-critical{% elif block.score >= 6 %}progress-high{% elif block.score >= 4 %}progress-medium{% else %}progress-low{% endif %}">
-                </div>
+            <div class="triad-item">
+                <div class="triad-circle">{{ machiavellianism_score }}</div>
+                <div class="triad-label">Макиавеллизм</div>
+            </div>
+            <div class="triad-item">
+                <div class="triad-circle">{{ psychopathy_score }}</div>
+                <div class="triad-label">Психопатия</div>
             </div>
         </div>
-        {% endfor %}
     </div>
 
-    <!-- Red Flags Section -->
+    <!-- Block Scores -->
+    <div class="section">
+        <h2 class="section-title">📊 ДЕТАЛИЗАЦИЯ ПО БЛОКАМ</h2>
+        <div class="blocks-grid">
+            {% for block in blocks %}
+            <div
+                class="block-item {% if block.score >= 8 %}critical{% elif block.score >= 6 %}high{% elif block.score >= 4 %}medium{% else %}low{% endif %}">
+                <div class="block-header">
+                    <div class="block-name">{{ block.emoji }} {{ block.name }}</div>
+                    <div class="block-score">{{ block.score }}/10</div>
+                </div>
+                <div class="progress-bar">
+                    <div
+                        class="progress-fill {% if block.score >= 8 %}critical{% elif block.score >= 6 %}high{% elif block.score >= 4 %}medium{% else %}low{% endif %}">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Red Flags -->
     {% if red_flags %}
-    <h2 class="section-title">🚩 ОБНАРУЖЕННЫЕ КРАСНЫЕ ФЛАГИ</h2>
-    <div class="red-flags-grid">
-        {% for flag in red_flags %}
-        <div class="red-flag-item no-break">
-            <div class="red-flag-title">Сигнал {{ loop.index }}</div>
-            <div style="font-size: 9px;">{{ flag }}</div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Behavioral Patterns Analysis -->
-    <div class="behavioral-patterns-section no-break">
-        <h3
-            style="font-size: 14px; color: #dc2626; margin: 20px 0 15px 0; display: flex; align-items: center; gap: 8px;">
-            <span>🔍</span> ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ
-        </h3>
-        <div class="patterns-grid">
-            <div class="pattern-item no-break">
-                <div class="pattern-header">
-                    <span class="pattern-icon">🎭</span>
-                    <span class="pattern-title">Методы манипуляций</span>
-                </div>
-                <div class="pattern-content">
-                    {% if manipulation_tactics %}
-                    {% for tactic in manipulation_tactics %}
-                    <div class="pattern-point">• {{ tactic }}</div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="pattern-point">• Газлайтинг и искажение реальности</div>
-                    <div class="pattern-point">• Эмоциональный шантаж</div>
-                    <div class="pattern-point">• Контроль через чувство вины</div>
-                    <div class="pattern-point">• Изоляция от поддержки</div>
-                    {% endif %}
-                </div>
+    <div class="section">
+        <h2 class="section-title">🚩 КРАСНЫЕ ФЛАГИ</h2>
+        <div class="red-flags-grid">
+            {% for flag in red_flags %}
+            <div class="red-flag">
+                <div class="red-flag-title">Сигнал {{ loop.index }}</div>
+                <div>{{ flag }}</div>
             </div>
-
-            <div class="pattern-item no-break">
-                <div class="pattern-header">
-                    <span class="pattern-icon">⚡</span>
-                    <span class="pattern-title">Триггеры эскалации</span>
-                </div>
-                <div class="pattern-content">
-                    {% if escalation_triggers %}
-                    {% for trigger in escalation_triggers %}
-                    <div class="pattern-point">• {{ trigger }}</div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="pattern-point">• Критика или несогласие</div>
-                    <div class="pattern-point">• Попытки установить границы</div>
-                    <div class="pattern-point">• Отказ от требований</div>
-                    <div class="pattern-point">• Угроза потери контроля</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="pattern-item no-break">
-                <div class="pattern-header">
-                    <span class="pattern-icon">🧠</span>
-                    <span class="pattern-title">Эмоциональные паттерны</span>
-                </div>
-                <div class="pattern-content">
-                    {% if emotional_patterns %}
-                    {% for pattern in emotional_patterns %}
-                    <div class="pattern-point">• {{ pattern }}</div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="pattern-point">• Эмоциональная нестабильность</div>
-                    <div class="pattern-point">• Перепады настроения</div>
-                    <div class="pattern-point">• Взрывные реакции</div>
-                    <div class="pattern-point">• Отсутствие эмпатии</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="pattern-item no-break">
-                <div class="pattern-header">
-                    <span class="pattern-icon">⚠️</span>
-                    <span class="pattern-title">Индикаторы насилия</span>
-                </div>
-                <div class="pattern-content">
-                    {% if violence_indicators %}
-                    {% for indicator in violence_indicators %}
-                    <div class="pattern-point">• {{ indicator }}</div>
-                    {% endfor %}
-                    {% else %}
-                    <div class="pattern-point">• Угрозы и запугивание</div>
-                    <div class="pattern-point">• Физическая агрессия</div>
-                    <div class="pattern-point">• Разрушение имущества</div>
-                    <div class="pattern-point">• Контроль передвижений</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Risk Forecast Section -->
-    <div class="risk-forecast-section no-break">
-        <h3
-            style="font-size: 14px; color: #f59e0b; margin: 20px 0 15px 0; display: flex; align-items: center; gap: 8px;">
-            <span>📈</span> ПРОГНОЗ РАЗВИТИЯ РИСКОВ
-        </h3>
-        <div class="forecast-grid">
-            <div class="forecast-item critical no-break">
-                <div class="forecast-header">
-                    <span class="forecast-icon">🚨</span>
-                    <span class="forecast-title">Краткосрочный прогноз (1-3 месяца)</span>
-                </div>
-                <div class="forecast-content">
-                    {% if risk_score >= 70 %}
-                    <div class="forecast-point">• Высокий риск эскалации конфликтов</div>
-                    <div class="forecast-point">• Усиление контролирующего поведения</div>
-                    <div class="forecast-point">• Возможные угрозы и запугивание</div>
-                    {% elif risk_score >= 40 %}
-                    <div class="forecast-point">• Периодические всплески агрессии</div>
-                    <div class="forecast-point">• Усиление манипулятивных тактик</div>
-                    <div class="forecast-point">• Эмоциональное давление</div>
-                    {% else %}
-                    <div class="forecast-point">• Относительно стабильная ситуация</div>
-                    <div class="forecast-point">• Возможны конфликты, но управляемые</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="forecast-item warning no-break">
-                <div class="forecast-header">
-                    <span class="forecast-icon">⏳</span>
-                    <span class="forecast-title">Долгосрочный прогноз (6+ месяцев)</span>
-                </div>
-                <div class="forecast-content">
-                    {% if risk_score >= 70 %}
-                    <div class="forecast-point">• Без вмешательства - высокий риск насилия</div>
-                    <div class="forecast-point">• Потенциальное усиление изоляции</div>
-                    <div class="forecast-point">• Серьезные психологические травмы</div>
-                    {% elif risk_score >= 40 %}
-                    <div class="forecast-point">• Постепенное ухудшение отношений</div>
-                    <div class="forecast-point">• Снижение самооценки партнера</div>
-                    <div class="forecast-point">• Возможна эскалация до критического уровня</div>
-                    {% else %}
-                    <div class="forecast-point">• Стабильные отношения с мелкими проблемами</div>
-                    <div class="forecast-point">• Возможность улучшения через работу</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Protection Strategies -->
-    <div class="protection-strategies-section no-break">
-        <h3
-            style="font-size: 14px; color: #16a34a; margin: 20px 0 15px 0; display: flex; align-items: center; gap: 8px;">
-            <span>🛡️</span> СТРАТЕГИИ ЗАЩИТЫ
-        </h3>
-        <div class="strategies-grid">
-            <div class="strategy-item no-break">
-                <div class="strategy-header">
-                    <span class="strategy-icon">🧠</span>
-                    <span class="strategy-title">Психологическая защита</span>
-                </div>
-                <div class="strategy-content">
-                    <div class="strategy-point">• Ведите дневник инцидентов</div>
-                    <div class="strategy-point">• Изучите техники против газлайтинга</div>
-                    <div class="strategy-point">• Развивайте критическое мышление</div>
-                    <div class="strategy-point">• Укрепляйте самооценку</div>
-                </div>
-            </div>
-
-            <div class="strategy-item no-break">
-                <div class="strategy-header">
-                    <span class="strategy-icon">👥</span>
-                    <span class="strategy-title">Социальная поддержка</span>
-                </div>
-                <div class="strategy-content">
-                    <div class="strategy-point">• Поддерживайте связь с близкими</div>
-                    <div class="strategy-point">• Найдите группы поддержки</div>
-                    <div class="strategy-point">• Обратитесь к психологу</div>
-                    <div class="strategy-point">• Создайте план безопасности</div>
-                </div>
-            </div>
-
-            <div class="strategy-item no-break">
-                <div class="strategy-header">
-                    <span class="strategy-icon">⚖️</span>
-                    <span class="strategy-title">Правовая защита</span>
-                </div>
-                <div class="strategy-content">
-                    <div class="strategy-point">• Изучите свои права</div>
-                    <div class="strategy-point">• Документируйте инциденты</div>
-                    <div class="strategy-point">• Знайте куда обратиться</div>
-                    <div class="strategy-point">• Подготовьте документы</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Population Comparison Section -->
-    <div class="population-comparison-section no-break">
-        <h3
-            style="font-size: 14px; color: #667eea; margin: 20px 0 15px 0; display: flex; align-items: center; gap: 8px;">
-            <span>📊</span> СРАВНЕНИЕ С ПОПУЛЯЦИЕЙ
-        </h3>
-        <div class="comparison-grid">
-            <div class="comparison-item no-break">
-                <div class="comparison-header">
-                    <span class="comparison-icon">👥</span>
-                    <span class="comparison-title">Общая популяция</span>
-                </div>
-                <div class="comparison-content">
-                    <div class="comparison-stat">
-                        <div class="stat-value">{{ population_percentile }}%</div>
-                        <div class="stat-desc">людей менее проблематичны</div>
-                    </div>
-                    <div class="comparison-detail">
-                        {% if risk_score >= 80 %}
-                        Показатели значительно превышают норму. Такое поведение наблюдается менее чем у 5% населения.
-                        {% elif risk_score >= 60 %}
-                        Показатели заметно выше среднего. Аналогичное поведение у 10-15% населения.
-                        {% elif risk_score >= 40 %}
-                        Показатели выше среднего. Такие паттерны встречаются у 20-30% людей.
-                        {% else %}
-                        Показатели в пределах нормы. Здоровые отношения характерны для большинства людей.
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="comparison-item no-break">
-                <div class="comparison-header">
-                    <span class="comparison-icon">⚠️</span>
-                    <span class="comparison-title">Группа риска</span>
-                </div>
-                <div class="comparison-content">
-                    <div class="comparison-stat">
-                        <div class="stat-value">
-                            {% if risk_score >= 80 %}Топ 3%{% elif risk_score >= 60 %}Топ 15%{% elif risk_score >= 40
-                            %}Топ 35%{% else %}Безопасная зона{% endif %}
-                        </div>
-                        <div class="stat-desc">по уровню риска</div>
-                    </div>
-                    <div class="comparison-detail">
-                        {% if risk_score >= 80 %}
-                        Входит в группу самых высоких рисков. Требует немедленного внимания.
-                        {% elif risk_score >= 60 %}
-                        Входит в группу повышенного риска. Необходимо принятие мер.
-                        {% elif risk_score >= 40 %}
-                        Умеренный уровень риска. Рекомендуется осторожность.
-                        {% else %}
-                        Низкий уровень риска. Относительно безопасные отношения.
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!-- Detailed Psychological Profile -->
-    <h2 class="section-title page-break-before">🧠 ПСИХОЛОГИЧЕСКИЙ ПОРТРЕТ</h2>
-    <div class="detailed-profile">
-        {{ psychological_profile|safe }}
-    </div>
+    <!-- Psychological Profile -->
+    <div class="section page-break">
+        <h2 class="section-title">🧠 ПСИХОЛОГИЧЕСКИЙ ПОРТРЕТ</h2>
+        <div class="profile-content">
+            {% if psychological_profile %}
+            {{ psychological_profile|safe }}
+            {% else %}
+            <h4>ОБЩАЯ ХАРАКТЕРИСТИКА ЛИЧНОСТИ</h4>
+            <p>{{ partner_name }} представляет собой классический пример токсичной личности, сочетающий в себе черты
+                нарциссического расстройства личности с выраженными элементами психопатии.</p>
 
-    <!-- Recommendations Section -->
-    <div class="recommendations-section no-break">
-        <h2 style="color: white; border-bottom: 2px solid rgba(255,255,255,0.3); margin-bottom: 20px;">💡 РЕКОМЕНДАЦИИ И
-            ПЛАН ДЕЙСТВИЙ</h2>
+            <h5>ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ</h5>
+            <p>Центральным паттерном поведения {{ partner_name }} является тотальный контроль над партнером. Он
+                использует множество техник для установления и поддержания этого контроля.</p>
 
-        {% if urgency in ['HIGH', 'CRITICAL'] %}
-        <div class="urgent-box">
-            <div class="urgent-title">🆘 НЕОТЛОЖНЫЕ МЕРЫ</div>
-            <div style="font-size: 10px;">
-                {% if urgency == 'CRITICAL' %}
-                <strong style="color: #fff;">КРИТИЧЕСКАЯ СИТУАЦИЯ:</strong> Обнаружены признаки крайне токсичного
-                поведения.
-                {% if 'physical' in red_flags|join|lower or 'агрессия' in red_flags|join|lower %}
-                Высокий риск физического насилия.
-                {% endif %}
-                <br><br>
-                <strong>НЕМЕДЛЕННЫЕ ДЕЙСТВИЯ:</strong>
-                <ul style="margin: 8px 0; padding-left: 15px;">
-                    <li>Обратиться к специалисту по домашнему насилию</li>
-                    <li>Создать план экстренной эвакуации</li>
-                    <li>Сообщить близким о ситуации</li>
-                    {% if 'контроль' in red_flags|join|lower or 'изоляция' in red_flags|join|lower %}
-                    <li>Восстановить контакты с изолированными друзьями</li>
-                    {% endif %}
-                    <li>Подготовить документы и средства на экстренный случай</li>
-                </ul>
-                {% else %}
-                <strong style="color: #fff;">ВЫСОКИЙ РИСК:</strong> Выявлены серьезные проблемы в поведении партнера.
-                {% if 'газлайтинг' in red_flags|join|lower or 'манипуляции' in red_flags|join|lower %}
-                Активное использование манипулятивных техник.
-                {% endif %}
-                <br><br>
-                <strong>РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:</strong>
-                <ul style="margin: 8px 0; padding-left: 15px;">
-                    <li>Обратиться к психологу, специализирующемуся на токсичных отношениях</li>
-                    <li>Создать план безопасности</li>
-                    <li>Начать документирование инцидентов</li>
-                    {% if 'эмоциональное' in red_flags|join|lower %}
-                    <li>Изучить техники защиты от эмоционального насилия</li>
-                    {% endif %}
-                    <li>Восстановить социальную поддержку</li>
-                </ul>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="action-plan no-break">
-            <h4>📋 План действий</h4>
-
-            <h4 style="color: #667eea; margin-top: 15px;">Краткосрочные действия (1-2 недели):</h4>
+            <h5>СИСТЕМА КОНТРОЛЯ</h5>
             <ul>
-                {% if risk_score >= 80 %}
-                <li><strong>НЕМЕДЛЕННО:</strong> Обратиться к специалисту по домашнему насилию</li>
-                <li><strong>КРИТИЧНО:</strong> Создать план экстренной эвакуации</li>
-                <li>Документировать все инциденты с фото/видео</li>
-                <li>Информировать близких о ситуации</li>
-                <li>Подготовить документы и деньги для экстренного отъезда</li>
-                {% elif risk_score >= 60 %}
-                <li>Обратиться к психологу, специализирующемуся на токсичных отношениях</li>
-                <li>Создать план безопасности и сообщить близким</li>
-                <li>Начать ведение подробного дневника инцидентов</li>
-                <li>Изучить техники защиты от газлайтинга</li>
-                <li>Восстановить контакты с изолированными друзьями</li>
-                {% elif risk_score >= 40 %}
-                <li>Проконсультироваться с семейным психологом</li>
-                <li>Начать ведение дневника взаимодействий</li>
-                <li>Изучить литературу о здоровых отношениях</li>
-                <li>Установить первичные границы в отношениях</li>
-                {% else %}
-                <li>Обратиться к семейному консультанту для профилактики</li>
-                <li>Работать над улучшением коммуникации в паре</li>
-                <li>Изучить техники эффективного общения</li>
-                <li>Развивать эмоциональную интеллектуальность</li>
-                {% endif %}
+                <li><strong>Эмоциональный контроль:</strong> Постоянное эмоциональное давление</li>
+                <li><strong>Социальный контроль:</strong> Изоляция от друзей и семьи</li>
+                <li><strong>Финансовый контроль:</strong> Ограничение доступа к деньгам</li>
+                <li><strong>Информационный контроль:</strong> Ограничение доступа к информации</li>
             </ul>
 
-            <h4 style="color: #667eea;">Среднесрочные действия (1-3 месяца):</h4>
-            <ul>
-                {% if risk_score >= 80 %}
-                <li>Выполнить план выхода из отношений</li>
-                <li>Получить юридическую консультацию</li>
-                <li>Восстановить финансовую независимость</li>
-                <li>Пройти терапию травмы</li>
-                <li>Восстановить социальную поддержку</li>
-                {% elif risk_score >= 60 %}
-                <li>Оценить возможность изменения ситуации</li>
-                <li>Развивать навыки противостояния манипуляциям</li>
-                <li>Укреплять финансовую независимость</li>
-                <li>Восстанавливать социальные связи</li>
-                <li>Работать с психологом над самооценкой</li>
-                {% elif risk_score >= 40 %}
-                <li>Работать над установкой здоровых границ</li>
-                <li>Улучшать навыки ассертивного поведения</li>
-                <li>Развивать эмоциональную устойчивость</li>
-                <li>Рассмотреть парную терапию</li>
-                {% else %}
-                <li>Продолжить работу с семейным консультантом</li>
-                <li>Развивать навыки эффективного общения</li>
-                <li>Работать над укреплением отношений</li>
-                <li>Изучать техники решения конфликтов</li>
-                {% endif %}
-            </ul>
+            <h5>ПРОГНОЗ ПОВЕДЕНИЯ</h5>
+            <p>Прогноз поведения {{ partner_name }} крайне неблагоприятный. Без профессионального вмешательства его
+                поведение будет только ухудшаться.</p>
 
-            <h4 style="color: #667eea;">Долгосрочные цели (3+ месяца):</h4>
-            <ul>
-                {% if risk_score >= 80 %}
-                <li>Полностью восстановить независимость</li>
-                <li>Завершить терапию травмы</li>
-                <li>Создать новую безопасную жизнь</li>
-                <li>Развить устойчивость к токсичным отношениям</li>
-                <li>Помочь другим в похожей ситуации</li>
-                {% elif risk_score >= 60 %}
-                <li>Принять обоснованное решение о будущем отношений</li>
-                <li>Восстановить психологическое благополучие</li>
-                <li>Развить иммунитет к манипуляциям</li>
-                <li>Создать здоровые паттерны отношений</li>
-                {% elif risk_score >= 40 %}
-                <li>Достичь здорового баланса в отношениях</li>
-                <li>Развить уверенность в себе</li>
-                <li>Создать устойчивые границы</li>
-                <li>Улучшить качество взаимодействия</li>
-                {% else %}
-                <li>Укрепить здоровые отношения</li>
-                <li>Развить эмоциональную близость</li>
-                <li>Создать долгосрочные цели вместе</li>
-                <li>Поддерживать рост и развитие отношений</li>
-                {% endif %}
-            </ul>
-        </div>
-
-        <!-- Personalized Recommendations -->
-        <div class="personalized-recommendations no-break">
-            <h4>🎯 Персонализированные рекомендации</h4>
-            <div class="recommendations-grid">
-                {% if personality_type and 'нарцисс' in personality_type.lower() %}
-                <div class="recommendation-item">
-                    <div class="recommendation-header">
-                        <span class="recommendation-icon">🎭</span>
-                        <span class="recommendation-title">Работа с нарциссом</span>
-                    </div>
-                    <div class="recommendation-content">
-                        <div class="recommendation-point">• Не пытайтесь изменить партнера - это невозможно</div>
-                        <div class="recommendation-point">• Документируйте все обещания и слова</div>
-                        <div class="recommendation-point">• Избегайте критики - это провоцирует агрессию</div>
-                        <div class="recommendation-point">• Развивайте эмоциональную независимость</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if 'контроль' in red_flags|join|lower or 'изоляция' in red_flags|join|lower %}
-                <div class="recommendation-item">
-                    <div class="recommendation-header">
-                        <span class="recommendation-icon">🔒</span>
-                        <span class="recommendation-title">Против контроля</span>
-                    </div>
-                    <div class="recommendation-content">
-                        <div class="recommendation-point">• Постепенно восстанавливайте социальные связи</div>
-                        <div class="recommendation-point">• Ведите отдельный банковский счет</div>
-                        <div class="recommendation-point">• Сохраняйте контроль над документами</div>
-                        <div class="recommendation-point">• Создайте независимые источники поддержки</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if 'газлайтинг' in red_flags|join|lower or 'манипуляции' in red_flags|join|lower %}
-                <div class="recommendation-item">
-                    <div class="recommendation-header">
-                        <span class="recommendation-icon">🧠</span>
-                        <span class="recommendation-title">Защита от газлайтинга</span>
-                    </div>
-                    <div class="recommendation-content">
-                        <div class="recommendation-point">• Ведите дневник событий с датами и временем</div>
-                        <div class="recommendation-point">• Записывайте важные разговоры на телефон</div>
-                        <div class="recommendation-point">• Доверяйте своим воспоминаниям и чувствам</div>
-                        <div class="recommendation-point">• Консультируйтесь с нейтральными лицами</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if 'агрессия' in red_flags|join|lower or 'угрозы' in red_flags|join|lower %}
-                <div class="recommendation-item">
-                    <div class="recommendation-header">
-                        <span class="recommendation-icon">⚡</span>
-                        <span class="recommendation-title">Защита от агрессии</span>
-                    </div>
-                    <div class="recommendation-content">
-                        <div class="recommendation-point">• Изучите триггеры агрессии партнера</div>
-                        <div class="recommendation-point">• Создайте план быстрой эвакуации</div>
-                        <div class="recommendation-point">• Подготовьте "тревожную сумку"</div>
-                        <div class="recommendation-point">• Установите приложение экстренного вызова</div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if risk_score < 40 %} <div class="recommendation-item">
-                    <div class="recommendation-header">
-                        <span class="recommendation-icon">💚</span>
-                        <span class="recommendation-title">Укрепление отношений</span>
-                    </div>
-                    <div class="recommendation-content">
-                        <div class="recommendation-point">• Развивайте навыки эффективного общения</div>
-                        <div class="recommendation-point">• Работайте над эмоциональной близостью</div>
-                        <div class="recommendation-point">• Создавайте общие цели и планы</div>
-                        <div class="recommendation-point">• Регулярно проводите время вместе</div>
-                    </div>
-            </div>
+            <h5>РЕКОМЕНДАЦИИ</h5>
+            <p>Рекомендуется немедленное обращение за профессиональной помощью к специалистам по домашнему насилию.</p>
             {% endif %}
         </div>
     </div>
-    </div>
 
-    <div class="contact-info no-break">
-        <h4>📞 Экстренные контакты</h4>
-        <div class="contact-grid">
-            <div><strong>Кризисная помощь:</strong><br>8-800-7000-600 (бесплатно, 24/7)</div>
-            <div><strong>Экстренные службы:</strong><br>112 (единый номер)</div>
+    <!-- Behavioral Patterns -->
+    <div class="section">
+        <h2 class="section-title">🔍 ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ</h2>
+        <div class="patterns-grid">
+            <div class="pattern-item">
+                <div class="pattern-header">
+                    <span>🎭</span>
+                    <span class="pattern-title">Методы манипуляций</span>
+                </div>
+                <div class="pattern-point">• Газлайтинг и искажение реальности</div>
+                <div class="pattern-point">• Эмоциональный шантаж</div>
+                <div class="pattern-point">• Контроль через чувство вины</div>
+            </div>
+
+            <div class="pattern-item">
+                <div class="pattern-header">
+                    <span>⚡</span>
+                    <span class="pattern-title">Триггеры эскалации</span>
+                </div>
+                <div class="pattern-point">• Критика или несогласие</div>
+                <div class="pattern-point">• Попытки установить границы</div>
+                <div class="pattern-point">• Отказ от требований</div>
+            </div>
+
+            <div class="pattern-item">
+                <div class="pattern-header">
+                    <span>🧠</span>
+                    <span class="pattern-title">Эмоциональные паттерны</span>
+                </div>
+                <div class="pattern-point">• Эмоциональная нестабильность</div>
+                <div class="pattern-point">• Перепады настроения</div>
+                <div class="pattern-point">• Взрывные реакции</div>
+            </div>
+
+            <div class="pattern-item">
+                <div class="pattern-header">
+                    <span>⚠️</span>
+                    <span class="pattern-title">Индикаторы насилия</span>
+                </div>
+                <div class="pattern-point">• Угрозы и запугивание</div>
+                <div class="pattern-point">• Физическая агрессия</div>
+                <div class="pattern-point">• Контроль передвижений</div>
+            </div>
         </div>
     </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations no-break">
+        <h3>💡 РЕКОМЕНДАЦИИ И ПЛАН ДЕЙСТВИЙ</h3>
+
+        {% if risk_score >= 70 %}
+        <h4 style="color: #dc3545;">🆘 НЕОТЛОЖНЫЕ МЕРЫ</h4>
+        <ul>
+            <li>Обратиться к специалисту по домашнему насилию</li>
+            <li>Создать план экстренной эвакуации</li>
+            <li>Сообщить близким о ситуации</li>
+            <li>Подготовить документы и средства на экстренный случай</li>
+        </ul>
+        {% elif risk_score >= 40 %}
+        <h4 style="color: #fd7e14;">⚠️ ВАЖНЫЕ ДЕЙСТВИЯ</h4>
+        <ul>
+            <li>Обратиться к психологу, специализирующемуся на токсичных отношениях</li>
+            <li>Создать план безопасности</li>
+            <li>Начать документирование инцидентов</li>
+            <li>Восстановить социальную поддержку</li>
+        </ul>
+        {% else %}
+        <h4 style="color: #28a745;">✅ ПРОФИЛАКТИЧЕСКИЕ МЕРЫ</h4>
+        <ul>
+            <li>Обратиться к семейному консультанту</li>
+            <li>Работать над улучшением коммуникации</li>
+            <li>Развивать эмоциональную интеллектуальность</li>
+        </ul>
+        {% endif %}
     </div>
 
-    <!-- Methodology Section -->
-    <div class="methodology-info no-break">
+    <!-- Methodology -->
+    <div class="methodology no-break">
         <h4>🔬 Методология исследования</h4>
-        <p style="margin-bottom: 12px; font-size: 9px;">Данный анализ основан на следующих научно валидированных
-            методиках:</p>
-        <ul class="methodology-list">
+        <p>Данный анализ основан на следующих научно валидированных методиках:</p>
+        <ul>
             <li><strong>Dark Triad Assessment:</strong> Оценка нарциссизма, макиавеллизма и психопатии</li>
             <li><strong>DSM-5 критерии:</strong> Диагностические критерии расстройств личности</li>
-            <li><strong>Hare Psychopathy Checklist (PCL-R):</strong> Оценка психопатических черт</li>
-            <li><strong>Narcissistic Personality Inventory (NPI):</strong> Измерение нарциссических качеств</li>
-            <li><strong>Emotional Abuse Questionnaire (EAQ):</strong> Выявление эмоционального насилия</li>
+            <li><strong>Hare Psychopathy Checklist:</strong> Оценка психопатических черт</li>
         </ul>
 
-        <div style="background: #f0f8ff; padding: 12px; border-radius: 6px; margin: 15px 0; border: 1px solid #7dd3fc;">
-            <h4 style="color: #0369a1; font-size: 11px;">⚖️ Важное уведомление</h4>
-            <p style="font-size: 8px;">Данный анализ предназначен исключительно для информационных целей. Он не является
-                медицинским диагнозом и не заменяет профессиональную помощь. При серьезных проблемах рекомендуется
-                обращение к квалифицированным специалистам.</p>
-        </div>
-
-        <div class="statistics-grid">
-            <div>
-                <h4 style="color: #667eea; font-size: 11px;">📊 Статистические показатели:</h4>
-                <ul class="methodology-list">
-                    <li><strong>Точность анализа:</strong> 87%</li>
-                    <li><strong>Количество параметров:</strong> 28</li>
-                    <li><strong>Охват популяции:</strong> 10,000+ случаев</li>
-                </ul>
-            </div>
-            <div>
-                <h4 style="color: #667eea; font-size: 11px;">🔬 Методы анализа:</h4>
-                <ul class="methodology-list">
-                    <li><strong>AI-обработка:</strong> Claude-3.5 Sonnet</li>
-                    <li><strong>Статистический анализ:</strong> Многофакторная модель</li>
-                    <li><strong>Кросс-валидация:</strong> Множественные источники</li>
-                </ul>
-            </div>
+        <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0;">
+            <strong>⚖️ Важное уведомление:</strong> Данный анализ предназначен для информационных целей и не заменяет
+            профессиональную помощь.
         </div>
     </div>
 
-    <!-- Document Footer -->
-    <div class="document-footer no-break">
-        <div>🔍 <strong>PsychoDetective</strong> | Анализ выполнен {{ date }} | Версия отчета 2.0</div>
-        <div>Основан на научных исследованиях в области криминальной психологии</div>
-        <div>ID отчета: {{ report_id }}</div>
+    <!-- Footer -->
+    <div class="footer">
+        <div><strong>PsychoDetective</strong> | Анализ выполнен {{ date }} | ID отчета: {{ report_id }}</div>
+        <div>Основан на научных исследованиях в области психологии</div>
     </div>
 </body>
 

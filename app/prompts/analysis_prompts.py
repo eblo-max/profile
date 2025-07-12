@@ -55,10 +55,10 @@ def get_text_analysis_prompt(text: str, analysis_type: str = "general") -> str:
 
 Верни результат в JSON формате:
 {{
-    "toxicity_score": число от 0 до 10,
-    "urgency_level": "low/medium/high/critical",
+  "toxicity_score": число от 0 до 10,
+  "urgency_level": "low/medium/high/critical",
     "red_flags": ["список красных флагов"],
-    "patterns_detected": ["выявленные паттерны"],
+  "patterns_detected": ["выявленные паттерны"],
     "recommendations": ["рекомендации"],
     "confidence_level": число от 0 до 100
 }}

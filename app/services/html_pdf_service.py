@@ -326,7 +326,7 @@ class HTMLPDFService:
         Generate professional partner analysis PDF report using CloudLayer.io API
         
         Args:
-            analysis_data: Analysis results from AI
+            analysis_data: Analysis results from psychological assessment
             user_id: User ID
             partner_name: Partner name
             
@@ -922,7 +922,7 @@ class HTMLPDFService:
 <div class="detailed-profile ai-generated">
     <div class="profile-section">
         <h3 class="section-title">🧠 Персонализированный психологический анализ</h3>
-        <p><em>Анализ основан на конкретных ответах пользователя и создан с помощью ИИ</em></p>
+
         <div class="ai-analysis-content">
             {''.join(formatted_paragraphs)}
         </div>

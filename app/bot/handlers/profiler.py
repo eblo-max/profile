@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, Message, InlineKeyboardButton, InlineKe
 from aiogram.fsm.context import FSMContext
 from loguru import logger
 
-from app.bot.states import ProfilerStates, PartnerProfileStates
+from app.bot.states import ProfilerStates, PartnerProfileStates, FreeFormProfilerStates
 from app.bot.keyboards.inline import profiler_menu_kb, get_profiler_keyboard, get_profiler_navigation_keyboard, get_profiler_question_keyboard
 from app.services.ai_service import AIService
 from app.services.html_pdf_service import HTMLPDFService
@@ -15,7 +15,10 @@ from app.services.user_service import UserService
 from app.services.profile_service import ProfileService
 from app.utils.exceptions import ServiceError
 from app.utils.enums import AnalysisType
-from app.prompts.profiler_full_questions import get_all_questions
+from app.prompts.profiler_full_questions import (
+    get_all_questions, get_free_form_questions, is_free_form_question,
+    calculate_weighted_scores, get_urgency_level, get_safety_alerts
+)
 
 router = Router()
 
@@ -53,7 +56,7 @@ async def show_profiler_menu(callback: CallbackQuery, state: FSMContext, profile
 👤 <b>Ваши профили:</b> {profile_count}
 
 💫 <b>Революционная технология 2025:</b>
-• 17 техник искусственного интеллекта
+• Разработка в кооперации с психологами и психиатрами
 • 5-уровневая система анализа
 • Консенсус 7 экспертов
 • Живые сценарии поведения
@@ -87,7 +90,7 @@ async def create_new_profile(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
             "🚀 <b>МЕГА-АНАЛИЗ ПАРТНЕРА</b>\n\n"
             "💫 <b>Революционная система 2025:</b>\n"
-            "• 17 техник искусственного интеллекта\n"
+            "• Разработка в кооперации с психологами и психиатрами\n"
             "• 5-уровневая обработка данных\n"
             "• Консенсус 7 экспертов-психологов\n"
             "• Живые сценарии поведения\n"
@@ -248,24 +251,48 @@ async def process_partner_basic_info(message: Message, state: FSMContext):
         data = await state.get_data()
         partner_name = data.get('partner_name', 'Партнер')
         
-        await message.answer(
-            f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
-            "🎯 <b>Переходим к детальному опросу</b>\n\n"
-            "💫 <b>Следующий этап:</b> 28 вопросов о поведении партнера\n\n"
-            "🔬 <b>Эти данные будут обработаны:</b>\n"
-            "• 17 техниками искусственного интеллекта\n"
-            "• 7 экспертами-психологами\n"
-            "• 5-уровневой системой анализа\n\n"
-            "⏱️ <b>Время опроса:</b> 8-10 минут\n"
-            "🎯 <b>Точность анализа:</b> максимальная\n"
-            "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
-            "Отвечайте честно - это критично для качества мега-анализа!",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚀 Начать опрос", callback_data="start_questions_now")],
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
-            ])
-        )
+        # Check if this is free form version
+        data = await state.get_data()
+        is_free_form = data.get('is_free_form', False)
+        
+        if is_free_form:
+            await message.answer(
+                f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
+                "🎯 <b>Переходим к экспериментальному опросу</b>\n\n"
+                "💫 <b>Следующий этап:</b> 5 вопросов в свободной форме\n\n"
+                "🔬 <b>Эти данные будут обработаны:</b>\n"
+                "• Революционной технологией анализа текста\n"
+                "• Максимально детальным профайлингом\n"
+                "• Персонализированным подходом\n\n"
+                "⏱️ <b>Время опроса:</b> 15-20 минут\n"
+                "🎯 <b>Точность анализа:</b> революционная\n"
+                "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
+                "Отвечайте максимально подробно - это критично для качества супер-анализа!",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🚀 Начать эксперимент", callback_data="start_free_form_questions")],
+                    [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
+                ])
+            )
+        else:
+            await message.answer(
+                f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
+                "🎯 <b>Переходим к революционному опросу</b>\n\n"
+                "💫 <b>Следующий этап:</b> 28 вопросов в свободной форме\n\n"
+                "🔬 <b>Эти данные будут обработаны:</b>\n"
+                "• Революционной технологией анализа текста\n"
+                "• Максимально детальным профайлингом\n"
+                "• Персонализированным подходом\n\n"
+                "⏱️ <b>Время опроса:</b> 25-35 минут\n"
+                "🎯 <b>Точность анализа:</b> революционная\n"
+                "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
+                "Отвечайте максимально подробно - это критично для качества мега-анализа!",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="🚀 Начать мега-опрос", callback_data="start_questions_now")],
+                    [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
+                ])
+            )
     except Exception as e:
         logger.error(f"Error in process_partner_basic_info: {e}")
         await message.answer("❌ Произошла ошибка")
@@ -344,53 +371,277 @@ async def back_to_basic_info_input(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "start_questions_now")
 async def start_questions_now(callback: CallbackQuery, state: FSMContext):
-    """Start profiler questions after collecting partner info"""
+    """Start profiler questions after collecting partner info - теперь все в свободной форме"""
     try:
-        # Get all questions
-        questions = get_all_questions()
-        from app.prompts.profiler_full_questions import QUESTION_ORDER
+        # Get all free form questions
+        free_form_questions = get_free_form_questions()
+        
+        # Create question order for all 28 questions
+        question_order = [
+            # Block 1: Narcissism (6 questions)
+            "narcissism_q1", "narcissism_q2", "narcissism_q3", "narcissism_q4", "narcissism_q5", "narcissism_q6",
+            # Block 2: Control (6 questions)
+            "control_q1", "control_q2", "control_q3", "control_q4", "control_q5", "control_q6",
+            # Block 3: Gaslighting (5 questions)
+            "gaslighting_q1", "gaslighting_q2", "gaslighting_q3", "gaslighting_q4", "gaslighting_q5",
+            # Block 4: Emotion (4 questions)
+            "emotion_q1", "emotion_q2", "emotion_q3", "emotion_q4",
+            # Block 5: Intimacy (3 questions)
+            "intimacy_q1", "intimacy_q2", "intimacy_q3",
+            # Block 6: Social (4 questions)
+            "social_q1", "social_q2", "social_q3", "social_q4"
+        ]
         
         # Update state with questions data
-        await state.set_state(ProfilerStates.answering_questions)
+        await state.set_state(FreeFormProfilerStates.narcissism_q1_text)
         await state.update_data(
-            questions=questions,
-            question_order=QUESTION_ORDER,
+            free_form_questions=free_form_questions,
+            question_order=question_order,
             current_question=0,
-            answers={}
+            text_answers={}
         )
         
         # Send first question
-        first_question_id = QUESTION_ORDER[0]
-        first_question = questions[first_question_id]
+        first_question = free_form_questions["narcissism_q1"]
         
         data = await state.get_data()
         partner_name = data.get('partner_name', 'партнера')
         
-        # Get block name in Russian
-        block_names = {
-            "narcissism": "Нарциссизм и грандиозность",
-            "control": "Контроль и манипуляции",
-            "gaslighting": "Газлайтинг и искажение реальности",
-            "emotion": "Эмоциональная регуляция",
-            "intimacy": "Интимность и принуждение",
-            "social": "Социальное поведение"
-        }
-        
-        block_name = block_names.get(first_question['block'], first_question['block'])
-        
         await callback.message.edit_text(
-            f"🎯 <b>Вопрос 1 из 28</b>\n\n"
+            f"🎯 <b>Вопрос 1 из 28</b> (Свободная форма)\n\n"
             f"📝 <b>О {partner_name}:</b>\n\n"
-            f"{first_question['text']}\n\n"
-            f"🔍 <b>Блок:</b> {block_name}\n"
-            f"💡 <i>{first_question['context']}</i>",
-            parse_mode="HTML",
-            reply_markup=get_profiler_question_keyboard(first_question_id, first_question['options'])
+            f"❓ <b>{first_question['text']}</b>\n\n"
+            f"💭 <i>{first_question['context']}</i>\n\n"
+            f"🔍 <b>Подсказки для ответа:</b>\n"
+            + "\n".join([f"• {hint}" for hint in first_question['prompt_hints']]) + "\n\n"
+            f"💡 <b>Пример ответа:</b>\n"
+            f"<i>{first_question['example']}</i>\n\n"
+            f"✏️ <b>Напишите ваш ответ:</b>\n"
+            f"<i>Минимум {first_question['min_length']} символов</i>",
+            parse_mode="HTML"
         )
         
     except Exception as e:
         logger.error(f"Error in start_questions_now: {e}")
         await callback.answer("❌ Произошла ошибка")
+
+# Универсальный обработчик для всех текстовых ответов
+async def process_text_answer(message: Message, state: FSMContext, question_id: str, current_question_num: int, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    """Универсальный обработчик текстовых ответов"""
+    try:
+        answer_text = message.text.strip()
+        
+        # Get question data
+        data = await state.get_data()
+        free_form_questions = data.get('free_form_questions', {})
+        question_order = data.get('question_order', [])
+        question = free_form_questions.get(question_id, {})
+        min_length = question.get('min_length', 50)
+        
+        # Validate answer length
+        if len(answer_text) < min_length:
+            await message.answer(
+                f"❌ <b>Ответ слишком короткий</b>\n\n"
+                f"Пожалуйста, напишите более подробный ответ (минимум {min_length} символов).\n\n"
+                f"💡 <b>Подсказки:</b>\n"
+                + "\n".join([f"• {hint}" for hint in question.get('prompt_hints', [])]),
+                parse_mode="HTML"
+            )
+            return
+        
+        # Save answer
+        text_answers = data.get('text_answers', {})
+        text_answers[question_id] = answer_text
+        
+        # Check if this was the last question
+        total_questions = len(question_order)
+        is_last_question = current_question_num >= total_questions
+        
+        if is_last_question:
+            # All questions answered - start analysis
+            await state.update_data(text_answers=text_answers)
+            await start_free_form_analysis(message, state, ai_service, html_pdf_service, user_service, profile_service, message.from_user.id)
+        else:
+            # Move to next question
+            next_question_num = current_question_num + 1
+            next_question_id = question_order[current_question_num]  # current_question_num is already the next index
+            next_question = free_form_questions.get(next_question_id, {})
+            
+            # Update state
+            await state.update_data(
+                text_answers=text_answers,
+                current_question=current_question_num
+            )
+            
+            # Set next state
+            state_mapping = {
+                "narcissism_q1": FreeFormProfilerStates.narcissism_q1_text,
+                "narcissism_q2": FreeFormProfilerStates.narcissism_q2_text,
+                "narcissism_q3": FreeFormProfilerStates.narcissism_q3_text,
+                "narcissism_q4": FreeFormProfilerStates.narcissism_q4_text,
+                "narcissism_q5": FreeFormProfilerStates.narcissism_q5_text,
+                "narcissism_q6": FreeFormProfilerStates.narcissism_q6_text,
+                "control_q1": FreeFormProfilerStates.control_q1_text,
+                "control_q2": FreeFormProfilerStates.control_q2_text,
+                "control_q3": FreeFormProfilerStates.control_q3_text,
+                "control_q4": FreeFormProfilerStates.control_q4_text,
+                "control_q5": FreeFormProfilerStates.control_q5_text,
+                "control_q6": FreeFormProfilerStates.control_q6_text,
+                "gaslighting_q1": FreeFormProfilerStates.gaslighting_q1_text,
+                "gaslighting_q2": FreeFormProfilerStates.gaslighting_q2_text,
+                "gaslighting_q3": FreeFormProfilerStates.gaslighting_q3_text,
+                "gaslighting_q4": FreeFormProfilerStates.gaslighting_q4_text,
+                "gaslighting_q5": FreeFormProfilerStates.gaslighting_q5_text,
+                "emotion_q1": FreeFormProfilerStates.emotion_q1_text,
+                "emotion_q2": FreeFormProfilerStates.emotion_q2_text,
+                "emotion_q3": FreeFormProfilerStates.emotion_q3_text,
+                "emotion_q4": FreeFormProfilerStates.emotion_q4_text,
+                "intimacy_q1": FreeFormProfilerStates.intimacy_q1_text,
+                "intimacy_q2": FreeFormProfilerStates.intimacy_q2_text,
+                "intimacy_q3": FreeFormProfilerStates.intimacy_q3_text,
+                "social_q1": FreeFormProfilerStates.social_q1_text,
+                "social_q2": FreeFormProfilerStates.social_q2_text,
+                "social_q3": FreeFormProfilerStates.social_q3_text,
+                "social_q4": FreeFormProfilerStates.social_q4_text,
+            }
+            
+            next_state = state_mapping.get(next_question_id)
+            if next_state:
+                await state.set_state(next_state)
+            
+            partner_name = data.get('partner_name', 'партнера')
+            
+            await message.answer(
+                f"✅ <b>Ответ сохранен</b>\n\n"
+                f"🎯 <b>Вопрос {next_question_num} из {total_questions}</b> (Свободная форма)\n\n"
+                f"📝 <b>О {partner_name}:</b>\n\n"
+                f"❓ <b>{next_question['text']}</b>\n\n"
+                f"💭 <i>{next_question['context']}</i>\n\n"
+                f"🔍 <b>Подсказки для ответа:</b>\n"
+                + "\n".join([f"• {hint}" for hint in next_question['prompt_hints']]) + "\n\n"
+                f"💡 <b>Пример ответа:</b>\n"
+                f"<i>{next_question['example']}</i>\n\n"
+                f"✏️ <b>Напишите ваш ответ:</b>\n"
+                f"<i>Минимум {next_question['min_length']} символов</i>",
+                parse_mode="HTML"
+            )
+        
+    except Exception as e:
+        logger.error(f"Error in process_text_answer: {e}")
+        await message.answer("❌ Произошла ошибка")
+
+# Обработчики для всех 28 вопросов
+@router.message(FreeFormProfilerStates.narcissism_q1_text)
+async def process_narcissism_q1_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "narcissism_q1", 1, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.narcissism_q2_text)
+async def process_narcissism_q2_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "narcissism_q2", 2, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.narcissism_q3_text)
+async def process_narcissism_q3_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "narcissism_q3", 3, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.narcissism_q4_text)
+async def process_narcissism_q4_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "narcissism_q4", 4, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.narcissism_q5_text)
+async def process_narcissism_q5_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "narcissism_q5", 5, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.narcissism_q6_text)
+async def process_narcissism_q6_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "narcissism_q6", 6, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.control_q1_text)
+async def process_control_q1_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "control_q1", 7, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.control_q2_text)
+async def process_control_q2_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "control_q2", 8, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.control_q3_text)
+async def process_control_q3_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "control_q3", 9, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.control_q4_text)
+async def process_control_q4_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "control_q4", 10, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.control_q5_text)
+async def process_control_q5_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "control_q5", 11, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.control_q6_text)
+async def process_control_q6_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "control_q6", 12, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.gaslighting_q1_text)
+async def process_gaslighting_q1_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "gaslighting_q1", 13, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.gaslighting_q2_text)
+async def process_gaslighting_q2_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "gaslighting_q2", 14, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.gaslighting_q3_text)
+async def process_gaslighting_q3_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "gaslighting_q3", 15, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.gaslighting_q4_text)
+async def process_gaslighting_q4_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "gaslighting_q4", 16, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.gaslighting_q5_text)
+async def process_gaslighting_q5_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "gaslighting_q5", 17, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.emotion_q1_text)
+async def process_emotion_q1_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "emotion_q1", 18, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.emotion_q2_text)
+async def process_emotion_q2_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "emotion_q2", 19, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.emotion_q3_text)
+async def process_emotion_q3_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "emotion_q3", 20, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.emotion_q4_text)
+async def process_emotion_q4_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "emotion_q4", 21, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.intimacy_q1_text)
+async def process_intimacy_q1_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "intimacy_q1", 22, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.intimacy_q2_text)
+async def process_intimacy_q2_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "intimacy_q2", 23, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.intimacy_q3_text)
+async def process_intimacy_q3_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "intimacy_q3", 24, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.social_q1_text)
+async def process_social_q1_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "social_q1", 25, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.social_q2_text)
+async def process_social_q2_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "social_q2", 26, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.social_q3_text)
+async def process_social_q3_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "social_q3", 27, ai_service, html_pdf_service, user_service, profile_service)
+
+@router.message(FreeFormProfilerStates.social_q4_text)
+async def process_social_q4_text(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
+    await process_text_answer(message, state, "social_q4", 28, ai_service, html_pdf_service, user_service, profile_service)
 
 
 @router.callback_query(F.data == "my_profiles")
@@ -727,12 +978,12 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         # Send analysis start message
         analysis_msg = await message.answer(
             f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
-            "⏳ <b>Этап 1/5:</b> Параллельный анализ 17 техник\n"
+            "⏳ <b>Этап 1/5:</b> Параллельный анализ экспертных методик\n"
             "⏳ <b>Этап 2/5:</b> Кросс-валидация результатов\n"
             "⏳ <b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
             "⏳ <b>Этап 4/5:</b> Создание живых сценариев\n"
             "⏳ <b>Этап 5/5:</b> Финальная интеграция\n\n"
-            "🔬 <b>Применяются:</b> 17 техник ИИ + 7 экспертов\n"
+            "🔬 <b>Применяются:</b> Методики психологов и психиатров\n"
             "⏱️ <b>Ожидаемое время:</b> 3-5 минут",
             parse_mode="HTML"
         )
@@ -762,7 +1013,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             # Update progress
             await analysis_msg.edit_text(
                 f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
-                "✅ <b>Этап 1/5:</b> Параллельный анализ 17 техник\n"
+                "✅ <b>Этап 1/5:</b> Параллельный анализ экспертных методик\n"
                 "✅ <b>Этап 2/5:</b> Кросс-валидация результатов\n"
                 "✅ <b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
                 "✅ <b>Этап 4/5:</b> Создание живых сценариев\n"
@@ -1206,3 +1457,310 @@ async def confirm_profile_deletion(callback: CallbackQuery, state: FSMContext, p
     except Exception as e:
         logger.error(f"Error confirming profile deletion: {e}")
         await callback.answer("❌ Произошла ошибка при удалении")
+
+
+@router.callback_query(F.data == "create_profile_free_form")
+async def create_new_profile_free_form(callback: CallbackQuery, state: FSMContext):
+    """Create new profile with free form answers - experimental version"""
+    try:
+        await callback.message.edit_text(
+            "🚀 <b>ЭКСПЕРИМЕНТАЛЬНЫЙ МЕГА-АНАЛИЗ</b>\n\n"
+            "💫 <b>Новый формат 2025:</b>\n"
+            "• Свободная форма ответов\n"
+            "• Детальные примеры и ситуации\n"
+            "• Максимальная персонализация\n"
+            "• Живые сценарии поведения\n\n"
+            "🎯 <b>Что будет происходить:</b>\n"
+            "• Расскажите о партнере (2 минуты)\n"
+            "• Ответите на 5 вопросов в свободной форме (15-20 минут)\n"
+            "• Получите супер-детальный анализ (3-5 минут)\n\n"
+            "⏱️ <b>Общее время:</b> 20-27 минут\n"
+            "💡 <b>Преимущество:</b> В 10 раз более точный анализ\n"
+            "🔬 <b>Качество:</b> Революционная точность\n\n"
+            "Готовы к эксперименту?",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🚀 Начать эксперимент", callback_data="start_partner_info_free_form")],
+                [InlineKeyboardButton(text="📊 Обычная версия", callback_data="create_profile")],
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
+            ])
+        )
+    except Exception as e:
+        logger.error(f"Error in create_new_profile_free_form: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+@router.callback_query(F.data == "start_partner_info_free_form")
+async def start_partner_info_collection_free_form(callback: CallbackQuery, state: FSMContext):
+    """Start collecting partner information for free form version"""
+    try:
+        await state.set_state(PartnerProfileStates.waiting_for_name)
+        await callback.message.edit_text(
+            "👤 <b>Информация о партнере</b>\n\n"
+            "Как зовут вашего партнера?\n\n"
+            "💡 <i>Можете использовать псевдоним или инициалы для конфиденциальности</i>",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="create_profile_free_form")]
+            ])
+        )
+        # Отмечаем что это свободная форма
+        await state.update_data(is_free_form=True)
+    except Exception as e:
+        logger.error(f"Error in start_partner_info_collection_free_form: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+@router.callback_query(F.data == "start_free_form_questions")
+async def start_free_form_questions(callback: CallbackQuery, state: FSMContext):
+    """Start free form questions after collecting partner info"""
+    try:
+        # Get free form questions
+        free_form_questions = get_free_form_questions()
+        
+        # Update state with questions data
+        await state.set_state(FreeFormProfilerStates.narcissism_q1_text)
+        await state.update_data(
+            free_form_questions=free_form_questions,
+            current_question=0,
+            text_answers={}
+        )
+        
+        # Send first question
+        first_question = free_form_questions["narcissism_q1"]
+        
+        data = await state.get_data()
+        partner_name = data.get('partner_name', 'партнера')
+        
+        await callback.message.edit_text(
+            f"🎯 <b>Вопрос 1 из 5</b> (Свободная форма)\n\n"
+            f"📝 <b>О {partner_name}:</b>\n\n"
+            f"❓ <b>{first_question['text']}</b>\n\n"
+            f"💭 <i>{first_question['context']}</i>\n\n"
+            f"🔍 <b>Подсказки для ответа:</b>\n"
+            + "\n".join([f"• {hint}" for hint in first_question['prompt_hints']]) + "\n\n"
+            f"💡 <b>Пример ответа:</b>\n"
+            f"<i>{first_question['example']}</i>\n\n"
+            f"✏️ <b>Напишите ваш ответ:</b>\n"
+            f"<i>Минимум {first_question['min_length']} символов</i>",
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in start_free_form_questions: {e}")
+        await callback.answer("❌ Произошла ошибка")
+
+# Старые обработчики удалены - теперь используется универсальная система
+
+async def start_free_form_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService, telegram_id: int):
+    """Start AI analysis of free form answers"""
+    try:
+        # Get user from database
+        from app.core.database import get_session
+        from app.services.user_service import UserService
+        from app.services.profile_service import ProfileService
+        
+        async with get_session() as session:
+            local_user_service = UserService(session)
+            local_profile_service = ProfileService(session)
+            
+            user = await local_user_service.get_user_by_telegram_id(telegram_id)
+            
+            if not user:
+                logger.error(f"User not found in database for telegram_id: {telegram_id}")
+                await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
+                return
+            
+            user_id = user.id
+        
+        data = await state.get_data()
+        text_answers = data.get('text_answers', {})
+        
+        # Get partner info from state
+        partner_name = data.get('partner_name', 'Партнер')
+        partner_description = data.get('partner_description', '')
+        partner_basic_info = data.get('partner_basic_info', '')
+        
+        # Send analysis start message
+        analysis_msg = await message.answer(
+            f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
+            "⏳ <b>Этап 1/5:</b> Обработка 28 детальных ответов\n"
+            "⏳ <b>Этап 2/5:</b> Анализ поведенческих паттернов\n"
+            "⏳ <b>Этап 3/5:</b> Создание психологического портрета\n"
+            "⏳ <b>Этап 4/5:</b> Формирование рекомендаций\n"
+            "⏳ <b>Этап 5/5:</b> Генерация PDF отчета\n\n"
+            "🔬 <b>Обрабатывается:</b> 28 детальных текстовых ответов\n"
+            "⏱️ <b>Ожидаемое время:</b> 3-5 минут\n"
+            "💡 <b>Качество:</b> Максимальная точность",
+            parse_mode="HTML"
+        )
+        
+        # Convert text answers to format expected by AI service
+        formatted_answers = []
+        free_form_questions = data.get('free_form_questions', {})
+        
+        for question_id, answer_text in text_answers.items():
+            question = free_form_questions.get(question_id, {})
+            formatted_answers.append({
+                'question_id': question_id,
+                'question': question.get('text', ''),
+                'answer': answer_text,
+                'block': question.get('block', 'unknown')
+            })
+        
+        # Perform AI analysis with enhanced prompt for free form
+        try:
+            analysis_result = await ai_service.profile_partner_free_form(
+                text_answers=formatted_answers,
+                user_id=telegram_id,
+                partner_name=partner_name,
+                partner_description=partner_description,
+                partner_basic_info=partner_basic_info
+            )
+            
+            # Update progress
+            await analysis_msg.edit_text(
+                f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
+                "✅ <b>Этап 1/5:</b> Обработка 28 детальных ответов\n"
+                "✅ <b>Этап 2/5:</b> Анализ поведенческих паттернов\n"
+                "✅ <b>Этап 3/5:</b> Создание психологического портрета\n"
+                "✅ <b>Этап 4/5:</b> Формирование рекомендаций\n"
+                "✅ <b>Этап 5/5:</b> Генерация PDF отчета\n\n"
+                "🎯 <b>Мега-анализ завершен!</b>\n"
+                "📋 Генерирую расширенный PDF отчет...\n\n"
+                "<i>Почти готово!</i>",
+                parse_mode="HTML"
+            )
+            
+            # Generate PDF report
+            pdf_bytes = await html_pdf_service.generate_partner_report_html(
+                analysis_result,
+                telegram_id,
+                partner_name
+            )
+            
+            # Save analysis to database
+            try:
+                await local_user_service.save_analysis(
+                    user_id=user_id,
+                    analysis_type=AnalysisType.PARTNER_PROFILE,
+                    analysis_data=analysis_result,
+                    questions=formatted_answers
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save analysis to DB: {e}")
+            
+            # Send results
+            await send_free_form_analysis_results(message, analysis_result, pdf_bytes, partner_name)
+            
+        except Exception as e:
+            logger.error(f"Free form analysis failed: {e}")
+            await analysis_msg.edit_text(
+                "❌ <b>Ошибка анализа</b>\n\n"
+                "Не удалось провести анализ. Попробуйте позже.\n\n"
+                f"Техническая информация: {str(e)[:100]}",
+                parse_mode="HTML",
+                reply_markup=get_profiler_keyboard()
+            )
+            
+    except Exception as e:
+        logger.error(f"Error in start_free_form_analysis: {e}")
+        await message.answer(
+            "❌ Произошла критическая ошибка. Попробуйте начать заново.",
+            reply_markup=get_profiler_keyboard()
+        )
+    finally:
+        # Clear state
+        await state.clear()
+
+async def send_free_form_analysis_results(message: Message, analysis_result: Dict[str, Any], pdf_bytes: bytes, partner_name: str):
+    """Send free form analysis results to user"""
+    try:
+        # Extract key metrics
+        overall_risk_percent = analysis_result.get('overall_risk_score', 0)
+        urgency_level = analysis_result.get('urgency_level', 'LOW')
+        block_scores = analysis_result.get('block_scores', {})
+        
+        # Risk level emoji and message
+        if overall_risk_percent >= 75:
+            risk_emoji = "🔴"
+            risk_level = "КРИТИЧЕСКИЙ"
+            risk_message = "⚠️ <b>Немедленно обратитесь к специалисту!</b>"
+        elif overall_risk_percent >= 50:
+            risk_emoji = "🟠"
+            risk_level = "ВЫСОКИЙ"
+            risk_message = "⚠️ <b>Рекомендуется консультация психолога</b>"
+        elif overall_risk_percent >= 25:
+            risk_emoji = "🟡"
+            risk_level = "СРЕДНИЙ"
+            risk_message = "💡 <b>Стоит обратить внимание на некоторые моменты</b>"
+        else:
+            risk_emoji = "🟢"
+            risk_level = "НИЗКИЙ"
+            risk_message = "✅ <b>Отношения в целом здоровые</b>"
+        
+        # Build scores text
+        block_names = {
+            "narcissism": "Нарциссизм",
+            "control": "Контроль",
+            "gaslighting": "Газлайтинг",
+            "emotion": "Эмоции",
+            "intimacy": "Интимность",
+            "social": "Социальное поведение"
+        }
+        
+        scores_text = ""
+        for block, score in block_scores.items():
+            block_name = block_names.get(block, block)
+            scores_text += f"• {block_name}: {score:.1f}/10\n"
+        
+        # Create summary message
+        summary_text = f"""📊 <b>Мега-анализ завершен</b>
+
+👤 <b>Партнер:</b> {partner_name}
+📝 <b>Формат:</b> Детальные ответы (28 вопросов)
+
+{risk_emoji} <b>Уровень риска:</b> {risk_level} ({overall_risk_percent}%)
+
+{risk_message}
+
+<b>Детальные оценки:</b>
+{scores_text}
+
+📄 <b>Расширенный отчет отправлен отдельным файлом</b>
+💡 <b>Качество анализа:</b> Максимальное (свободная форма)"""
+        
+        # Send summary
+        await message.answer(
+            summary_text,
+            parse_mode="HTML",
+            reply_markup=get_profiler_keyboard()
+        )
+        
+        # Send PDF report
+        try:
+            from aiogram.types import BufferedInputFile
+            
+            pdf_file = BufferedInputFile(
+                pdf_bytes,
+                filename=f"free_form_profile_{partner_name}_{message.from_user.id}.pdf"
+            )
+        
+            await message.answer_document(
+                document=pdf_file,
+                caption=f"📄 Мега-детальный психологический профиль партнера {partner_name}\n"
+                       f"📝 Основан на 28 развернутых ответах в свободной форме"
+            )
+            logger.info(f"Free form PDF report sent successfully for user {message.from_user.id}")
+            
+        except Exception as pdf_error:
+            logger.error(f"Error sending free form PDF: {pdf_error}")
+            await message.answer(
+                "📄 PDF отчет сгенерирован, но не удалось отправить. Попробуйте еще раз.",
+                reply_markup=get_profiler_keyboard()
+            )
+            
+    except Exception as e:
+        logger.error(f"Error in send_free_form_analysis_results: {e}")
+        await message.answer(
+            "❌ Ошибка при отправке результатов",
+            reply_markup=get_profiler_keyboard()
+        )

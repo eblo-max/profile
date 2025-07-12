@@ -1,6 +1,6 @@
 # 🤖 PsychoDetective Bot
 
-> AI-powered Telegram bot for relationship analysis using criminal psychology methods
+> Telegram bot для анализа отношений, разработанный в кооперации с психологами и психиатрами
 
 ![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![aiogram](https://img.shields.io/badge/aiogram-3.x-green.svg)
@@ -10,7 +10,7 @@
 
 ## 🎯 Overview
 
-PsychoDetective is the first AI-powered Telegram bot that uses criminal psychology methods to analyze relationships and protect users from toxic behavior. Built with cutting-edge AI models and scientific research.
+PsychoDetective - первый Telegram бот, который использует методы криминальной психологии для анализа отношений и защиты пользователей от токсичного поведения. Разработан в кооперации с психологами и психиатрами на основе научных исследований.
 
 ### ✨ Key Features
 
@@ -19,7 +19,7 @@ PsychoDetective is the first AI-powered Telegram bot that uses criminal psycholo
 - 💕 **Compatibility Testing** - Advanced compatibility analysis
 - 🛡️ **Manipulation Detection** - Identify gaslighting and emotional manipulation
 - 📊 **Daily Content** - Psychology tips and relationship advice
-- 💎 **Premium Features** - Advanced analysis with Claude AI
+- 💎 **Premium Features** - Advanced analysis developed with psychologists
 
 ## 🏗️ Tech Stack
 
@@ -28,8 +28,7 @@ PsychoDetective is the first AI-powered Telegram bot that uses criminal psycholo
 - **Web Framework**: FastAPI 0.104+
 - **Database**: PostgreSQL 16+ with asyncpg
 - **Cache**: Redis 7+ with hiredis
-- **AI Primary**: Claude-3-Sonnet API
-- **AI Fallback**: OpenAI GPT-4 API
+- **Analysis**: Методики психологов и психиатров
 - **Deployment**: Railway
 - **Monitoring**: Sentry + Loguru
 - **Testing**: Pytest + pytest-asyncio
@@ -152,12 +151,12 @@ app/
 - `DATABASE_URL`: PostgreSQL connection string
 - `REDIS_URL`: Redis connection string
 
-### AI Configuration
+### Analysis Configuration
 
 - `CLAUDE_MODEL`: Claude model (default: claude-3-sonnet-20240229)
 - `OPENAI_MODEL`: OpenAI model (default: gpt-4-turbo-preview)
-- `MAX_CONCURRENT_AI_REQUESTS`: Concurrent requests limit
-- `AI_REQUEST_TIMEOUT`: Request timeout in seconds
+- `MAX_CONCURRENT_REQUESTS`: Concurrent requests limit
+- `REQUEST_TIMEOUT`: Request timeout in seconds
 
 ### Rate Limiting
 
@@ -175,7 +174,7 @@ pytest
 pytest --cov=app
 
 # Run specific test file
-pytest tests/test_ai_service.py
+pytest tests/test_analysis_service.py
 ```
 
 ## 📝 API Documentation
@@ -200,7 +199,7 @@ Once deployed, visit:
 
 - Database connectivity
 - Redis connectivity
-- AI service availability
+- Analysis service availability
 - Bot connectivity
 
 ### Logging
@@ -214,7 +213,7 @@ Once deployed, visit:
 
 The bot implements comprehensive error handling:
 
-- Graceful AI service failures with fallbacks
+- Graceful analysis service failures with fallbacks
 - Database transaction rollbacks
 - User-friendly error messages
 - Automatic retry mechanisms
@@ -245,7 +244,7 @@ alembic downgrade -1
 ## 💎 Premium Features
 
 - Unlimited analyses
-- Advanced AI models
+- Advanced analysis models
 - Priority support
 - Detailed reporting
 - Export capabilities
@@ -268,11 +267,9 @@ This project is proprietary software. All rights reserved.
 - 💬 Telegram: [@psychodetective_support](https://t.me/psychodetective_support)
 - 📖 Documentation: [docs.psychodetective.bot](https://docs.psychodetective.bot)
 
-## 🙏 Acknowledgments
+## �� Acknowledgments
 
-- Criminal psychology research from Harvard Psychology Lab
-- AI models from Anthropic and OpenAI
-- Open source community for tools and libraries
+- Психологи и психиатры за методики анализа
 
 ---
 

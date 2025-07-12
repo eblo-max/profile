@@ -218,6 +218,52 @@ class ProfilerStates(StatesGroup):
     processing = State()
     results_ready = State()
 
+class FreeFormProfilerStates(StatesGroup):
+    """Free form profiler states - все 28 вопросов в свободной форме"""
+    # Block 1: Narcissism (6 questions)
+    narcissism_q1_text = State()
+    narcissism_q2_text = State()
+    narcissism_q3_text = State()
+    narcissism_q4_text = State()
+    narcissism_q5_text = State()
+    narcissism_q6_text = State()
+    
+    # Block 2: Control (6 questions)
+    control_q1_text = State()
+    control_q2_text = State()
+    control_q3_text = State()
+    control_q4_text = State()
+    control_q5_text = State()
+    control_q6_text = State()
+    
+    # Block 3: Gaslighting (5 questions)
+    gaslighting_q1_text = State()
+    gaslighting_q2_text = State()
+    gaslighting_q3_text = State()
+    gaslighting_q4_text = State()
+    gaslighting_q5_text = State()
+    
+    # Block 4: Emotion (4 questions)
+    emotion_q1_text = State()
+    emotion_q2_text = State()
+    emotion_q3_text = State()
+    emotion_q4_text = State()
+    
+    # Block 5: Intimacy (3 questions)
+    intimacy_q1_text = State()
+    intimacy_q2_text = State()
+    intimacy_q3_text = State()
+    
+    # Block 6: Social (4 questions)
+    social_q1_text = State()
+    social_q2_text = State()
+    social_q3_text = State()
+    social_q4_text = State()
+    
+    # Processing and results
+    processing = State()
+    results_ready = State()
+
 
 class AdminStates(StatesGroup):
     """Admin panel states"""
