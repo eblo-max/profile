@@ -178,22 +178,12 @@ class AIService:
         partner_description: str = "",
         use_cache: bool = True
     ) -> Dict[str, Any]:
-        """Простое эффективное профилирование партнера"""
+        """Детальный анализ партнера с персонализированным портретом"""
         start_time = time.time()
         
-        # Format answers
-        if isinstance(answers, list):
-            answers_text = []
-            for answer in answers:
-                question_text = answer.get('question', f"Question {answer.get('question_id', 'N/A')}")
-                answer_text = answer.get('answer', 'No answer')
-                answers_text.append(f"Q: {question_text}\nA: {answer_text}")
-            combined_answers = "\n\n".join(answers_text)
-        else:
-            combined_answers = str(answers)
-        
         # Cache key
-        cache_key = create_cache_key("profile_analysis", user_id, hash(combined_answers + partner_name))
+        cache_key = create_cache_key("profile_partner", user_id, 
+                                   hash(str(answers) + partner_name + partner_description))
         
         if use_cache:
             cached_result = await redis_client.get(cache_key)
@@ -217,25 +207,70 @@ class AIService:
             # Create enhanced prompts
             user_prompt = self._create_enhanced_user_prompt(analysis_data)
             
-            # Get analysis from Claude Sonnet 4
+            # Get detailed analysis from Claude Sonnet 4
             async with self._request_semaphore:
                 response = await self._get_ai_response(
                     system_prompt="",  # Системный промпт включен в user_prompt
                     user_prompt=user_prompt,
-                    response_format="text",  # Изменено на text для детального анализа
+                    response_format="text",  # Текстовый анализ
                     max_tokens=8000,  # Увеличено для детального анализа
                     temperature=0.7  # Более креативный анализ
                 )
             
-            # Parse response - теперь это текстовый анализ
+            # Создаем второй запрос для получения метрик
+            metrics_prompt = f"""
+На основе следующих ответов на диагностические вопросы дай краткую оценку рисков в JSON формате:
+
+ПАРТНЕР: {partner_name}
+ОТВЕТЫ: {str(answers)[:1000]}...
+
+Верни JSON с полями:
+- overall_risk_score: число от 0 до 100 (процент риска)
+- urgency_level: "LOW", "MEDIUM", "HIGH", "CRITICAL" 
+- block_scores: объект с оценками от 0 до 10 для narcissism, control, gaslighting, emotion, intimacy, social
+- red_flags: массив строк с основными проблемами
+- personality_type: краткое описание типа личности
+
+Пример:
+{{"overall_risk_score": 75, "urgency_level": "HIGH", "block_scores": {{"narcissism": 8.5, "control": 7.2, "gaslighting": 6.8, "emotion": 7.5, "intimacy": 6.0, "social": 7.8}}, "red_flags": ["Контролирующее поведение", "Эмоциональная нестабильность"], "personality_type": "Нарциссический контролер"}}
+"""
+            
+            # Получаем метрики
+            async with self._request_semaphore:
+                metrics_response = await self._get_ai_response(
+                    system_prompt="Ты эксперт-психолог. Отвечай только в JSON формате.",
+                    user_prompt=metrics_prompt,
+                    response_format="json",
+                    max_tokens=1000,
+                    temperature=0.3
+                )
+            
+            # Парсим метрики
+            try:
+                metrics_data = extract_json_from_text(metrics_response)
+                if not metrics_data:
+                    metrics_data = safe_json_loads(metrics_response, {})
+            except:
+                metrics_data = {}
+            
+            # Формируем результат
             result = {
-                "psychological_profile": response,
+                "psychological_profile": response,  # Полный текстовый анализ
+                "overall_risk_score": metrics_data.get("overall_risk_score", 50),
+                "urgency_level": metrics_data.get("urgency_level", "MEDIUM"),
+                "block_scores": metrics_data.get("block_scores", {
+                    "narcissism": 5.0, "control": 5.0, "gaslighting": 5.0,
+                    "emotion": 5.0, "intimacy": 5.0, "social": 5.0
+                }),
+                "red_flags": metrics_data.get("red_flags", ["Требует дополнительного изучения"]),
+                "personality_type": metrics_data.get("personality_type", "Смешанный тип"),
                 "processing_time": time.time() - start_time,
                 "ai_model_used": self._get_last_model_used(),
-                "analysis_mode": "detailed_portrait",
-                "cost_estimate": 0.15,  # Увеличена стоимость из-за детального анализа
+                "analysis_mode": "detailed_portrait_with_metrics",
+                "cost_estimate": 0.18,  # Увеличена из-за двух запросов
                 "word_count": len(response.split()),
-                "character_count": len(response)
+                "character_count": len(response),
+                "partner_name": partner_name
             }
             
             # Cache result
