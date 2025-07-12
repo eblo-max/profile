@@ -535,8 +535,7 @@ class HTMLPDFService:
             
         except Exception as e:
             logger.error(f"Failed to render template: {e}")
-            # Fallback to simple HTML if template fails
-            return self._generate_simple_fallback_html(template_data)
+            raise Exception(f"HTML генерация не удалась: {str(e)}")
     
     def _generate_blocks_data(self, analysis_data: Dict[str, Any], overall_risk: float) -> list:
         """Generate blocks data for template using real block_scores if available"""
@@ -551,7 +550,7 @@ class HTMLPDFService:
             empathy_score = max(1, 10 - manipulation_score)  # Inverse of manipulation
             aggression_score = int(block_scores.get('narcissism', overall_risk / 10))
         else:
-            # Fallback to calculation from overall_risk
+            # Используем расчет на основе общего риска
             emotion_score = min(10, int(overall_risk / 10))
             manipulation_score = min(10, int((overall_risk + 10) / 12))
             empathy_score = max(1, 10 - int(overall_risk / 10))
@@ -585,44 +584,7 @@ class HTMLPDFService:
         ]
         return blocks
     
-    def _generate_simple_fallback_html(self, data: dict) -> str:
-        """Simple fallback HTML if template fails"""
-        return f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Профиль партнера - {data['partner_name']}</title>
-    <style>
-        body {{ font-family: Arial, sans-serif; padding: 20px; }}
-        .header {{ background: #667eea; color: white; padding: 20px; text-align: center; }}
-        .risk-score {{ font-size: 48px; color: red; text-align: center; margin: 20px; }}
-        .section {{ margin: 20px 0; padding: 15px; border: 1px solid #ddd; }}
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>ПСИХОЛОГИЧЕСКИЙ ПРОФИЛЬ ПАРТНЕРА</h1>
-        <p>Партнер: {data['partner_name']} | Дата: {data['date']}</p>
-            </div>
-            
-    <div class="risk-score">Оценка риска: {data['risk_score']}</div>
-            
-            <div class="section">
-        <h3>Тип личности</h3>
-        <p>{data['personality_type']}</p>
-            </div>
-            
-            <div class="section">
-        <h3>Красные флаги</h3>
-        <ul>{''.join(f'<li>{flag}</li>' for flag in data['red_flags'])}</ul>
-            </div>
-            
-            <div class="section">
-        <h3>Рекомендации</h3>
-        <p>{data['recommendations']}</p>
-    </div>
-</body>
-</html>"""
+
     
     def _generate_red_flags_html(self, red_flags: list) -> str:
         """Generate HTML for red flags section"""
@@ -910,16 +872,24 @@ class HTMLPDFService:
                 analysis_data
             )
         else:
-            # Fallback: используем статичные шаблоны только если ИИ-анализ отсутствует
-            logger.warning(f"No AI analysis found, using static templates as fallback")
+            # Используем статичные шаблоны если AI-анализ отсутствует
+            logger.warning(f"No AI analysis found, using static templates")
             if risk_score >= 70:
                 expanded = self._generate_high_risk_analysis(partner_name, risk_score, block_scores, red_flags, dark_triad)
-            elif risk_score >= 40:
+            elif risk_score >= 50:
                 expanded = self._generate_medium_risk_analysis(partner_name, risk_score, block_scores, red_flags, dark_triad)
             else:
                 expanded = self._generate_low_risk_analysis(partner_name, risk_score, block_scores, analysis_data)
         
-        return expanded
+        # Возвращаем объединенный профиль
+        return f"""
+        <div class="analysis-section">
+            <h3>🧠 Детальный психологический анализ:</h3>
+            <div class="analysis-content">
+                {expanded}
+            </div>
+        </div>
+        """
     
     def _format_ai_analysis_to_html(
         self,

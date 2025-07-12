@@ -1,7 +1,7 @@
 """Application configuration using Pydantic settings"""
 
 import os
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
@@ -26,11 +26,40 @@ class Settings(BaseSettings):
         """Alias for TELEGRAM_BOT_TOKEN for backward compatibility"""
         return self.TELEGRAM_BOT_TOKEN
     
-    # AI Configuration
-    CLAUDE_API_KEY: Optional[str] = Field(None, env="CLAUDE_API_KEY")
+    # AI Configuration - только AIML API
     OPENAI_API_KEY: Optional[str] = Field(None, env="OPENAI_API_KEY")
-    CLAUDE_MODEL: str = Field("claude-3-5-sonnet-20241022", env="CLAUDE_MODEL")
-    OPENAI_MODEL: str = Field("gpt-4-turbo-preview", env="OPENAI_MODEL")
+    
+    # AIML API Configuration for Claude 3.7
+    AIML_API_KEY: Optional[str] = Field(None, env="AIML_API_KEY")
+    AIML_API_URL: str = Field("https://api.aimlapi.com/chat/completions", env="AIML_API_URL")
+    USE_AIML_API: bool = Field(False, env="USE_AIML_API")
+    AIML_CLAUDE_MODEL: str = Field("claude-3-7-sonnet", env="AIML_CLAUDE_MODEL")
+    
+    # Token Limits (adaptive based on model)
+    MAX_TOKENS_DEFAULT: int = Field(17000, env="MAX_TOKENS_DEFAULT")
+    MAX_TOKENS_MEGA: int = Field(20000, env="MAX_TOKENS_MEGA") 
+    MAX_TOKENS_ANALYSIS: int = Field(17000, env="MAX_TOKENS_ANALYSIS")
+    MAX_TOKENS_PROFILING: int = Field(18000, env="MAX_TOKENS_PROFILING")
+    
+    # Thinking tokens for Claude 3.7
+    MAX_THINKING_TOKENS: int = Field(15000, env="MAX_THINKING_TOKENS")
+    
+    # Model-specific token limits
+    @property
+    def model_max_tokens(self) -> int:
+        """Get max tokens for current model"""
+        if self.USE_AIML_API:
+            return 200000  # AIML API поддерживает до 200k токенов
+        
+        # Fallback для других моделей
+        return 8192
+        
+    @property
+    def effective_claude_model(self) -> str:
+        """Get the effective Claude model name"""
+        if self.USE_AIML_API:
+            return self.AIML_CLAUDE_MODEL
+        return "claude-3-5-sonnet-20241022"  # Default fallback
     
     # PDF Generation
     CLOUDLAYER_API_KEY: Optional[str] = Field(None, env="CLOUDLAYER_API_KEY")
@@ -83,6 +112,10 @@ class Settings(BaseSettings):
     ALLOWED_HOSTS: List[str] = Field(["*"], env="ALLOWED_HOSTS")
     ADMIN_USER_IDS: List[int] = Field([], env="ADMIN_USER_IDS")
     
+    # Простая эффективная система анализа
+    ENHANCED_ANALYSIS: bool = Field(True, env="ENHANCED_ANALYSIS")
+    ANALYSIS_CACHE_TTL: int = Field(3600, env="ANALYSIS_CACHE_TTL")  # 1 час
+    
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url(cls, v):
@@ -114,6 +147,8 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         """Check if running in development"""
         return self.DEBUG or not self.is_production
+    
+
     
     class Config:
         env_file = ".env"

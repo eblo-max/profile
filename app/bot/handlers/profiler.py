@@ -48,17 +48,25 @@ async def show_profiler_menu(callback: CallbackQuery, state: FSMContext, profile
         profile_count = await profile_service._get_user_profile_count(user_id)
         
         # Create menu text
-        menu_text = f"""🧠 <b>Psychological Profiler</b>
+        menu_text = f"""🚀 <b>МЕГА-ПРОФАЙЛЕР ПАРТНЕРА</b>
 
 👤 <b>Ваши профили:</b> {profile_count}
 
+💫 <b>Революционная технология 2025:</b>
+• 17 техник искусственного интеллекта
+• 5-уровневая система анализа
+• Консенсус 7 экспертов
+• Живые сценарии поведения
+• Максимальная персонализация
+
 <b>Что вы хотите сделать?</b>
 
-🆕 <b>Новый профиль</b> - создать психологический профиль партнера
+🆕 <b>Новый профиль</b> - мега-анализ партнера
 📂 <b>Мои профили</b> - просмотреть сохраненные профили
 💡 <b>Рекомендации</b> - получить советы по отношениям
 
-<i>Профилирование поможет вам лучше понять психологию партнера и принять правильные решения.</i>"""
+⏱️ <i>Время анализа: 3-5 минут</i>
+🔬 <i>Максимальная точность и детализация</i>"""
         
         # Show menu
         await callback.message.edit_text(
@@ -77,19 +85,25 @@ async def create_new_profile(callback: CallbackQuery, state: FSMContext):
     """Create new profile - show introduction and start data collection"""
     try:
         await callback.message.edit_text(
-            "📝 <b>Создание профиля партнера</b>\n\n"
+            "🚀 <b>МЕГА-АНАЛИЗ ПАРТНЕРА</b>\n\n"
+            "💫 <b>Революционная система 2025:</b>\n"
+            "• 17 техник искусственного интеллекта\n"
+            "• 5-уровневая обработка данных\n"
+            "• Консенсус 7 экспертов-психологов\n"
+            "• Живые сценарии поведения\n"
+            "• Максимальная персонализация\n\n"
             "🎯 <b>Что будет происходить:</b>\n"
-            "• Сначала расскажите о партнере\n"
-            "• Затем ответите на 28 вопросов\n"
-            "• Получите детальный анализ\n"
-            "• Узнаете уровень риска\n"
-            "• Получите персональные рекомендации\n\n"
-            "⏱️ <b>Время:</b> 10-15 минут\n"
-            "🔒 <b>Конфиденциальность:</b> Все данные защищены\n\n"
-            "Готовы начать?",
+            "• Расскажите о партнере (2 минуты)\n"
+            "• Ответите на 28 вопросов (8-10 минут)\n"
+            "• Получите мега-анализ (3-5 минут)\n"
+            "• Узнаете детальные риски и рекомендации\n\n"
+            "⏱️ <b>Общее время:</b> 13-17 минут\n"
+            "🔒 <b>Конфиденциальность:</b> Все данные защищены\n"
+            "🔬 <b>Качество:</b> Максимальная точность анализа\n\n"
+            "Готовы к революционному анализу?",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚀 Начать", callback_data="start_partner_info")],
+                [InlineKeyboardButton(text="🚀 Начать мега-анализ", callback_data="start_partner_info")],
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
             ])
         )
@@ -236,14 +250,19 @@ async def process_partner_basic_info(message: Message, state: FSMContext):
         
         await message.answer(
             f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
-            "🎯 <b>Переходим к вопросам</b>\n\n"
-            "Сейчас вам будет предложено 28 вопросов о поведении партнера.\n"
-            "Отвечайте честно - это поможет получить точный анализ.\n\n"
-            "⏱️ <b>Время:</b> 8-10 минут\n"
-            "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы",
+            "🎯 <b>Переходим к детальному опросу</b>\n\n"
+            "💫 <b>Следующий этап:</b> 28 вопросов о поведении партнера\n\n"
+            "🔬 <b>Эти данные будут обработаны:</b>\n"
+            "• 17 техниками искусственного интеллекта\n"
+            "• 7 экспертами-психологами\n"
+            "• 5-уровневой системой анализа\n\n"
+            "⏱️ <b>Время опроса:</b> 8-10 минут\n"
+            "🎯 <b>Точность анализа:</b> максимальная\n"
+            "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
+            "Отвечайте честно - это критично для качества мега-анализа!",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚀 Начать вопросы", callback_data="start_questions_now")],
+                [InlineKeyboardButton(text="🚀 Начать опрос", callback_data="start_questions_now")],
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
             ])
         )
@@ -610,10 +629,10 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             await state.update_data(answers=answers)
             await start_analysis(callback.message, state, ai_service, html_pdf_service, user_service, profile_service, callback.from_user.id)
         else:
-            # Move to next question
+        # Move to next question
             next_question = current_question + 1
             logger.info(f"Moving to question {next_question + 1} of {total_questions}")
-            
+        
             # Update state
             await state.update_data(
                 current_question=next_question,
@@ -655,10 +674,7 @@ async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: 
             
     except Exception as e:
         logger.error(f"Error handling answer: {e}")
-        try:
-            await callback.answer("❌ Произошла ошибка при обработке ответа")
-        except:
-            pass
+        await callback.answer("❌ Произошла ошибка при обработке ответа")
 
 
 def get_block_emoji(block: str) -> str:
@@ -700,102 +716,110 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             logger.info(f"Found user: id={user.id}, telegram_id={user.telegram_id}, name={user.first_name}")
             
             user_id = user.id  # Internal database ID
-            data = await state.get_data()
-            answers = data.get('answers', {})
+        data = await state.get_data()
+        answers = data.get('answers', {})
+        
+        # Get partner info from state
+        partner_name = data.get('partner_name', 'Партнер')
+        partner_description = data.get('partner_description', '')
+        partner_basic_info = data.get('partner_basic_info', '')
+        
+        # Send analysis start message
+        analysis_msg = await message.answer(
+            f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
+            "⏳ <b>Этап 1/5:</b> Параллельный анализ 17 техник\n"
+            "⏳ <b>Этап 2/5:</b> Кросс-валидация результатов\n"
+            "⏳ <b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
+            "⏳ <b>Этап 4/5:</b> Создание живых сценариев\n"
+            "⏳ <b>Этап 5/5:</b> Финальная интеграция\n\n"
+            "🔬 <b>Применяются:</b> 17 техник ИИ + 7 экспертов\n"
+            "⏱️ <b>Ожидаемое время:</b> 3-5 минут",
+            parse_mode="HTML"
+        )
+        
+        # Convert answers to format expected by AI service
+        formatted_answers = []
+        questions = data.get('questions', {})
+        for question_id, answer_index in answers.items():
+            question = questions.get(question_id, {})
+            options = question.get('options', [])
+            if answer_index < len(options):
+                formatted_answers.append({
+                    'question_id': question_id,
+                    'question': question.get('text', ''),
+                    'answer': options[answer_index]
+                })
+        
+        # Perform AI analysis
+        try:
+            analysis_result = await ai_service.profile_partner(
+                answers=formatted_answers, 
+                    user_id=telegram_id,  # AI service uses telegram_id
+                partner_name=partner_name,
+                partner_description=partner_description
+            )
             
-            # Get partner info from state
-            partner_name = data.get('partner_name', 'Партнер')
-            partner_description = data.get('partner_description', '')
-            partner_basic_info = data.get('partner_basic_info', '')
-            
-            # Send analysis start message
-            analysis_msg = await message.answer(
-                f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
-                "⏳ Обрабатываю ваши ответы...\n"
-                "📊 Провожу психологический анализ...\n"
-                "🎯 Выявляю красные флаги...\n\n"
-                "<i>Это может занять до 2 минут</i>",
+            # Update progress
+            await analysis_msg.edit_text(
+                f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
+                "✅ <b>Этап 1/5:</b> Параллельный анализ 17 техник\n"
+                "✅ <b>Этап 2/5:</b> Кросс-валидация результатов\n"
+                "✅ <b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
+                "✅ <b>Этап 4/5:</b> Создание живых сценариев\n"
+                "✅ <b>Этап 5/5:</b> Финальная интеграция\n\n"
+                "🎯 <b>Мега-анализ завершен!</b>\n"
+                "📋 Генерирую PDF отчет...\n\n"
+                "<i>Почти готово!</i>",
                 parse_mode="HTML"
             )
             
-            # Convert answers to format expected by AI service
-            formatted_answers = []
-            questions = data.get('questions', {})
-            for question_id, answer_index in answers.items():
-                question = questions.get(question_id, {})
-                options = question.get('options', [])
-                if answer_index < len(options):
-                    formatted_answers.append({
-                        'question_id': question_id,
-                        'question': question.get('text', ''),
-                        'answer': options[answer_index]
-                    })
-            
-            # Perform AI analysis
-            try:
-                analysis_result = await ai_service.profile_partner(
-                    answers=formatted_answers, 
-                    user_id=telegram_id,  # AI service uses telegram_id
-                    partner_name=partner_name,
-                    partner_description=partner_description
-                )
-                
-                # Update progress
-                await analysis_msg.edit_text(
-                    f"🔍 <b>Анализ профиля {partner_name}</b>\n\n"
-                    "✅ Психологический профиль готов\n"
-                    "📋 Генерирую PDF отчет...\n\n"
-                    "<i>Почти готово!</i>",
-                    parse_mode="HTML"
-                )
-                
-                # Generate PDF report
-                pdf_bytes = await html_pdf_service.generate_partner_report_html(
-                    analysis_result,
+            # Generate PDF report
+            pdf_bytes = await html_pdf_service.generate_partner_report_html(
+                analysis_result,
                     telegram_id,  # PDF service uses telegram_id
-                    partner_name
-                )
-                
+                partner_name
+            )
+            
                 # Save analysis to database (legacy format) using our own service
-                try:
+            try:
                     await local_user_service.save_analysis(
                         user_id=user_id,  # Use internal user_id
-                        analysis_type=AnalysisType.PARTNER_PROFILE,
-                        analysis_data=analysis_result,
-                        questions=formatted_answers
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to save analysis to DB: {e}")
-                
+                    analysis_type=AnalysisType.PARTNER_PROFILE,
+                    analysis_data=analysis_result,
+                    questions=formatted_answers
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save analysis to DB: {e}")
+            
                 # Save partner profile to database using our own service
-                try:
+            try:
                     await local_profile_service.create_profile_from_profiler(
                         user_id=user_id,  # Use internal user_id
-                        partner_name=partner_name,
-                        partner_description=partner_description,
-                        partner_basic_info=partner_basic_info,
-                        questions=formatted_answers,
-                        answers=answers,
-                        analysis_result=analysis_result
-                    )
-                    logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
-                except Exception as e:
-                    logger.error(f"Failed to save partner profile: {e}")
-                
-                # Send results
-                logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
-                await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
-                
-            except Exception as e:
-                logger.error(f"Analysis failed: {e}")
-                logger.error(f"Analysis error details: {str(e)}")
-                await analysis_msg.edit_text(
-                    "❌ <b>Ошибка анализа</b>\n\n"
-                    "Не удалось провести анализ. Попробуйте позже.\n\n"
-                    f"Техническая информация: {str(e)[:100]}",
-                    parse_mode="HTML",
-                    reply_markup=get_profiler_keyboard()
+                    partner_name=partner_name,
+                    partner_description=partner_description,
+                    partner_basic_info=partner_basic_info,
+                    questions=formatted_answers,
+                    answers=answers,
+                    analysis_result=analysis_result
                 )
+                    logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
+            except Exception as e:
+                logger.error(f"Failed to save partner profile: {e}")
+            
+            # Send results
+                logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
+            await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
+            
+        except Exception as e:
+            logger.error(f"Analysis failed: {e}")
+            logger.error(f"Analysis error details: {str(e)}")
+            await analysis_msg.edit_text(
+                "❌ <b>Ошибка анализа</b>\n\n"
+                "Не удалось провести анализ. Попробуйте позже.\n\n"
+                f"Техническая информация: {str(e)[:100]}",
+                parse_mode="HTML",
+                reply_markup=get_profiler_keyboard()
+            )
             
     except Exception as e:
         logger.error(f"Error in start_analysis: {e}")
@@ -1104,7 +1128,7 @@ async def show_detailed_recommendations(callback: CallbackQuery, state: FSMConte
         
         await callback.message.edit_text(
             recommendations_text,
-            parse_mode="HTML",
+            parse_mode="HTML", 
             reply_markup=keyboard
         )
         
