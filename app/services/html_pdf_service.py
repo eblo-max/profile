@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 import aiohttp
 import base64
@@ -485,7 +485,19 @@ class HTMLPDFService:
         # Generate personality type based on risk
         personality_type = self._determine_personality_type(overall_risk)
         
+        # Extract Dark Triad scores from analysis data
+        dark_triad_scores = self._extract_dark_triad_scores(analysis_data, overall_risk)
+        
+        # Generate personalized insights based on analysis
+        personalized_insights = self._generate_personalized_insights(analysis_data, partner_name, overall_risk)
+        
         # Prepare template data
+        # Generate enhanced data for blocks
+        personality_traits = self._get_personality_traits(personality_type, overall_risk)
+        personality_description = self._get_personality_description(personality_type, overall_risk)
+        risk_detailed_description = self._get_risk_detailed_description(overall_risk)
+        risk_recommendations = self._get_risk_recommendations(overall_risk)
+        
         template_data = {
             'partner_name': partner_name,
             'partner_name_genitive': self._decline_name(partner_name, "genitive"),      # кого? чего? - анализ Анны
@@ -496,18 +508,35 @@ class HTMLPDFService:
             'date': current_date,
             'report_id': report_id,
             'risk_score': int(overall_risk),
+            'risk_level': self._get_risk_level(overall_risk),
             'urgency': 'CRITICAL' if overall_risk > 70 else 'HIGH' if overall_risk > 40 else 'MEDIUM' if overall_risk > 20 else 'LOW',
             'personality_type': personality_type,
+            'personality_description': personality_description,
+            'personality_traits': personality_traits,
+            'risk_detailed_description': risk_detailed_description,
+            'risk_recommendations': risk_recommendations,
             'psychological_profile': expanded_profile,  # Using expanded version
             'red_flags': red_flags[:6] if len(red_flags) > 6 else red_flags,  # Limit to 6 for display
             'recommendations': '\n'.join(recommendations) if isinstance(recommendations, list) else str(recommendations),
             'population_percentile': min(95, int(overall_risk * 1.2)),  # Conservative estimate
+            'total_questions': 28,
             'blocks': self._generate_blocks_data(analysis_data, overall_risk),
-            'charts': {
-                'blocks_chart': None,  # Could be generated dynamically
-                'dark_triad_chart': None,
-                'risk_circle': None
-            },
+            
+            # Dynamic Dark Triad scores
+            'narcissism_score': dark_triad_scores['narcissism'],
+            'machiavellianism_score': dark_triad_scores['machiavellianism'], 
+            'psychopathy_score': dark_triad_scores['psychopathy'],
+            
+            # Personalized insights instead of static content
+            'warning_signs': personalized_insights['warning_signs'],
+            'behavioral_patterns': personalized_insights['behavioral_patterns'],
+            'development_prognosis': personalized_insights['development_prognosis'],
+            'protective_mechanisms': personalized_insights['protective_mechanisms'],
+            'help_resources': personalized_insights['help_resources'],
+            
+            # AI analysis
+            'ai_analysis': analysis_data.get('psychological_profile', ''),
+            
             # Additional data for new sections
             'manipulation_tactics': analysis_data.get('manipulation_tactics', []),
             'escalation_triggers': analysis_data.get('escalation_triggers', []),
@@ -536,7 +565,143 @@ class HTMLPDFService:
         except Exception as e:
             logger.error(f"Failed to render template: {e}")
             raise Exception(f"HTML генерация не удалась: {str(e)}")
-    
+
+    def _extract_dark_triad_scores(self, analysis_data: Dict[str, Any], overall_risk: float) -> Dict[str, int]:
+        """Extract Dark Triad scores from analysis data or calculate based on risk and block scores"""
+        
+        # Try to get from block_scores if available
+        block_scores = analysis_data.get('block_scores', {})
+        
+        # Calculate Dark Triad based on psychological research and user responses
+        narcissism_base = block_scores.get('narcissism', overall_risk / 10)
+        control_score = block_scores.get('control', overall_risk / 10)
+        emotion_score = block_scores.get('emotion', overall_risk / 10)
+        social_score = block_scores.get('social', overall_risk / 10)
+        
+        # Narcissism: Based on grandiosity, need for admiration, lack of empathy
+        narcissism = min(10, max(1, int(narcissism_base + (control_score * 0.3) + (social_score * 0.2))))
+        
+        # Machiavellianism: Based on manipulation, cunning, strategic thinking
+        gaslighting_score = block_scores.get('gaslighting', overall_risk / 10)
+        machiavellianism = min(10, max(1, int(control_score + (gaslighting_score * 0.4) + (social_score * 0.3))))
+        
+        # Psychopathy: Based on callousness, impulsivity, antisocial behavior
+        intimacy_score = block_scores.get('intimacy', overall_risk / 10)
+        psychopathy = min(10, max(1, int(emotion_score + (intimacy_score * 0.4) + (gaslighting_score * 0.3))))
+        
+        return {
+            'narcissism': narcissism,
+            'machiavellianism': machiavellianism,
+            'psychopathy': psychopathy
+        }
+
+    def _generate_personalized_insights(self, analysis_data: Dict[str, Any], partner_name: str, overall_risk: float) -> Dict[str, List[str]]:
+        """Generate personalized insights based on analysis data instead of static content"""
+        
+        block_scores = analysis_data.get('block_scores', {})
+        red_flags = analysis_data.get('red_flags', [])
+        key_concerns = analysis_data.get('key_concerns', [])
+        
+        # Generate personalized warning signs based on highest scoring blocks
+        warning_signs = []
+        if block_scores.get('control', 0) > 6:
+            warning_signs.extend([
+                "Контроль над финансами и временем партнера",
+                "Ограничение социальных контактов и изоляция",
+                "Принятие решений без учета мнения партнера"
+            ])
+        
+        if block_scores.get('emotion', 0) > 6:
+            warning_signs.extend([
+                "Эмоциональные качели и непредсказуемость",
+                "Агрессивные реакции на критику или несогласие",
+                "Использование эмоций для манипулирования"
+            ])
+            
+        if block_scores.get('gaslighting', 0) > 6:
+            warning_signs.extend([
+                "Газлайтинг и искажение реальности",
+                "Отрицание собственных слов и действий",
+                "Перекладывание вины на партнера"
+            ])
+            
+        if block_scores.get('narcissism', 0) > 6:
+            warning_signs.extend([
+                "Постоянная потребность в восхищении",
+                "Обесценивание достижений партнера",
+                "Неспособность к эмпатии и сочувствию"
+            ])
+            
+        # If no specific patterns, use general warning signs
+        if not warning_signs:
+            warning_signs = [
+                "Нарушение личных границ",
+                "Двойные стандарты в поведении", 
+                "Отказ брать ответственность за свои действия"
+            ]
+        
+        # Generate behavioral patterns based on analysis
+        behavioral_patterns = []
+        if block_scores.get('social', 0) > 6:
+            behavioral_patterns.append("Различное поведение наедине и в обществе")
+        if block_scores.get('intimacy', 0) > 6:
+            behavioral_patterns.append("Нарушение интимных границ и принуждение")
+        if overall_risk > 70:
+            behavioral_patterns.append("Эскалация агрессивного поведения при сопротивлении")
+        if block_scores.get('control', 0) > 7:
+            behavioral_patterns.append("Систематическое подрывание самооценки партнера")
+            
+        # Development prognosis based on risk level
+        if overall_risk > 80:
+            prognosis = "Критический прогноз: без профессионального вмешательства поведение будет усиливаться и может привести к серьезным последствиям"
+        elif overall_risk > 60:
+            prognosis = "Неблагоприятный прогноз: паттерны поведения будут усиливаться без изменений в динамике отношений"
+        elif overall_risk > 40:
+            prognosis = "Осторожный прогноз: возможны улучшения при работе с квалифицированным специалистом"
+        else:
+            prognosis = "Относительно благоприятный прогноз при соблюдении здоровых границ в отношениях"
+            
+        # Protective mechanisms based on specific risks
+        protective_mechanisms = [
+            "Документирование инцидентов и ведение дневника событий",
+            "Поддержание связей с поддерживающим окружением"
+        ]
+        
+        if block_scores.get('gaslighting', 0) > 6:
+            protective_mechanisms.append("Развитие навыков распознавания газлайтинга")
+        if block_scores.get('control', 0) > 6:
+            protective_mechanisms.append("Создание финансовой независимости и автономии")
+        if overall_risk > 70:
+            protective_mechanisms.append("Разработка плана безопасности на случай эскалации")
+            
+        # Help resources based on risk level
+        if overall_risk > 80:
+            help_resources = [
+                "Немедленное обращение в кризисные центры поддержки",
+                "Консультация с психологом, специализирующимся на абьюзивных отношениях",
+                "Обращение к юристу для защиты прав"
+            ]
+        elif overall_risk > 60:
+            help_resources = [
+                "Консультация семейного психолога",
+                "Групповая терапия для жертв эмоционального насилия",
+                "Телефоны доверия и онлайн-поддержка"
+            ]
+        else:
+            help_resources = [
+                "Семейное консультирование для работы с парой",
+                "Индивидуальная терапия для укрепления границ",
+                "Образовательные ресурсы по здоровым отношениям"
+            ]
+        
+        return {
+            'warning_signs': warning_signs[:8],  # Limit to 8 items
+            'behavioral_patterns': behavioral_patterns,
+            'development_prognosis': prognosis,
+            'protective_mechanisms': protective_mechanisms,
+            'help_resources': help_resources
+        }
+
     def _generate_blocks_data(self, analysis_data: Dict[str, Any], overall_risk: float) -> list:
         """Generate blocks data for template using real block_scores if available"""
         
@@ -545,44 +710,76 @@ class HTMLPDFService:
         
         # If we have real block_scores, use them
         if block_scores:
-            emotion_score = int(block_scores.get('emotion', block_scores.get('control', overall_risk / 10)))
-            manipulation_score = int(analysis_data.get('manipulation_risk', overall_risk / 10))
-            empathy_score = max(1, 10 - manipulation_score)  # Inverse of manipulation
-            aggression_score = int(block_scores.get('narcissism', overall_risk / 10))
+            blocks = []
+            
+            # Map block names with emojis and calculate scores
+            block_mapping = {
+                'narcissism': {'name': 'Нарциссизм', 'emoji': '👑'},
+                'control': {'name': 'Контроль', 'emoji': '🎛️'},
+                'gaslighting': {'name': 'Газлайтинг', 'emoji': '🌪️'},
+                'emotion': {'name': 'Эмоции', 'emoji': '💥'},
+                'intimacy': {'name': 'Интимность', 'emoji': '💔'},
+                'social': {'name': 'Социальность', 'emoji': '🎭'}
+            }
+            
+            for block_key, block_info in block_mapping.items():
+                score = int(block_scores.get(block_key, overall_risk / 10))
+                blocks.append({
+                    'name': block_info['name'],
+                    'emoji': block_info['emoji'],
+                    'score': min(10, max(0, score)),
+                    'level': self._get_level_description(score)
+                })
+            
+            return blocks
         else:
-            # Используем расчет на основе общего риска
+            # Fallback to calculated scores based on overall risk
             emotion_score = min(10, int(overall_risk / 10))
             manipulation_score = min(10, int((overall_risk + 10) / 12))
             empathy_score = max(1, 10 - int(overall_risk / 10))
             aggression_score = min(10, int(overall_risk / 8))
+            control_score = min(10, int(overall_risk / 9))
+            narcissism_score = min(10, int(overall_risk / 11))
 
-        blocks = [
-            {
-                'name': 'Эмоциональный контроль',
-                'emoji': '😠',
-                'score': emotion_score,
-                'level': 'КРИТИЧНО' if emotion_score > 7 else 'ВЫСОКО' if emotion_score > 4 else 'УМЕРЕННО' if emotion_score > 2 else 'НИЗКО'
-            },
-            {
-                'name': 'Манипулятивность',
-                'emoji': '🎭',
-                'score': manipulation_score,
-                'level': 'КРИТИЧНО' if manipulation_score > 7 else 'ВЫСОКО' if manipulation_score > 4 else 'УМЕРЕННО' if manipulation_score > 2 else 'НИЗКО'
-            },
-            {
-                'name': 'Эмпатия',
-                'emoji': '💝',
-                'score': empathy_score,
-                'level': 'ВЫСОКО' if empathy_score > 7 else 'НОРМАЛЬНО' if empathy_score > 4 else 'УМЕРЕННО' if empathy_score > 2 else 'НИЗКО'
-            },
-            {
-                'name': 'Агрессивность',
-                'emoji': '⚡',
-                'score': aggression_score,
-                'level': 'КРИТИЧНО' if aggression_score > 7 else 'ВЫСОКО' if aggression_score > 4 else 'УМЕРЕННО' if aggression_score > 2 else 'НИЗКО'
-            }
-        ]
-        return blocks
+            blocks = [
+                {
+                    'name': 'Эмоциональный контроль',
+                    'emoji': '💥',
+                    'score': emotion_score,
+                    'level': self._get_level_description(emotion_score)
+                },
+                {
+                    'name': 'Манипулятивность', 
+                    'emoji': '🎭',
+                    'score': manipulation_score,
+                    'level': self._get_level_description(manipulation_score)
+                },
+                {
+                    'name': 'Эмпатия',
+                    'emoji': '💝',
+                    'score': empathy_score,
+                    'level': self._get_level_description(empathy_score)
+                },
+                {
+                    'name': 'Агрессивность',
+                    'emoji': '⚡',
+                    'score': aggression_score,
+                    'level': self._get_level_description(aggression_score)
+                },
+                {
+                    'name': 'Контроль',
+                    'emoji': '🎛️',
+                    'score': control_score,
+                    'level': self._get_level_description(control_score)
+                },
+                {
+                    'name': 'Нарциссизм',
+                    'emoji': '👑',
+                    'score': narcissism_score,
+                    'level': self._get_level_description(narcissism_score)
+                }
+            ]
+            return blocks
     
 
     
@@ -1323,27 +1520,92 @@ class HTMLPDFService:
         return '\n'.join([f'<li>{char}</li>' for char in characteristics])
     
     def _generate_behavior_patterns(self, risk_score: float) -> str:
-        """Generate behavior patterns HTML"""
-        if risk_score >= 70:
-            patterns = [
-                "Цикл \"любовные бомбардировки\" → обесценивание → контроль",
-                "Использование молчания как формы психологического наказания",
-                "Систематическая проекция собственных недостатков на партнера",
-                "Двойные стандарты в отношении правил и ожиданий",
-                "Эскалация агрессии при попытках установить границы"
-            ]
-        elif risk_score >= 50:
-            patterns = [
-                "Периодические циклы близости и отдаления",
-                "Использование эмоций для контроля ситуации",
-                "Проекция вины на партнера",
-                "Непоследовательность в поведении и обещаниях"
-            ]
-        else:
-            patterns = [
-                "Эмоциональные реакции на конфликты",
-                "Сложности в выражении чувств",
-                "Периодические коммуникационные проблемы"
-            ]
+        """Generate behavior patterns based on risk score"""
+        patterns = [
+            f"Эмоциональная нестабильность - {min(100, int(risk_score * 1.2))}%",
+            f"Контролирующее поведение - {min(100, int(risk_score * 1.1))}%",
+            f"Манипулятивные техники - {min(100, int(risk_score * 0.9))}%",
+            f"Нарушение границ - {min(100, int(risk_score * 1.0))}%"
+        ]
         
-        return '\n'.join([f'<li>{pattern}</li>' for pattern in patterns]) 
+        return "\n".join(patterns)
+
+    def _get_personality_traits(self, personality_type: str, risk_score: float) -> list:
+        """Generate personality traits based on type and risk score"""
+        base_traits = {
+            'Нарциссическая личность': [
+                'Грандиозное самомнение',
+                'Потребность в восхищении', 
+                'Отсутствие эмпатии',
+                'Эксплуатация отношений'
+            ],
+            'Пограничная личность': [
+                'Эмоциональная нестабильность',
+                'Страх покинутости',
+                'Импульсивность',
+                'Нарушенная самоидентичность'
+            ],
+            'Антисоциальная личность': [
+                'Игнорирование прав других',
+                'Обман и манипуляции',
+                'Импульсивность',
+                'Отсутствие раскаяния'
+            ],
+            'Токсичная личность': [
+                'Контролирующее поведение',
+                'Эмоциональные качели',
+                'Газлайтинг',
+                'Нарушение границ'
+            ]
+        }
+        
+        # Get base traits for personality type
+        traits = base_traits.get(personality_type, base_traits['Токсичная личность'])
+        
+        # Add risk-specific traits
+        if risk_score >= 70:
+            traits.extend(['Высокая агрессивность', 'Деструктивные паттерны'])
+        elif risk_score >= 40:
+            traits.extend(['Проблемные паттерны', 'Эмоциональная нестабильность'])
+            
+        return traits[:6]  # Limit to 6 traits
+
+    def _get_personality_description(self, personality_type: str, risk_score: float) -> str:
+        """Generate detailed personality description"""
+        descriptions = {
+            'Нарциссическая личность': f"Личность с выраженными нарциссическими чертами (риск {risk_score:.0f}%). Характеризуется грандиозным самомнением, потребностью в постоянном восхищении и отсутствием эмпатии к партнеру.",
+            'Пограничная личность': f"Пограничное расстройство личности (риск {risk_score:.0f}%). Отличается эмоциональной нестабильностью, страхом покинутости и импульсивным поведением в отношениях.",
+            'Антисоциальная личность': f"Антисоциальные черты личности (риск {risk_score:.0f}%). Проявляется в игнорировании прав партнера, обмане, манипуляциях и отсутствии раскаяния.",
+            'Токсичная личность': f"Токсичные паттерны поведения (риск {risk_score:.0f}%). Включают контролирующее поведение, эмоциональные качели и систематическое нарушение границ партнера."
+        }
+        
+        return descriptions.get(personality_type, descriptions['Токсичная личность'])
+
+    def _get_risk_detailed_description(self, risk_score: float) -> str:
+        """Generate detailed risk description"""
+        if risk_score >= 70:
+            return f"Критически высокий уровень токсичности ({risk_score:.0f}%). Обнаружены серьезные признаки эмоционального абьюза, контролирующего поведения и манипуляций. Отношения представляют значительную угрозу для психологического и возможно физического благополучия."
+        elif risk_score >= 40:
+            return f"Высокий уровень проблемных паттернов ({risk_score:.0f}%). Выявлены множественные красные флаги токсичного поведения, включая нарушение границ, эмоциональную нестабильность и элементы контроля."
+        else:
+            return f"Умеренный уровень риска ({risk_score:.0f}%). Некоторые проблемные моменты в поведении, которые требуют внимания, но в целом отношения находятся в допустимых рамках."
+
+    def _get_risk_recommendations(self, risk_score: float) -> str:
+        """Generate risk-specific recommendations"""
+        if risk_score >= 70:
+            return "Немедленно обратитесь к специалисту. Рассмотрите план безопасности. Установите четкие границы и поддержку близких."
+        elif risk_score >= 40:
+            return "Обратитесь к психологу для работы с отношениями. Укрепите личные границы. Развивайте поддерживающие отношения."
+        else:
+            return "Продолжайте наблюдение за динамикой отношений. При необходимости обратитесь за консультацией специалиста."
+
+    def _get_risk_level(self, risk_score: float) -> str:
+        """Get risk level string"""
+        if risk_score >= 70:
+            return "critical"
+        elif risk_score >= 40:
+            return "high"
+        elif risk_score >= 20:
+            return "medium"
+        else:
+            return "low"

@@ -60,40 +60,218 @@
             letter-spacing: -0.01em;
         }
 
-        /* Compact Header */
+        /* Header */
         .header {
             background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
             color: white;
+            padding: var(--spacing-lg);
             text-align: center;
-            padding: var(--spacing-l);
-            margin: -8mm -8mm var(--spacing-m) -8mm;
-            border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
-            box-shadow: var(--shadow-medium);
+            margin-bottom: var(--spacing-md);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
         }
 
         .header h1 {
-            font-size: 22px;
-            margin-bottom: var(--spacing-s);
-            font-weight: 600;
-            letter-spacing: -0.02em;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 var(--spacing-xs) 0;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            word-spacing: 2px;
+            line-height: 1.3;
         }
 
-        .header-info {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            padding: var(--spacing-s);
-            border-radius: var(--border-radius-base);
-            margin-top: var(--spacing-s);
+        .header .subtitle {
+            font-size: 11px;
+            opacity: 0.9;
+            margin: 0;
+            font-weight: 400;
+        }
+
+        .header .meta {
             font-size: 9px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0.8;
+            margin-top: var(--spacing-xs);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Main title card - adaptive sizing */
+        .main-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-md);
+            text-align: center;
+            margin-bottom: var(--spacing-md);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ff9a9e, #fecfef, #fecfef);
+        }
+
+        .main-title h2 {
+            font-size: clamp(12px, 2.5vw, 16px);
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            line-height: 1.2;
+            word-wrap: break-word;
+            hyphens: auto;
+            text-align: center;
+            max-width: 100%;
+            padding: 0 var(--spacing-xs);
+        }
+
+        /* Info cards grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .info-card {
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-md);
+            padding: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+            border-top: 3px solid var(--color-primary);
+            position: relative;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-card h3 {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--color-text-primary);
+            margin: 0 0 var(--spacing-sm) 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: var(--spacing-xs);
+        }
+
+        .info-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin: 0 0 var(--spacing-xs) 0;
+            line-height: 1;
+        }
+
+        .info-card .description {
+            font-size: 9px;
+            color: var(--color-text-secondary);
+            line-height: 1.4;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-card.risk-critical .value {
+            color: var(--color-danger);
+        }
+
+        .info-card.risk-high .value {
+            color: #ff6b35;
+        }
+
+        .info-card.risk-medium .value {
+            color: var(--color-warning);
+        }
+
+        .info-card.risk-low .value {
+            color: var(--color-success);
+        }
+
+        /* Personality type card - enhanced */
+        .personality-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: var(--border-radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .personality-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ff9a9e, #fecfef);
+        }
+
+        .personality-card h3 {
+            font-size: 12px;
+            font-weight: 700;
+            margin: 0 0 var(--spacing-sm) 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .personality-card .type-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 var(--spacing-sm) 0;
+            line-height: 1.2;
+        }
+
+        .personality-card .type-description {
+            font-size: 10px;
+            opacity: 0.9;
+            line-height: 1.4;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .personality-card .characteristics {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: var(--spacing-xs);
+            font-size: 9px;
+            opacity: 0.8;
         }
 
-        .header-info div {
-            margin: var(--spacing-xs) 0;
-            font-weight: 400;
+        .personality-card .characteristic {
+            background: rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-xs);
+            border-radius: var(--border-radius-sm);
+            backdrop-filter: blur(10px);
         }
 
         /* Compact Risk Overview */
@@ -807,8 +985,8 @@
     <!-- Compact Header -->
     <div class="header">
         <h1>🧠 ПРОФЕССИОНАЛЬНЫЙ ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ</h1>
-        <div>Научный анализ личности на основе DSM-5, ICD-11 и методик Dark Triad</div>
-        <div class="header-info">
+        <div class="subtitle">Научный анализ личности на основе DSM-5, ICD-11 и методик Dark Triad</div>
+        <div class="meta">
             <div><strong>Партнер:</strong> {{ partner_name }}</div>
             <div><strong>Дата анализа:</strong> {{ date }}</div>
             <div><strong>ID отчета:</strong> {{ report_id }}</div>
@@ -844,32 +1022,43 @@
 
     <!-- Three-column Content Grid -->
     <div class="content-grid">
-        <!-- Personality Type -->
-        <div class="card">
-            <div class="card-title">👤 ТИП ЛИЧНОСТИ</div>
-            <div class="personality-type-text">{{ personality_type }}</div>
-        </div>
-
-        <!-- Statistics -->
-        <div class="card">
-            <div class="card-title">📊 СТАТИСТИКА</div>
-            <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
-                <div class="stat-item">
-                    <div class="stat-number">{{ population_percentile }}%</div>
-                    <div class="stat-label">Популяция хуже</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">{{ red_flags|length }}</div>
-                    <div class="stat-label">Красных флагов</div>
-                </div>
+        <!-- Enhanced Personality Type -->
+        <div class="info-card personality-card">
+            <h3>👤 ТИП ЛИЧНОСТИ</h3>
+            <div class="type-name">{{ personality_type }}</div>
+            <div class="type-description">{{ personality_description }}</div>
+            <div class="characteristics">
+                {% for trait in personality_traits %}
+                <div class="characteristic">{{ trait }}</div>
+                {% endfor %}
             </div>
         </div>
 
-        <!-- Risk Level -->
-        <div class="card">
-            <div class="card-title">⚠️ УРОВЕНЬ РИСКА</div>
-            <div class="personality-type-text">
-                {% if risk_score >= 70 %}Критический{% elif risk_score >= 40 %}Высокий{% else %}Низкий{% endif %}
+        <!-- Enhanced Statistics -->
+        <div class="info-card">
+            <h3>📊 СТАТИСТИКА</h3>
+            <div class="value">{{ population_percentile }}%</div>
+            <div class="description">
+                Популяция с более низкими показателями токсичности.
+                <br><br>
+                <strong>{{ red_flags|length }}</strong> критических красных флагов выявлено в поведении.
+                <br><br>
+                Анализ основан на {{ total_questions }} профессиональных вопросах.
+            </div>
+        </div>
+
+        <!-- Enhanced Risk Level -->
+        <div class="info-card risk-{{ risk_level }}">
+            <h3>⚠️ УРОВЕНЬ РИСКА</h3>
+            <div class="value">
+                {% if risk_score >= 70 %}Критический{% elif risk_score >= 40 %}Высокий{% else %}Умеренный{% endif %}
+            </div>
+            <div class="description">
+                {{ risk_detailed_description }}
+                <br><br>
+                <strong>Рекомендации:</strong> {{ risk_recommendations }}
+                <br><br>
+                <em>Оценка основана на научных методиках DSM-5 и Dark Triad.</em>
             </div>
         </div>
     </div>
@@ -935,42 +1124,49 @@
     </div>
     {% endif %}
 
-    <!-- Warning Signs -->
+    <!-- Dynamic Warning Signs -->
     <div class="warning-signs">
-        <h4>⚠️ ПРИЗНАКИ ТОКСИЧНОГО ПОВЕДЕНИЯ</h4>
+        <h4>⚠️ ВЫЯВЛЕННЫЕ ПРИЗНАКИ ТОКСИЧНОГО ПОВЕДЕНИЯ</h4>
         <ul>
-            <li>Постоянная критика и обесценивание</li>
-            <li>Контроль над финансами и временем</li>
-            <li>Изоляция от друзей и семьи</li>
-            <li>Эмоциональные качели и непредсказуемость</li>
-            <li>Газлайтинг и искажение реальности</li>
-            <li>Нарушение личных границ</li>
-            <li>Двойные стандарты в поведении</li>
-            <li>Отказ брать ответственность за свои действия</li>
+            {% for warning in warning_signs %}
+            <li>{{ warning }}</li>
+            {% endfor %}
         </ul>
     </div>
 
-    <!-- Additional Info Grid -->
+    <!-- Dynamic Personalized Info Grid -->
     <div class="info-grid">
         <div class="info-card">
-            <h4>🎯 ОСНОВНЫЕ ПАТТЕРНЫ</h4>
-            <p>Выявлены характерные для токсичных отношений паттерны контроля, манипуляций и эмоционального насилия.
-                Особое внимание следует обратить на техники газлайтинга и нарушение личных границ.</p>
+            <h3>🎯 ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ</h3>
+            {% if behavioral_patterns %}
+            <ul style="margin-left: 15px; font-size: 8px;">
+                {% for pattern in behavioral_patterns %}
+                <li>{{ pattern }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>На основе анализа выявлены специфические паттерны поведения, требующие внимания в отношениях.</p>
+            {% endif %}
         </div>
         <div class="info-card">
-            <h4>📈 ПРОГНОЗ РАЗВИТИЯ</h4>
-            <p>При отсутствии изменений поведенческие паттерны будут усиливаться. Рекомендуется профессиональная помощь
-                и четкое установление границ в отношениях.</p>
+            <h3>📈 ПРОГНОЗ РАЗВИТИЯ</h3>
+            <p>{{ development_prognosis }}</p>
         </div>
         <div class="info-card">
-            <h4>🛡️ ЗАЩИТНЫЕ МЕХАНИЗМЫ</h4>
-            <p>Важно развивать навыки распознавания манипуляций, укреплять самооценку и поддерживать связи с
-                поддерживающим окружением.</p>
+            <h3>🛡️ ЗАЩИТНЫЕ МЕХАНИЗМЫ</h3>
+            <ul style="margin-left: 15px; font-size: 8px;">
+                {% for mechanism in protective_mechanisms %}
+                <li>{{ mechanism }}</li>
+                {% endfor %}
+            </ul>
         </div>
         <div class="info-card">
-            <h4>📞 РЕСУРСЫ ПОМОЩИ</h4>
-            <p>При критических ситуациях обращайтесь к специалистам по семейной терапии, психологам или в кризисные
-                центры поддержки.</p>
+            <h3>📞 РЕСУРСЫ ПОМОЩИ</h3>
+            <ul style="margin-left: 15px; font-size: 8px;">
+                {% for resource in help_resources %}
+                <li>{{ resource }}</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
 
