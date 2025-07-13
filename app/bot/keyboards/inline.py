@@ -44,14 +44,11 @@ def profiler_menu_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     builder.row(
-        InlineKeyboardButton(text="🆕 Новый профиль", callback_data="create_profile"),
-        InlineKeyboardButton(text="📋 Мои профили", callback_data="my_profiles")
+        InlineKeyboardButton(text="Новый профиль", callback_data="create_profile"),
+        InlineKeyboardButton(text="Мои профили", callback_data="my_profiles")
     )
     builder.row(
-        InlineKeyboardButton(text="🧪 Экспериментальная версия", callback_data="create_profile_free_form")
-    )
-    builder.row(
-        InlineKeyboardButton(text="🎯 Рекомендации", callback_data="profile_recommendations")
+        InlineKeyboardButton(text="Рекомендации", callback_data="profile_recommendations")
     )
     builder.row(
         InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")

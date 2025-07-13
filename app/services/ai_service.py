@@ -140,7 +140,7 @@ class AIService:
         
         try:
             # Create prompts
-            system_prompt = ANALYSIS_SYSTEM_PROMPT
+                system_prompt = ANALYSIS_SYSTEM_PROMPT
             user_prompt = get_text_analysis_prompt(text, analysis_type)
             
             # Get AI response
@@ -749,7 +749,7 @@ class AIService:
         try:
             data = extract_json_from_text(response)
             if not data:
-                data = safe_json_loads(response, {})
+            data = safe_json_loads(response, {})
             
             return {
                 "analysis": data.get("analysis", "Анализ недоступен"),
@@ -803,8 +803,8 @@ class AIService:
                 "control_mechanisms": data.get("control_mechanisms", ["Ограничение общения"])
             }
             
-            # Validate urgency level
-            valid_urgency = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        # Validate urgency level
+        valid_urgency = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
             if result["urgency_level"] not in valid_urgency:
                 result["urgency_level"] = "LOW"
             

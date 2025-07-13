@@ -51,25 +51,26 @@ async def show_profiler_menu(callback: CallbackQuery, state: FSMContext, profile
         profile_count = await profile_service._get_user_profile_count(user_id)
         
         # Create menu text
-        menu_text = f"""🚀 <b>МЕГА-ПРОФАЙЛЕР ПАРТНЕРА</b>
+        menu_text = f"""🧠 <b>ПСИХОЛОГИЧЕСКИЙ ПРОФАЙЛЕР ПАРТНЕРА</b>
 
 👤 <b>Ваши профили:</b> {profile_count}
 
-💫 <b>Революционная технология 2025:</b>
+<b>Научные методики 2025:</b>
 • Разработка в кооперации с психологами и психиатрами
-• 5-уровневая система анализа
-• Консенсус 7 экспертов
-• Живые сценарии поведения
-• Максимальная персонализация
+• Применение техник DSM-5 и ICD-11
+• Анализ Dark Triad (нарциссизм, макиавеллизм, психопатия)
+• Методы клинической психологии
+• Техники поведенческого анализа
+• Система оценки манипулятивного поведения
 
 <b>Что вы хотите сделать?</b>
 
-🆕 <b>Новый профиль</b> - мега-анализ партнера
-📂 <b>Мои профили</b> - просмотреть сохраненные профили
-💡 <b>Рекомендации</b> - получить советы по отношениям
+<b>Новый профиль</b> - профессиональный анализ партнера
+<b>Мои профили</b> - просмотреть сохраненные профили
+<b>Рекомендации</b> - получить советы по отношениям
 
-⏱️ <i>Время анализа: 3-5 минут</i>
-🔬 <i>Максимальная точность и детализация</i>"""
+<i>Время анализа: 3-5 минут</i>
+<i>Максимальная точность и детализация</i>"""
         
         # Show menu
         await callback.message.edit_text(
@@ -88,25 +89,25 @@ async def create_new_profile(callback: CallbackQuery, state: FSMContext):
     """Create new profile - show introduction and start data collection"""
     try:
         await callback.message.edit_text(
-            "🚀 <b>МЕГА-АНАЛИЗ ПАРТНЕРА</b>\n\n"
-            "💫 <b>Революционная система 2025:</b>\n"
+            "🧠 <b>ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ ПАРТНЕРА</b>\n\n"
+            "<b>Научная система 2025:</b>\n"
             "• Разработка в кооперации с психологами и психиатрами\n"
-            "• 5-уровневая обработка данных\n"
-            "• Консенсус 7 экспертов-психологов\n"
-            "• Живые сценарии поведения\n"
-            "• Максимальная персонализация\n\n"
-            "🎯 <b>Что будет происходить:</b>\n"
+            "• Применение методик DSM-5 и ICD-11\n"
+            "• Анализ Dark Triad (нарциссизм, макиавеллизм, психопатия)\n"
+            "• Техники клинической психологии\n"
+            "• Методы поведенческого анализа\n\n"
+            "<b>Что будет происходить:</b>\n"
             "• Расскажите о партнере (2 минуты)\n"
-            "• Ответите на 28 вопросов (8-10 минут)\n"
-            "• Получите мега-анализ (3-5 минут)\n"
+            "• Ответите на 28 вопросов в свободной форме (15-20 минут)\n"
+            "• Получите детальный анализ (3-5 минут)\n"
             "• Узнаете детальные риски и рекомендации\n\n"
-            "⏱️ <b>Общее время:</b> 13-17 минут\n"
-            "🔒 <b>Конфиденциальность:</b> Все данные защищены\n"
-            "🔬 <b>Качество:</b> Максимальная точность анализа\n\n"
-            "Готовы к революционному анализу?",
+            "<b>Общее время:</b> 20-27 минут\n"
+            "<b>Конфиденциальность:</b> Все данные защищены\n"
+            "<b>Качество:</b> Максимальная точность анализа\n\n"
+            "Готовы к профессиональному анализу?",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚀 Начать мега-анализ", callback_data="start_partner_info")],
+                [InlineKeyboardButton(text="🚀 Начать анализ", callback_data="start_partner_info")],
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
             ])
         )
@@ -120,6 +121,8 @@ async def start_partner_info_collection(callback: CallbackQuery, state: FSMConte
     """Start collecting partner information"""
     try:
         await state.set_state(PartnerProfileStates.waiting_for_name)
+        # Автоматически устанавливаем флаг свободной формы
+        await state.update_data(is_free_form=True)
         await callback.message.edit_text(
             "👤 <b>Информация о партнере</b>\n\n"
             "Как зовут вашего партнера?\n\n"
@@ -253,46 +256,26 @@ async def process_partner_basic_info(message: Message, state: FSMContext):
         
         # Check if this is free form version
         data = await state.get_data()
-        is_free_form = data.get('is_free_form', False)
+        is_free_form = data.get('is_free_form', True)  # По умолчанию теперь свободная форма
         
-        if is_free_form:
-            await message.answer(
-                f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
-                "🎯 <b>Переходим к экспериментальному опросу</b>\n\n"
-                "💫 <b>Следующий этап:</b> 5 вопросов в свободной форме\n\n"
-                "🔬 <b>Эти данные будут обработаны:</b>\n"
-                "• Революционной технологией анализа текста\n"
-                "• Максимально детальным профайлингом\n"
-                "• Персонализированным подходом\n\n"
-                "⏱️ <b>Время опроса:</b> 15-20 минут\n"
-                "🎯 <b>Точность анализа:</b> революционная\n"
-                "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
-                "Отвечайте максимально подробно - это критично для качества супер-анализа!",
-                parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🚀 Начать эксперимент", callback_data="start_free_form_questions")],
-                    [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
-                ])
-            )
-        else:
-            await message.answer(
-                f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
-                "🎯 <b>Переходим к революционному опросу</b>\n\n"
-                "💫 <b>Следующий этап:</b> 28 вопросов в свободной форме\n\n"
-                "🔬 <b>Эти данные будут обработаны:</b>\n"
-                "• Революционной технологией анализа текста\n"
-                "• Максимально детальным профайлингом\n"
-                "• Персонализированным подходом\n\n"
-                "⏱️ <b>Время опроса:</b> 25-35 минут\n"
-                "🎯 <b>Точность анализа:</b> революционная\n"
-                "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
-                "Отвечайте максимально подробно - это критично для качества мега-анализа!",
-                parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🚀 Начать мега-опрос", callback_data="start_questions_now")],
-                    [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
-                ])
-            )
+        await message.answer(
+            f"✅ <b>Информация о {partner_name} сохранена</b>\n\n"
+            "🎯 <b>Переходим к психологическому опросу</b>\n\n"
+            "💫 <b>Следующий этап:</b> 28 вопросов в свободной форме\n\n"
+            "🔬 <b>Эти данные будут обработаны:</b>\n"
+            "• Научными методиками анализа текста\n"
+            "• Максимально детальным профайлингом\n"
+            "• Персонализированным подходом\n\n"
+            "⏱️ <b>Время опроса:</b> 15-20 минут\n"
+            "🎯 <b>Точность анализа:</b> максимальная\n"
+            "🔒 <b>Конфиденциально:</b> Никто не увидит ваши ответы\n\n"
+            "Отвечайте максимально подробно - это критично для качества анализа!",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🚀 Начать опрос", callback_data="start_free_form_questions")],
+                [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_basic_info")]
+            ])
+        )
     except Exception as e:
         logger.error(f"Error in process_partner_basic_info: {e}")
         await message.answer("❌ Произошла ошибка")
@@ -349,16 +332,18 @@ async def back_to_basic_info_input(callback: CallbackQuery, state: FSMContext):
     """Go back to basic info input"""
     try:
         await state.set_state(PartnerProfileStates.waiting_for_basic_info)
+        
+        data = await state.get_data()
+        partner_name = data.get('partner_name', 'партнер')
+        
         await callback.message.edit_text(
-            "✅ <b>Описание сохранено</b>\n\n"
-            "📊 <b>Базовые данные партнера</b>\n\n"
-            "Укажите дополнительную информацию (одним сообщением):\n"
-            "• Возраст (примерно)\n"
-            "• Род деятельности/работа\n"
-            "• Семейное положение\n"
-            "• Сколько времени вы знакомы\n\n"
-            "📝 <b>Пример:</b>\n"
-            "<i>30 лет, программист, холост, знакомы 8 месяцев</i>",
+            f"📝 <b>Базовая информация о {partner_name}</b>\n\n"
+            "Расскажите о вашем партнере в свободной форме:\n"
+            "• Как давно вы вместе?\n"
+            "• Какие у вас отношения?\n"
+            "• Что вас беспокоит или радует?\n"
+            "• Любые детали, которые считаете важными\n\n"
+            "💬 <i>Пишите всё, что считаете нужным</i>",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_description")]
@@ -368,62 +353,6 @@ async def back_to_basic_info_input(callback: CallbackQuery, state: FSMContext):
         logger.error(f"Error in back_to_basic_info_input: {e}")
         await callback.answer("❌ Произошла ошибка")
 
-
-@router.callback_query(F.data == "start_questions_now")
-async def start_questions_now(callback: CallbackQuery, state: FSMContext):
-    """Start profiler questions after collecting partner info - теперь все в свободной форме"""
-    try:
-        # Get all free form questions
-        free_form_questions = get_free_form_questions()
-        
-        # Create question order for all 28 questions
-        question_order = [
-            # Block 1: Narcissism (6 questions)
-            "narcissism_q1", "narcissism_q2", "narcissism_q3", "narcissism_q4", "narcissism_q5", "narcissism_q6",
-            # Block 2: Control (6 questions)
-            "control_q1", "control_q2", "control_q3", "control_q4", "control_q5", "control_q6",
-            # Block 3: Gaslighting (5 questions)
-            "gaslighting_q1", "gaslighting_q2", "gaslighting_q3", "gaslighting_q4", "gaslighting_q5",
-            # Block 4: Emotion (4 questions)
-            "emotion_q1", "emotion_q2", "emotion_q3", "emotion_q4",
-            # Block 5: Intimacy (3 questions)
-            "intimacy_q1", "intimacy_q2", "intimacy_q3",
-            # Block 6: Social (4 questions)
-            "social_q1", "social_q2", "social_q3", "social_q4"
-        ]
-        
-        # Update state with questions data
-        await state.set_state(FreeFormProfilerStates.narcissism_q1_text)
-        await state.update_data(
-            free_form_questions=free_form_questions,
-            question_order=question_order,
-            current_question=0,
-            text_answers={}
-        )
-        
-        # Send first question
-        first_question = free_form_questions["narcissism_q1"]
-        
-        data = await state.get_data()
-        partner_name = data.get('partner_name', 'партнера')
-        
-        await callback.message.edit_text(
-            f"🎯 <b>Вопрос 1 из 28</b> (Свободная форма)\n\n"
-            f"📝 <b>О {partner_name}:</b>\n\n"
-            f"❓ <b>{first_question['text']}</b>\n\n"
-            f"💭 <i>{first_question['context']}</i>\n\n"
-            f"🔍 <b>Подсказки для ответа:</b>\n"
-            + "\n".join([f"• {hint}" for hint in first_question['prompt_hints']]) + "\n\n"
-            f"💡 <b>Пример ответа:</b>\n"
-            f"<i>{first_question['example']}</i>\n\n"
-            f"✏️ <b>Напишите ваш ответ:</b>\n"
-            f"<i>Минимум {first_question['min_length']} символов</i>",
-            parse_mode="HTML"
-        )
-        
-    except Exception as e:
-        logger.error(f"Error in start_questions_now: {e}")
-        await callback.answer("❌ Произошла ошибка")
 
 # Универсальный обработчик для всех текстовых ответов
 async def process_text_answer(message: Message, state: FSMContext, question_id: str, current_question_num: int, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
@@ -460,7 +389,7 @@ async def process_text_answer(message: Message, state: FSMContext, question_id: 
         if is_last_question:
             # All questions answered - start analysis
             await state.update_data(text_answers=text_answers)
-            await start_free_form_analysis(message, state, ai_service, html_pdf_service, user_service, profile_service, message.from_user.id)
+            await start_analysis(message, state, ai_service, html_pdf_service, user_service, profile_service, message.from_user.id)
         else:
             # Move to next question
             next_question_num = current_question_num + 1
@@ -831,103 +760,6 @@ async def show_profile_recommendations(callback: CallbackQuery, state: FSMContex
         await callback.answer("❌ Произошла ошибка при загрузке рекомендаций")
 
 
-
-
-
-@router.callback_query(F.data.startswith("answer_"))
-async def handle_answer(callback: CallbackQuery, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService):
-    """Handle user answer to profiling question"""
-    try:
-        # Acknowledge callback immediately to prevent duplicates
-        await callback.answer()
-        
-        # Parse callback data: answer_{question_id}_{answer_index}
-        # Question ID can contain underscores, so we split and take the last part as answer_index
-        callback_parts = callback.data.split("_")
-        if len(callback_parts) < 3:
-            logger.error(f"Invalid callback format: {callback.data}")
-            return
-            
-        # Last part is answer_index, everything between "answer" and last part is question_id
-        answer_index = int(callback_parts[-1])
-        question_id = "_".join(callback_parts[1:-1])
-        
-        # Get state data
-        data = await state.get_data()
-        questions = data.get('questions', {})
-        question_order = data.get('question_order', [])
-        current_question = data.get('current_question', 0)
-        answers = data.get('answers', {})
-        
-        # Check if this answer was already processed (protection from duplicates)
-        if question_id in answers:
-            logger.warning(f"Answer for question {question_id} already exists, skipping duplicate")
-            return
-        
-        # Save answer
-        answers[question_id] = answer_index
-        logger.info(f"Saved answer for question {question_id}: {answer_index}")
-        
-        # Check if this was the last question
-        total_questions = len(question_order)
-        is_last_question = current_question >= (total_questions - 1)
-        
-        logger.info(f"Current question index: {current_question}, Total questions: {total_questions}, Is last: {is_last_question}")
-        
-        if is_last_question:
-            # All questions answered - start analysis
-            logger.info("All questions completed, starting analysis...")
-            await state.update_data(answers=answers)
-            await start_analysis(callback.message, state, ai_service, html_pdf_service, user_service, profile_service, callback.from_user.id)
-        else:
-        # Move to next question
-            next_question = current_question + 1
-            logger.info(f"Moving to question {next_question + 1} of {total_questions}")
-        
-            # Update state
-            await state.update_data(
-                current_question=next_question,
-                answers=answers
-            )
-            
-            # Send next question
-            next_question_id = question_order[next_question]
-            question = questions.get(next_question_id)
-            
-            if not question:
-                logger.error(f"Question {next_question_id} not found in questions dict")
-                await callback.message.answer("❌ Вопрос не найден")
-                return
-            
-            # Get partner name
-            partner_name = data.get('partner_name', 'партнера')
-            
-            # Get block name
-            block_names = {
-                "narcissism": "Нарциссизм и грандиозность",
-                "control": "Контроль и манипуляции",
-                "gaslighting": "Газлайтинг и искажение реальности",
-                "emotion": "Эмоциональная регуляция",
-                "intimacy": "Интимность и принуждение",
-                "social": "Социальное поведение"
-            }
-            block_name = block_names.get(question['block'], question['block'])
-            
-            await callback.message.edit_text(
-                f"🎯 <b>Вопрос {next_question + 1} из {total_questions}</b>\n\n"
-                f"📝 <b>О {partner_name}:</b>\n\n"
-                f"{question['text']}\n\n"
-                f"🔍 <b>Блок:</b> {block_name}\n"
-                f"💡 <i>{question['context']}</i>",
-                parse_mode="HTML",
-                reply_markup=get_profiler_question_keyboard(next_question_id, question['options'])
-            )
-            
-    except Exception as e:
-        logger.error(f"Error handling answer: {e}")
-        await callback.answer("❌ Произошла ошибка при обработке ответа")
-
-
 def get_block_emoji(block: str) -> str:
     """Get emoji for block"""
     block_emoji = {
@@ -942,12 +774,9 @@ def get_block_emoji(block: str) -> str:
 
 
 async def start_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService, telegram_id: int):
-    """Start AI analysis of answers"""
+    """Start AI analysis of free form answers"""
     try:
-        # Use the provided telegram_id instead of extracting from message
-        logger.info(f"Starting analysis for telegram_id: {telegram_id}")
-        
-        # Create our own session and services to avoid middleware session issues
+        # Get user from database
         from app.core.database import get_session
         from app.services.user_service import UserService
         from app.services.profile_service import ProfileService
@@ -956,7 +785,6 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             local_user_service = UserService(session)
             local_profile_service = ProfileService(session)
             
-            logger.info(f"Searching for user with telegram_id: {telegram_id}")
             user = await local_user_service.get_user_by_telegram_id(telegram_id)
             
             if not user:
@@ -964,11 +792,10 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
                 await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
                 return
             
-            logger.info(f"Found user: id={user.id}, telegram_id={user.telegram_id}, name={user.first_name}")
-            
             user_id = user.id  # Internal database ID
+        
         data = await state.get_data()
-        answers = data.get('answers', {})
+        text_answers = data.get('text_answers', {})
         
         # Get partner info from state
         partner_name = data.get('partner_name', 'Партнер')
@@ -977,49 +804,50 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         
         # Send analysis start message
         analysis_msg = await message.answer(
-            f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
-            "⏳ <b>Этап 1/5:</b> Параллельный анализ экспертных методик\n"
-            "⏳ <b>Этап 2/5:</b> Кросс-валидация результатов\n"
-            "⏳ <b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
-            "⏳ <b>Этап 4/5:</b> Создание живых сценариев\n"
-            "⏳ <b>Этап 5/5:</b> Финальная интеграция\n\n"
-            "🔬 <b>Применяются:</b> Методики психологов и психиатров\n"
-            "⏱️ <b>Ожидаемое время:</b> 3-5 минут",
+            f"🧠 <b>ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ: {partner_name}</b>\n\n"
+            "<b>Этап 1/5:</b> Параллельный анализ экспертных методик\n"
+            "<b>Этап 2/5:</b> Кросс-валидация результатов\n"
+            "<b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
+            "<b>Этап 4/5:</b> Создание живых сценариев\n"
+            "<b>Этап 5/5:</b> Финальная интеграция\n\n"
+            "<b>Применяются:</b> Методики психологов и психиатров\n"
+            "<b>Ожидаемое время:</b> 3-5 минут",
             parse_mode="HTML"
         )
         
-        # Convert answers to format expected by AI service
+        # Convert text answers to format expected by AI service
         formatted_answers = []
-        questions = data.get('questions', {})
-        for question_id, answer_index in answers.items():
-            question = questions.get(question_id, {})
-            options = question.get('options', [])
-            if answer_index < len(options):
-                formatted_answers.append({
-                    'question_id': question_id,
-                    'question': question.get('text', ''),
-                    'answer': options[answer_index]
-                })
+        free_form_questions = data.get('free_form_questions', {})
         
-        # Perform AI analysis
+        for question_id, answer_text in text_answers.items():
+            question = free_form_questions.get(question_id, {})
+            formatted_answers.append({
+                'question_id': question_id,
+                'question': question.get('text', ''),
+                'answer': answer_text,
+                'block': question.get('block', 'unknown')
+            })
+        
+        # Perform AI analysis with enhanced prompt for free form
         try:
-            analysis_result = await ai_service.profile_partner(
-                answers=formatted_answers, 
-                    user_id=telegram_id,  # AI service uses telegram_id
+            analysis_result = await ai_service.profile_partner_free_form(
+                text_answers=formatted_answers,
+                user_id=telegram_id,
                 partner_name=partner_name,
-                partner_description=partner_description
+                partner_description=partner_description,
+                partner_basic_info=partner_basic_info
             )
             
             # Update progress
             await analysis_msg.edit_text(
-                f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
+                f"🧠 <b>ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ: {partner_name}</b>\n\n"
                 "✅ <b>Этап 1/5:</b> Параллельный анализ экспертных методик\n"
                 "✅ <b>Этап 2/5:</b> Кросс-валидация результатов\n"
                 "✅ <b>Этап 3/5:</b> Формирование экспертного консенсуса\n"
                 "✅ <b>Этап 4/5:</b> Создание живых сценариев\n"
                 "✅ <b>Этап 5/5:</b> Финальная интеграция\n\n"
-                "🎯 <b>Мега-анализ завершен!</b>\n"
-                "📋 Генерирую PDF отчет...\n\n"
+                "🎯 <b>Психологический анализ завершен!</b>\n"
+                "📋 Генерирую расширенный PDF отчет...\n\n"
                 "<i>Почти готово!</i>",
                 parse_mode="HTML"
             )
@@ -1027,14 +855,14 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             # Generate PDF report
             pdf_bytes = await html_pdf_service.generate_partner_report_html(
                 analysis_result,
-                    telegram_id,  # PDF service uses telegram_id
+                telegram_id,
                 partner_name
             )
             
-                # Save analysis to database (legacy format) using our own service
+            # Save analysis to database
             try:
-                    await local_user_service.save_analysis(
-                        user_id=user_id,  # Use internal user_id
+                await local_user_service.save_analysis(
+                    user_id=user_id,
                     analysis_type=AnalysisType.PARTNER_PROFILE,
                     analysis_data=analysis_result,
                     questions=formatted_answers
@@ -1042,28 +870,27 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             except Exception as e:
                 logger.warning(f"Failed to save analysis to DB: {e}")
             
-                # Save partner profile to database using our own service
+            # Save partner profile to database
             try:
-                    await local_profile_service.create_profile_from_profiler(
-                        user_id=user_id,  # Use internal user_id
+                await local_profile_service.create_profile_from_profiler(
+                    user_id=user_id,
                     partner_name=partner_name,
                     partner_description=partner_description,
                     partner_basic_info=partner_basic_info,
                     questions=formatted_answers,
-                    answers=answers,
+                    answers=text_answers,
                     analysis_result=analysis_result
                 )
-                    logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
+                logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
             except Exception as e:
                 logger.error(f"Failed to save partner profile: {e}")
             
             # Send results
-                logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
+            logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
             await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
             
         except Exception as e:
             logger.error(f"Analysis failed: {e}")
-            logger.error(f"Analysis error details: {str(e)}")
             await analysis_msg.edit_text(
                 "❌ <b>Ошибка анализа</b>\n\n"
                 "Не удалось провести анализ. Попробуйте позже.\n\n"
@@ -1074,7 +901,6 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             
     except Exception as e:
         logger.error(f"Error in start_analysis: {e}")
-        logger.error(f"Critical error details: {str(e)}")
         await message.answer(
             "❌ Произошла критическая ошибка. Попробуйте начать заново.",
             reply_markup=get_profiler_keyboard()
@@ -1082,112 +908,6 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
     finally:
         # Clear state
         await state.clear()
-
-
-async def send_analysis_results(
-    message: Message,
-    analysis_result: Dict[str, Any],
-    pdf_bytes: bytes,
-    partner_name: str
-):
-    """Send analysis results to user"""
-    try:
-        # Extract key metrics
-        overall_risk = analysis_result.get('overall_risk_score', analysis_result.get('manipulation_risk', 0))
-        
-        # Convert to percentage if needed
-        if isinstance(overall_risk, float) and overall_risk <= 10:
-            overall_risk_percent = int(overall_risk * 10)  # Convert 0-10 scale to 0-100
-        else:
-            overall_risk_percent = int(overall_risk)
-            
-        urgency_level = analysis_result.get('urgency_level', 'UNKNOWN')
-        block_scores = analysis_result.get('block_scores', {})
-        
-        # Determine risk emoji and message
-        if overall_risk_percent >= 80:
-            risk_emoji = "🚨"
-            risk_level = "КРИТИЧЕСКИЙ"
-            risk_message = "Обнаружены серьезные признаки токсичного поведения!"
-        elif overall_risk_percent >= 60:
-            risk_emoji = "⚠️"
-            risk_level = "ВЫСОКИЙ"
-            risk_message = "Выявлены значительные проблемы в поведении партнера."
-        elif overall_risk_percent >= 40:
-            risk_emoji = "🟡"
-            risk_level = "СРЕДНИЙ"
-            risk_message = "Есть некоторые тревожные признаки."
-        else:
-            risk_emoji = "✅"
-            risk_level = "НИЗКИЙ"
-            risk_message = "Серьезных проблем не обнаружено."
-        
-        # Format block scores
-        block_names = {
-            'narcissism': 'Нарциссизм',
-            'control': 'Контроль',
-            'gaslighting': 'Газлайтинг',
-            'emotion': 'Эмоции',
-            'intimacy': 'Интимность',
-            'social': 'Социальное'
-        }
-        
-        scores_text = ""
-        for block, score in block_scores.items():
-            block_name = block_names.get(block, block)
-            # Round to 1 decimal place
-            scores_text += f"• {block_name}: {score:.1f}/10\n"
-        
-        # Create summary message
-        summary_text = f"""📊 <b>Анализ завершен</b>
-
-👤 <b>Партнер:</b> {partner_name}
-
-{risk_emoji} <b>Уровень риска:</b> {risk_level} ({overall_risk_percent}%)
-
-{risk_message}
-
-<b>Детальные оценки:</b>
-{scores_text}
-
-📄 Подробный отчет отправлен отдельным файлом."""
-        
-        # Send summary
-        await message.answer(
-            summary_text,
-            parse_mode="HTML",
-            reply_markup=get_profiler_keyboard()
-        )
-        
-        # Send PDF report
-        try:
-            from aiogram.types import BufferedInputFile
-            
-            # Create BufferedInputFile for PDF
-            pdf_file = BufferedInputFile(
-                pdf_bytes,
-                filename=f"profile_{partner_name}_{message.from_user.id}.pdf"
-            )
-        
-            await message.answer_document(
-                document=pdf_file,
-                caption=f"📄 Полный психологический профиль партнера {partner_name}"
-            )
-            logger.info(f"PDF report sent successfully for user {message.from_user.id}")
-            
-        except Exception as pdf_error:
-            logger.error(f"Error sending PDF: {pdf_error}")
-            await message.answer(
-                "📄 PDF отчет сгенерирован, но не удалось отправить. Попробуйте еще раз.",
-                reply_markup=get_profiler_keyboard()
-            )
-        
-    except Exception as e:
-        logger.error(f"Error sending analysis results: {e}")
-        await message.answer(
-            "❌ Ошибка при отправке результатов анализа.",
-            reply_markup=get_profiler_keyboard()
-        )
 
 
 @router.callback_query(F.data.startswith("profiler_nav_"))
@@ -1459,56 +1179,6 @@ async def confirm_profile_deletion(callback: CallbackQuery, state: FSMContext, p
         await callback.answer("❌ Произошла ошибка при удалении")
 
 
-@router.callback_query(F.data == "create_profile_free_form")
-async def create_new_profile_free_form(callback: CallbackQuery, state: FSMContext):
-    """Create new profile with free form answers - experimental version"""
-    try:
-        await callback.message.edit_text(
-            "🚀 <b>ЭКСПЕРИМЕНТАЛЬНЫЙ МЕГА-АНАЛИЗ</b>\n\n"
-            "💫 <b>Новый формат 2025:</b>\n"
-            "• Свободная форма ответов\n"
-            "• Детальные примеры и ситуации\n"
-            "• Максимальная персонализация\n"
-            "• Живые сценарии поведения\n\n"
-            "🎯 <b>Что будет происходить:</b>\n"
-            "• Расскажите о партнере (2 минуты)\n"
-            "• Ответите на 5 вопросов в свободной форме (15-20 минут)\n"
-            "• Получите супер-детальный анализ (3-5 минут)\n\n"
-            "⏱️ <b>Общее время:</b> 20-27 минут\n"
-            "💡 <b>Преимущество:</b> В 10 раз более точный анализ\n"
-            "🔬 <b>Качество:</b> Революционная точность\n\n"
-            "Готовы к эксперименту?",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚀 Начать эксперимент", callback_data="start_partner_info_free_form")],
-                [InlineKeyboardButton(text="📊 Обычная версия", callback_data="create_profile")],
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="profiler_menu")]
-            ])
-        )
-    except Exception as e:
-        logger.error(f"Error in create_new_profile_free_form: {e}")
-        await callback.answer("❌ Произошла ошибка")
-
-@router.callback_query(F.data == "start_partner_info_free_form")
-async def start_partner_info_collection_free_form(callback: CallbackQuery, state: FSMContext):
-    """Start collecting partner information for free form version"""
-    try:
-        await state.set_state(PartnerProfileStates.waiting_for_name)
-        await callback.message.edit_text(
-            "👤 <b>Информация о партнере</b>\n\n"
-            "Как зовут вашего партнера?\n\n"
-            "💡 <i>Можете использовать псевдоним или инициалы для конфиденциальности</i>",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔙 Назад", callback_data="create_profile_free_form")]
-            ])
-        )
-        # Отмечаем что это свободная форма
-        await state.update_data(is_free_form=True)
-    except Exception as e:
-        logger.error(f"Error in start_partner_info_collection_free_form: {e}")
-        await callback.answer("❌ Произошла ошибка")
-
 @router.callback_query(F.data == "start_free_form_questions")
 async def start_free_form_questions(callback: CallbackQuery, state: FSMContext):
     """Start free form questions after collecting partner info"""
@@ -1516,10 +1186,21 @@ async def start_free_form_questions(callback: CallbackQuery, state: FSMContext):
         # Get free form questions
         free_form_questions = get_free_form_questions()
         
+        # Create question order
+        question_order = [
+            "narcissism_q1", "narcissism_q2", "narcissism_q3", "narcissism_q4", "narcissism_q5", "narcissism_q6",
+            "control_q1", "control_q2", "control_q3", "control_q4", "control_q5", "control_q6",
+            "gaslighting_q1", "gaslighting_q2", "gaslighting_q3", "gaslighting_q4", "gaslighting_q5",
+            "emotion_q1", "emotion_q2", "emotion_q3", "emotion_q4",
+            "intimacy_q1", "intimacy_q2", "intimacy_q3",
+            "social_q1", "social_q2", "social_q3", "social_q4"
+        ]
+        
         # Update state with questions data
         await state.set_state(FreeFormProfilerStates.narcissism_q1_text)
         await state.update_data(
             free_form_questions=free_form_questions,
+            question_order=question_order,
             current_question=0,
             text_answers={}
         )
@@ -1531,7 +1212,7 @@ async def start_free_form_questions(callback: CallbackQuery, state: FSMContext):
         partner_name = data.get('partner_name', 'партнера')
         
         await callback.message.edit_text(
-            f"🎯 <b>Вопрос 1 из 5</b> (Свободная форма)\n\n"
+            f"🎯 <b>Вопрос 1 из 28</b> (Свободная форма)\n\n"
             f"📝 <b>О {partner_name}:</b>\n\n"
             f"❓ <b>{first_question['text']}</b>\n\n"
             f"💭 <i>{first_question['context']}</i>\n\n"
@@ -1548,131 +1229,9 @@ async def start_free_form_questions(callback: CallbackQuery, state: FSMContext):
         logger.error(f"Error in start_free_form_questions: {e}")
         await callback.answer("❌ Произошла ошибка")
 
-# Старые обработчики удалены - теперь используется универсальная система
 
-async def start_free_form_analysis(message: Message, state: FSMContext, ai_service: AIService, html_pdf_service: HTMLPDFService, user_service: UserService, profile_service: ProfileService, telegram_id: int):
-    """Start AI analysis of free form answers"""
-    try:
-        # Get user from database
-        from app.core.database import get_session
-        from app.services.user_service import UserService
-        from app.services.profile_service import ProfileService
-        
-        async with get_session() as session:
-            local_user_service = UserService(session)
-            local_profile_service = ProfileService(session)
-            
-            user = await local_user_service.get_user_by_telegram_id(telegram_id)
-            
-            if not user:
-                logger.error(f"User not found in database for telegram_id: {telegram_id}")
-                await message.answer("❌ Пользователь не найден. Используйте /start для регистрации.")
-                return
-            
-            user_id = user.id
-        
-        data = await state.get_data()
-        text_answers = data.get('text_answers', {})
-        
-        # Get partner info from state
-        partner_name = data.get('partner_name', 'Партнер')
-        partner_description = data.get('partner_description', '')
-        partner_basic_info = data.get('partner_basic_info', '')
-        
-        # Send analysis start message
-        analysis_msg = await message.answer(
-            f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
-            "⏳ <b>Этап 1/5:</b> Обработка 28 детальных ответов\n"
-            "⏳ <b>Этап 2/5:</b> Анализ поведенческих паттернов\n"
-            "⏳ <b>Этап 3/5:</b> Создание психологического портрета\n"
-            "⏳ <b>Этап 4/5:</b> Формирование рекомендаций\n"
-            "⏳ <b>Этап 5/5:</b> Генерация PDF отчета\n\n"
-            "🔬 <b>Обрабатывается:</b> 28 детальных текстовых ответов\n"
-            "⏱️ <b>Ожидаемое время:</b> 3-5 минут\n"
-            "💡 <b>Качество:</b> Максимальная точность",
-            parse_mode="HTML"
-        )
-        
-        # Convert text answers to format expected by AI service
-        formatted_answers = []
-        free_form_questions = data.get('free_form_questions', {})
-        
-        for question_id, answer_text in text_answers.items():
-            question = free_form_questions.get(question_id, {})
-            formatted_answers.append({
-                'question_id': question_id,
-                'question': question.get('text', ''),
-                'answer': answer_text,
-                'block': question.get('block', 'unknown')
-            })
-        
-        # Perform AI analysis with enhanced prompt for free form
-        try:
-            analysis_result = await ai_service.profile_partner_free_form(
-                text_answers=formatted_answers,
-                user_id=telegram_id,
-                partner_name=partner_name,
-                partner_description=partner_description,
-                partner_basic_info=partner_basic_info
-            )
-            
-            # Update progress
-            await analysis_msg.edit_text(
-                f"🚀 <b>МЕГА-АНАЛИЗ: {partner_name}</b>\n\n"
-                "✅ <b>Этап 1/5:</b> Обработка 28 детальных ответов\n"
-                "✅ <b>Этап 2/5:</b> Анализ поведенческих паттернов\n"
-                "✅ <b>Этап 3/5:</b> Создание психологического портрета\n"
-                "✅ <b>Этап 4/5:</b> Формирование рекомендаций\n"
-                "✅ <b>Этап 5/5:</b> Генерация PDF отчета\n\n"
-                "🎯 <b>Мега-анализ завершен!</b>\n"
-                "📋 Генерирую расширенный PDF отчет...\n\n"
-                "<i>Почти готово!</i>",
-                parse_mode="HTML"
-            )
-            
-            # Generate PDF report
-            pdf_bytes = await html_pdf_service.generate_partner_report_html(
-                analysis_result,
-                telegram_id,
-                partner_name
-            )
-            
-            # Save analysis to database
-            try:
-                await local_user_service.save_analysis(
-                    user_id=user_id,
-                    analysis_type=AnalysisType.PARTNER_PROFILE,
-                    analysis_data=analysis_result,
-                    questions=formatted_answers
-                )
-            except Exception as e:
-                logger.warning(f"Failed to save analysis to DB: {e}")
-            
-            # Send results
-            await send_free_form_analysis_results(message, analysis_result, pdf_bytes, partner_name)
-            
-        except Exception as e:
-            logger.error(f"Free form analysis failed: {e}")
-            await analysis_msg.edit_text(
-                "❌ <b>Ошибка анализа</b>\n\n"
-                "Не удалось провести анализ. Попробуйте позже.\n\n"
-                f"Техническая информация: {str(e)[:100]}",
-                parse_mode="HTML",
-                reply_markup=get_profiler_keyboard()
-            )
-            
-    except Exception as e:
-        logger.error(f"Error in start_free_form_analysis: {e}")
-        await message.answer(
-            "❌ Произошла критическая ошибка. Попробуйте начать заново.",
-            reply_markup=get_profiler_keyboard()
-        )
-    finally:
-        # Clear state
-        await state.clear()
-
-async def send_free_form_analysis_results(message: Message, analysis_result: Dict[str, Any], pdf_bytes: bytes, partner_name: str):
-    """Send free form analysis results to user"""
+async def send_analysis_results(message: Message, analysis_result: Dict[str, Any], pdf_bytes: bytes, partner_name: str):
+    """Send analysis results to user"""
     try:
         # Extract key metrics
         overall_risk_percent = analysis_result.get('overall_risk_score', 0)
@@ -1713,7 +1272,7 @@ async def send_free_form_analysis_results(message: Message, analysis_result: Dic
             scores_text += f"• {block_name}: {score:.1f}/10\n"
         
         # Create summary message
-        summary_text = f"""📊 <b>Мега-анализ завершен</b>
+        summary_text = f"""📊 <b>Психологический анализ завершен</b>
 
 👤 <b>Партнер:</b> {partner_name}
 📝 <b>Формат:</b> Детальные ответы (28 вопросов)
@@ -1726,7 +1285,7 @@ async def send_free_form_analysis_results(message: Message, analysis_result: Dic
 {scores_text}
 
 📄 <b>Расширенный отчет отправлен отдельным файлом</b>
-💡 <b>Качество анализа:</b> Максимальное (свободная форма)"""
+<b>Качество анализа:</b> Максимальное (свободная форма)"""
         
         # Send summary
         await message.answer(
@@ -1746,8 +1305,8 @@ async def send_free_form_analysis_results(message: Message, analysis_result: Dic
         
             await message.answer_document(
                 document=pdf_file,
-                caption=f"📄 Мега-детальный психологический профиль партнера {partner_name}\n"
-                       f"📝 Основан на 28 развернутых ответах в свободной форме"
+                caption=f"📄 Профессиональный психологический анализ партнера {partner_name}\n"
+                       f"📝 Основан на 28 развернутых ответах с применением методик DSM-5, ICD-11 и Dark Triad"
             )
             logger.info(f"Free form PDF report sent successfully for user {message.from_user.id}")
             
@@ -1759,7 +1318,7 @@ async def send_free_form_analysis_results(message: Message, analysis_result: Dic
             )
             
     except Exception as e:
-        logger.error(f"Error in send_free_form_analysis_results: {e}")
+        logger.error(f"Error in send_analysis_results: {e}")
         await message.answer(
             "❌ Ошибка при отправке результатов",
             reply_markup=get_profiler_keyboard()
