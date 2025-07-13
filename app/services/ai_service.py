@@ -140,7 +140,7 @@ class AIService:
         
         try:
             # Create prompts
-                system_prompt = ANALYSIS_SYSTEM_PROMPT
+            system_prompt = ANALYSIS_SYSTEM_PROMPT
             user_prompt = get_text_analysis_prompt(text, analysis_type)
             
             # Get AI response
@@ -153,20 +153,20 @@ class AIService:
                 )
             
             # Parse response
-            result = self._parse_analysis_response(response)
-            result["processing_time"] = time.time() - start_time
-            result["ai_model_used"] = self._get_last_model_used()
+            result = safe_json_loads(response)
+            if not result:
+                raise AIServiceError("Не удалось разобрать ответ AI")
             
             # Cache result
             if use_cache:
-                await redis_client.set(cache_key, result, expire=settings.ANALYSIS_CACHE_TTL)
+                await redis_client.set(cache_key, result, ex=3600)  # 1 hour
             
-            logger.info(f"✅ Text analysis completed in {result['processing_time']:.2f}s")
+            logger.info(f"📝 Text analysis completed")
             return result
             
         except Exception as e:
             logger.error(f"❌ Text analysis failed: {e}")
-            raise AIServiceError(f"Анализ текста не удался: {str(e)}")
+            raise AIServiceError(f"Ошибка анализа текста: {str(e)}")
     
     async def profile_partner(
         self,
@@ -749,7 +749,7 @@ class AIService:
         try:
             data = extract_json_from_text(response)
             if not data:
-            data = safe_json_loads(response, {})
+                data = safe_json_loads(response, {})
             
             return {
                 "analysis": data.get("analysis", "Анализ недоступен"),
@@ -803,8 +803,8 @@ class AIService:
                 "control_mechanisms": data.get("control_mechanisms", ["Ограничение общения"])
             }
             
-        # Validate urgency level
-        valid_urgency = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+            # Validate urgency level
+            valid_urgency = ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
             if result["urgency_level"] not in valid_urgency:
                 result["urgency_level"] = "LOW"
             
