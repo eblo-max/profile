@@ -826,9 +826,9 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         
         for question_id, answer_text in text_answers.items():
             question = free_form_questions.get(question_id, {})
-                formatted_answers.append({
-                    'question_id': question_id,
-                    'question': question.get('text', ''),
+            formatted_answers.append({
+                'question_id': question_id,
+                'question': question.get('text', ''),
                 'answer': answer_text,
                 'block': question.get('block', 'unknown')
             })
