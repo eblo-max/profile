@@ -8,13 +8,40 @@
     <style>
         @page {
             size: A4;
-            margin: 15mm;
+            margin: 8mm;
 
             @bottom-center {
                 content: "Страница " counter(page);
-                font-size: 9px;
-                color: #666;
+                font-size: 8px;
+                color: #879aaa;
+                font-weight: 400;
             }
+        }
+
+        :root {
+            --color-primary: #0972d3;
+            --color-primary-light: #1f83eb;
+            --color-danger: #d13212;
+            --color-warning: #ff9500;
+            --color-success: #037f0c;
+            --color-text-primary: #16191f;
+            --color-text-secondary: #414d5c;
+            --color-text-muted: #687078;
+            --color-background-main: #ffffff;
+            --color-background-container: #f2f3f3;
+            --color-background-subtle: #fafbfc;
+            --color-border-primary: #d5dbdb;
+            --color-border-subtle: #e9ebed;
+            --border-radius-base: 6px;
+            --border-radius-large: 8px;
+            --spacing-xs: 3px;
+            --spacing-s: 6px;
+            --spacing-m: 10px;
+            --spacing-l: 14px;
+            --spacing-xl: 18px;
+            --shadow-subtle: 0 1px 3px rgba(0, 28, 36, 0.12);
+            --shadow-medium: 0 2px 6px rgba(0, 28, 36, 0.1);
+            --shadow-large: 0 4px 12px rgba(0, 28, 36, 0.12);
         }
 
         * {
@@ -24,198 +51,353 @@
         }
 
         body {
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-            line-height: 1.5;
-            color: #333;
-            font-size: 11px;
-            background: #fff;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.4;
+            color: var(--color-text-primary);
+            font-size: 10px;
+            background: var(--color-background-main);
+            font-weight: 400;
+            letter-spacing: -0.01em;
         }
 
-        /* Headers */
+        /* Compact Header */
         .header {
-            background: #2563eb;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
             color: white;
             text-align: center;
-            padding: 25px;
-            margin: -15mm -15mm 20px -15mm;
-            border-radius: 0 0 10px 10px;
+            padding: var(--spacing-l);
+            margin: -8mm -8mm var(--spacing-m) -8mm;
+            border-radius: 0 0 var(--border-radius-large) var(--border-radius-large);
+            box-shadow: var(--shadow-medium);
         }
 
         .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: 700;
+            font-size: 22px;
+            margin-bottom: var(--spacing-s);
+            font-weight: 600;
+            letter-spacing: -0.02em;
         }
 
         .header-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-size: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            margin-top: var(--spacing-s);
+            font-size: 9px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-xs);
         }
 
         .header-info div {
-            margin: 5px 0;
+            margin: var(--spacing-xs) 0;
+            font-weight: 400;
         }
 
-        /* Risk Overview */
+        /* Compact Risk Overview */
         .risk-overview {
-            text-align: center;
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: var(--spacing-l);
+            align-items: center;
+            margin: var(--spacing-m) 0;
+            padding: var(--spacing-l);
+            background: var(--color-background-subtle);
+            border-radius: var(--border-radius-large);
+            border: 1px solid var(--color-border-subtle);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .risk-overview h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-s);
+            letter-spacing: -0.01em;
+            grid-column: 1 / -1;
         }
 
         .risk-circle {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            background: #dc3545;
+            background: linear-gradient(135deg, var(--color-danger) 0%, #e53e3e 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 15px;
             color: white;
             font-size: 28px;
-            font-weight: bold;
+            font-weight: 700;
+            box-shadow: var(--shadow-medium);
+            position: relative;
+        }
+
+        .risk-circle::before {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .risk-circle span {
+            position: relative;
+            z-index: 1;
         }
 
         .risk-circle.medium {
-            background: #fd7e14;
+            background: linear-gradient(135deg, var(--color-warning) 0%, #ffa500 100%);
         }
 
         .risk-circle.low {
-            background: #28a745;
+            background: linear-gradient(135deg, var(--color-success) 0%, #38a169 100%);
+        }
+
+        .risk-info {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-s);
         }
 
         .risk-badge {
             display: inline-block;
-            padding: 8px 16px;
-            background: #dc3545;
+            padding: var(--spacing-xs) var(--spacing-s);
+            background: var(--color-danger);
             color: white;
             border-radius: 20px;
-            font-weight: bold;
-            font-size: 12px;
-            margin: 10px 0;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow-subtle);
+            width: fit-content;
         }
 
         .risk-badge.medium {
-            background: #fd7e14;
+            background: var(--color-warning);
         }
 
         .risk-badge.low {
-            background: #28a745;
+            background: var(--color-success);
+        }
+
+        .risk-description {
+            font-size: 10px;
+            line-height: 1.4;
+            color: var(--color-text-secondary);
         }
 
         /* Sections */
         .section {
-            margin: 25px 0;
+            margin: var(--spacing-m) 0;
             page-break-inside: avoid;
         }
 
         .section-title {
-            font-size: 16px;
-            color: #2563eb;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #2563eb;
-            text-align: center;
-        }
-
-        /* Content Grid */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-        }
-
-        .card-title {
             font-size: 14px;
-            color: #2563eb;
-            margin-bottom: 10px;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-s);
+            padding: var(--spacing-xs) 0;
+            border-bottom: 2px solid var(--color-primary);
+            text-align: center;
             font-weight: 600;
         }
 
-        /* Blocks Grid */
+        /* Compact Analysis Main Title */
+        .analysis-main-title {
+            font-size: 16px;
+            color: var(--color-primary);
+            text-align: center;
+            margin: var(--spacing-s) 0 var(--spacing-m) 0;
+            padding: var(--spacing-s);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+            background: linear-gradient(135deg, var(--color-background-subtle) 0%, var(--color-background-container) 100%);
+            border: 2px solid var(--color-primary);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-medium);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analysis-main-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+        }
+
+        /* Compact Analysis Section Headers */
+        .analysis-section-header {
+            font-size: 13px;
+            color: var(--color-danger);
+            margin: var(--spacing-l) 0 var(--spacing-xs) 0;
+            padding: var(--spacing-xs) 0 var(--spacing-xs) var(--spacing-s);
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+            position: relative;
+            background: linear-gradient(90deg, rgba(209, 50, 18, 0.05) 0%, transparent 100%);
+            border-left: 3px solid var(--color-danger);
+            border-radius: 0 var(--border-radius-base) var(--border-radius-base) 0;
+        }
+
+        /* Three-column Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: var(--spacing-s);
+            margin: var(--spacing-s) 0;
+        }
+
+        .card {
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            border: 1px solid var(--color-border-subtle);
+            box-shadow: var(--shadow-subtle);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+        }
+
+        .card-title {
+            font-size: 11px;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-xs);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        /* Compact Blocks Grid - 3 columns */
         .blocks-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 15px 0;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-xs);
+            margin: var(--spacing-s) 0;
         }
 
         .block-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #dc3545;
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            border: 1px solid var(--color-border-subtle);
+            box-shadow: var(--shadow-subtle);
+            position: relative;
+            overflow: hidden;
         }
 
-        .block-item.high {
-            border-left-color: #fd7e14;
+        .block-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--color-danger);
         }
 
-        .block-item.medium {
-            border-left-color: #ffc107;
+        .block-item.high::before {
+            background: var(--color-warning);
         }
 
-        .block-item.low {
-            border-left-color: #28a745;
+        .block-item.medium::before {
+            background: #ffc107;
+        }
+
+        .block-item.low::before {
+            background: var(--color-success);
         }
 
         .block-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: var(--spacing-xs);
         }
 
         .block-name {
             font-weight: 600;
-            font-size: 12px;
+            font-size: 9px;
+            color: var(--color-text-primary);
+            letter-spacing: -0.01em;
         }
 
         .block-score {
-            font-size: 18px;
-            font-weight: bold;
-            color: #dc3545;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--color-danger);
+            letter-spacing: -0.02em;
         }
 
+        .block-score.high {
+            color: var(--color-warning);
+        }
+
+        .block-score.medium {
+            color: #ffc107;
+        }
+
+        .block-score.low {
+            color: var(--color-success);
+        }
+
+        /* Compact Progress Bar */
         .progress-bar {
-            height: 8px;
-            background: #e9ecef;
+            height: 6px;
+            background: var(--color-background-container);
             border-radius: 4px;
             overflow: hidden;
-            margin-top: 8px;
+            margin-top: var(--spacing-xs);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         .progress-fill {
             height: 100%;
-            background: #dc3545;
+            background: linear-gradient(90deg, var(--color-danger) 0%, #e53e3e 100%);
+            border-radius: 4px;
+            position: relative;
             transition: width 0.3s ease;
         }
 
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px 4px 0 0;
+        }
+
         .progress-fill.high {
-            background: #fd7e14;
+            background: linear-gradient(90deg, var(--color-warning) 0%, #ffa500 100%);
         }
 
         .progress-fill.medium {
-            background: #ffc107;
+            background: linear-gradient(90deg, #ffc107 0%, #ffcd39 100%);
         }
 
         .progress-fill.low {
-            background: #28a745;
+            background: linear-gradient(90deg, var(--color-success) 0%, #38a169 100%);
         }
 
         .progress-fill.critical {
@@ -236,214 +418,322 @@
 
         .personality-type-text {
             font-weight: 600;
-            color: #2563eb;
-            font-size: 14px;
+            color: var(--color-primary);
+            font-size: 10px;
         }
 
-        /* Red Flags */
+        /* Compact Red Flags - 3 columns */
         .red-flags-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin: 15px 0;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-xs);
+            margin: var(--spacing-s) 0;
         }
 
         .red-flag {
             background: #fff5f5;
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 4px solid #dc3545;
-            font-size: 10px;
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            border-left: 3px solid #dc3545;
+            font-size: 8px;
         }
 
         .red-flag-title {
             font-weight: bold;
             color: #dc3545;
-            margin-bottom: 5px;
+            margin-bottom: var(--spacing-xs);
+            font-size: 9px;
         }
 
-        /* Psychological Profile */
+        /* Compact Psychological Profile */
         .profile-content {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 15px 0;
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            margin: var(--spacing-s) 0;
+            columns: 2;
+            column-gap: var(--spacing-m);
         }
 
         .profile-content h4 {
-            color: #2563eb;
-            font-size: 13px;
-            margin-bottom: 10px;
+            color: var(--color-primary);
+            font-size: 11px;
+            margin-bottom: var(--spacing-xs);
+            column-span: all;
         }
 
         .profile-content h5 {
-            color: #495057;
-            font-size: 11px;
-            margin: 15px 0 8px 0;
+            color: var(--color-text-secondary);
+            font-size: 10px;
+            margin: var(--spacing-s) 0 var(--spacing-xs) 0;
             font-weight: 600;
+            break-after: avoid;
         }
 
         .profile-content p {
-            margin-bottom: 10px;
-            line-height: 1.6;
-            font-size: 10px;
+            margin-bottom: var(--spacing-xs);
+            line-height: 1.4;
+            font-size: 9px;
+            break-inside: avoid;
         }
 
         .profile-content ul {
-            margin-left: 20px;
-            margin-bottom: 10px;
+            margin-left: var(--spacing-m);
+            margin-bottom: var(--spacing-xs);
         }
 
         .profile-content li {
-            margin-bottom: 5px;
-            font-size: 10px;
+            margin-bottom: var(--spacing-xs);
+            font-size: 8px;
         }
 
-        /* Patterns Grid */
+        /* AI Analysis Styles */
+        .ai-analysis-content {
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            margin: var(--spacing-s) 0;
+            columns: 2;
+            column-gap: var(--spacing-m);
+        }
+
+        .analysis-section-title {
+            color: var(--color-primary);
+            font-size: 11px;
+            font-weight: 600;
+            margin: var(--spacing-s) 0 var(--spacing-xs) 0;
+            padding-bottom: var(--spacing-xs);
+            border-bottom: 1px solid var(--color-border-subtle);
+            column-span: all;
+        }
+
+        .analysis-text {
+            margin-bottom: var(--spacing-xs);
+            line-height: 1.4;
+            font-size: 9px;
+            color: var(--color-text-primary);
+            break-inside: avoid;
+        }
+
+        /* Compact Patterns Grid - 3 columns */
         .patterns-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 15px 0;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-xs);
+            margin: var(--spacing-s) 0;
         }
 
         .pattern-item {
-            background: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
+            background: var(--color-background-main);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            border: 1px solid var(--color-border-subtle);
         }
 
         .pattern-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-xs);
         }
 
         .pattern-title {
             font-weight: 600;
-            font-size: 11px;
-            color: #495057;
+            font-size: 9px;
+            color: var(--color-text-secondary);
         }
 
         .pattern-point {
-            font-size: 9px;
-            margin: 5px 0;
-            color: #6c757d;
+            font-size: 8px;
+            margin: var(--spacing-xs) 0;
+            color: var(--color-text-muted);
         }
 
-        /* Recommendations */
+        /* Compact Recommendations */
         .recommendations {
             background: #e7f3ff;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            margin: var(--spacing-s) 0;
             border: 1px solid #b3d9ff;
+            columns: 2;
+            column-gap: var(--spacing-m);
         }
 
         .recommendations h3 {
             color: #0056b3;
-            margin-bottom: 15px;
+            margin-bottom: var(--spacing-s);
+            font-size: 12px;
+            column-span: all;
         }
 
         .recommendations ul {
-            margin-left: 20px;
+            margin-left: var(--spacing-m);
         }
 
         .recommendations li {
-            margin: 8px 0;
-            font-size: 10px;
+            margin: var(--spacing-xs) 0;
+            font-size: 9px;
+            break-inside: avoid;
         }
 
-        /* Methodology */
+        /* Compact Methodology */
         .methodology {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border: 1px solid #dee2e6;
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            margin: var(--spacing-s) 0;
+            border: 1px solid var(--color-border-subtle);
+            columns: 2;
+            column-gap: var(--spacing-m);
         }
 
         .methodology h4 {
-            color: #495057;
-            margin-bottom: 10px;
+            color: var(--color-text-secondary);
+            margin-bottom: var(--spacing-s);
+            font-size: 11px;
+            column-span: all;
         }
 
         .methodology ul {
-            margin-left: 20px;
+            margin-left: var(--spacing-m);
         }
 
         .methodology li {
-            margin: 5px 0;
-            font-size: 9px;
+            margin: var(--spacing-xs) 0;
+            font-size: 8px;
+            break-inside: avoid;
         }
 
-        /* Footer */
+        /* Compact Footer */
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            font-size: 9px;
-            color: #6c757d;
+            margin-top: var(--spacing-m);
+            padding: var(--spacing-s);
+            background: var(--color-background-subtle);
+            border-radius: var(--border-radius-base);
+            font-size: 8px;
+            color: var(--color-text-muted);
         }
 
-        /* Dark Triad Chart */
+        /* Compact Dark Triad Chart */
         .dark-triad {
             display: flex;
             justify-content: space-around;
-            margin: 20px 0;
+            margin: var(--spacing-s) 0;
+            padding: var(--spacing-s);
+            background: var(--color-background-subtle);
+            border-radius: var(--border-radius-base);
+            box-shadow: var(--shadow-subtle);
         }
 
         .triad-item {
             text-align: center;
+            position: relative;
         }
 
         .triad-circle {
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            background: #dc3545;
+            background: linear-gradient(135deg, var(--color-danger) 0%, #e53e3e 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
-            margin: 0 auto 8px;
+            font-weight: 700;
+            font-size: 14px;
+            margin: 0 auto var(--spacing-xs);
+            box-shadow: var(--shadow-medium);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .triad-circle::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg,
+                    transparent 0deg,
+                    rgba(255, 255, 255, 0.1) 90deg,
+                    rgba(255, 255, 255, 0.3) 180deg,
+                    rgba(255, 255, 255, 0.1) 270deg,
+                    transparent 360deg);
+            animation: rotate 3s linear infinite;
+        }
+
+        .triad-circle::after {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .triad-circle span {
+            position: relative;
+            z-index: 2;
+        }
+
+        .triad-item:nth-child(1) .triad-circle {
+            background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+        }
+
+        .triad-item:nth-child(2) .triad-circle {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+        }
+
+        .triad-item:nth-child(3) .triad-circle {
+            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
         }
 
         .triad-label {
             font-size: 9px;
-            color: #6c757d;
+            color: var(--color-text-secondary);
+            font-weight: 500;
+            letter-spacing: -0.01em;
         }
 
-        /* Statistics */
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Compact Statistics - 4 columns */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin: 15px 0;
+            gap: var(--spacing-xs);
+            margin: var(--spacing-s) 0;
         }
 
         .stat-item {
             text-align: center;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
         }
 
         .stat-number {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 5px;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-xs);
         }
 
         .stat-label {
-            font-size: 9px;
-            color: #6c757d;
+            font-size: 8px;
+            color: var(--color-text-muted);
         }
 
         /* Page breaks */
@@ -454,11 +744,67 @@
         .no-break {
             page-break-inside: avoid;
         }
+
+        /* Additional Info Sections */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-s);
+            margin: var(--spacing-s) 0;
+        }
+
+        .info-card {
+            background: var(--color-background-subtle);
+            padding: var(--spacing-s);
+            border-radius: var(--border-radius-base);
+            border: 1px solid var(--color-border-subtle);
+        }
+
+        .info-card h4 {
+            font-size: 10px;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-xs);
+            font-weight: 600;
+        }
+
+        .info-card p {
+            font-size: 8px;
+            line-height: 1.3;
+            color: var(--color-text-secondary);
+        }
+
+        /* Warning Signs */
+        .warning-signs {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: var(--border-radius-base);
+            padding: var(--spacing-s);
+            margin: var(--spacing-s) 0;
+        }
+
+        .warning-signs h4 {
+            color: #856404;
+            font-size: 11px;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .warning-signs ul {
+            columns: 2;
+            column-gap: var(--spacing-m);
+            margin-left: var(--spacing-m);
+        }
+
+        .warning-signs li {
+            font-size: 8px;
+            margin-bottom: var(--spacing-xs);
+            break-inside: avoid;
+            color: #856404;
+        }
     </style>
 </head>
 
 <body>
-    <!-- Header -->
+    <!-- Compact Header -->
     <div class="header">
         <h1>🧠 ПРОФЕССИОНАЛЬНЫЙ ПСИХОЛОГИЧЕСКИЙ АНАЛИЗ</h1>
         <div>Научный анализ личности на основе DSM-5, ICD-11 и методик Dark Triad</div>
@@ -471,43 +817,43 @@
         </div>
     </div>
 
-    <!-- Risk Overview -->
+    <!-- Compact Risk Overview -->
     <div class="risk-overview no-break">
         <h2>ОЦЕНКА РИСКОВ</h2>
         <div
             class="risk-circle {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}medium{% else %}low{% endif %}">
-            {{ risk_score }}%
+            <span>{{ risk_score }}%</span>
         </div>
-        <div
-            class="risk-badge {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}medium{% else %}low{% endif %}">
-            {% if risk_score >= 70 %}КРИТИЧЕСКИЙ РИСК{% elif risk_score >= 40 %}ВЫСОКИЙ РИСК{% else %}НИЗКИЙ РИСК{%
-            endif %}
+        <div class="risk-info">
+            <div
+                class="risk-badge {% if risk_score >= 70 %}critical{% elif risk_score >= 40 %}medium{% else %}low{% endif %}">
+                {% if risk_score >= 70 %}КРИТИЧЕСКИЙ РИСК{% elif risk_score >= 40 %}ВЫСОКИЙ РИСК{% else %}НИЗКИЙ РИСК{%
+                endif %}
+            </div>
+            <div class="risk-description">
+                {% if risk_score >= 70 %}
+                Обнаружены серьезные признаки токсичного поведения. Требуется немедленное внимание.
+                {% elif risk_score >= 40 %}
+                Выявлены проблемные паттерны поведения, которые требуют внимания.
+                {% else %}
+                Показатели в пределах здоровых отношений.
+                {% endif %}
+            </div>
         </div>
-        <p>
-            {% if risk_score >= 70 %}
-            Обнаружены серьезные признаки токсичного поведения. Требуется немедленное внимание.
-            {% elif risk_score >= 40 %}
-            Выявлены проблемные паттерны поведения, которые требуют внимания.
-            {% else %}
-            Показатели в пределах здоровых отношений.
-            {% endif %}
-        </p>
     </div>
 
-    <!-- Content Grid -->
+    <!-- Three-column Content Grid -->
     <div class="content-grid">
         <!-- Personality Type -->
         <div class="card">
             <div class="card-title">👤 ТИП ЛИЧНОСТИ</div>
-            <div class="personality-type-text">
-                {{ personality_type }}
-            </div>
+            <div class="personality-type-text">{{ personality_type }}</div>
         </div>
 
         <!-- Statistics -->
         <div class="card">
             <div class="card-title">📊 СТАТИСТИКА</div>
-            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
                 <div class="stat-item">
                     <div class="stat-number">{{ population_percentile }}%</div>
                     <div class="stat-label">Популяция хуже</div>
@@ -518,6 +864,14 @@
                 </div>
             </div>
         </div>
+
+        <!-- Risk Level -->
+        <div class="card">
+            <div class="card-title">⚠️ УРОВЕНЬ РИСКА</div>
+            <div class="personality-type-text">
+                {% if risk_score >= 70 %}Критический{% elif risk_score >= 40 %}Высокий{% else %}Низкий{% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- Dark Triad Analysis -->
@@ -525,21 +879,27 @@
         <h2 class="section-title">🎭 DARK TRIAD АНАЛИЗ</h2>
         <div class="dark-triad">
             <div class="triad-item">
-                <div class="triad-circle">{{ narcissism_score }}</div>
+                <div class="triad-circle">
+                    <span>{{ narcissism_score }}</span>
+                </div>
                 <div class="triad-label">Нарциссизм</div>
             </div>
             <div class="triad-item">
-                <div class="triad-circle">{{ machiavellianism_score }}</div>
+                <div class="triad-circle">
+                    <span>{{ machiavellianism_score }}</span>
+                </div>
                 <div class="triad-label">Макиавеллизм</div>
             </div>
             <div class="triad-item">
-                <div class="triad-circle">{{ psychopathy_score }}</div>
+                <div class="triad-circle">
+                    <span>{{ psychopathy_score }}</span>
+                </div>
                 <div class="triad-label">Психопатия</div>
             </div>
         </div>
     </div>
 
-    <!-- Block Scores -->
+    <!-- Block Scores - 3 columns -->
     <div class="section">
         <h2 class="section-title">📊 ДЕТАЛИЗАЦИЯ ПО БЛОКАМ</h2>
         <div class="blocks-grid">
@@ -560,7 +920,7 @@
         </div>
     </div>
 
-    <!-- Red Flags -->
+    <!-- Red Flags - 3 columns -->
     {% if red_flags %}
     <div class="section">
         <h2 class="section-title">🚩 КРАСНЫЕ ФЛАГИ</h2>
@@ -575,8 +935,47 @@
     </div>
     {% endif %}
 
-    <!-- Psychological Profile -->
-    <div class="section page-break">
+    <!-- Warning Signs -->
+    <div class="warning-signs">
+        <h4>⚠️ ПРИЗНАКИ ТОКСИЧНОГО ПОВЕДЕНИЯ</h4>
+        <ul>
+            <li>Постоянная критика и обесценивание</li>
+            <li>Контроль над финансами и временем</li>
+            <li>Изоляция от друзей и семьи</li>
+            <li>Эмоциональные качели и непредсказуемость</li>
+            <li>Газлайтинг и искажение реальности</li>
+            <li>Нарушение личных границ</li>
+            <li>Двойные стандарты в поведении</li>
+            <li>Отказ брать ответственность за свои действия</li>
+        </ul>
+    </div>
+
+    <!-- Additional Info Grid -->
+    <div class="info-grid">
+        <div class="info-card">
+            <h4>🎯 ОСНОВНЫЕ ПАТТЕРНЫ</h4>
+            <p>Выявлены характерные для токсичных отношений паттерны контроля, манипуляций и эмоционального насилия.
+                Особое внимание следует обратить на техники газлайтинга и нарушение личных границ.</p>
+        </div>
+        <div class="info-card">
+            <h4>📈 ПРОГНОЗ РАЗВИТИЯ</h4>
+            <p>При отсутствии изменений поведенческие паттерны будут усиливаться. Рекомендуется профессиональная помощь
+                и четкое установление границ в отношениях.</p>
+        </div>
+        <div class="info-card">
+            <h4>🛡️ ЗАЩИТНЫЕ МЕХАНИЗМЫ</h4>
+            <p>Важно развивать навыки распознавания манипуляций, укреплять самооценку и поддерживать связи с
+                поддерживающим окружением.</p>
+        </div>
+        <div class="info-card">
+            <h4>📞 РЕСУРСЫ ПОМОЩИ</h4>
+            <p>При критических ситуациях обращайтесь к специалистам по семейной терапии, психологам или в кризисные
+                центры поддержки.</p>
+        </div>
+    </div>
+
+    <!-- Psychological Profile - Two columns -->
+    <div class="section">
         <h2 class="section-title">🧠 ПСИХОЛОГИЧЕСКИЙ ПОРТРЕТ</h2>
         <div class="profile-content">
             {% if psychological_profile %}
@@ -590,120 +989,67 @@
             <p>Центральным паттерном поведения {{ partner_name }} является тотальный контроль над партнером. Он
                 использует множество техник для установления и поддержания этого контроля.</p>
 
-            <h5>СИСТЕМА КОНТРОЛЯ</h5>
-            <ul>
-                <li><strong>Эмоциональный контроль:</strong> Постоянное эмоциональное давление</li>
-                <li><strong>Социальный контроль:</strong> Изоляция от друзей и семьи</li>
-                <li><strong>Финансовый контроль:</strong> Ограничение доступа к деньгам</li>
-                <li><strong>Информационный контроль:</strong> Ограничение доступа к информации</li>
-            </ul>
+            <h5>ЭМОЦИОНАЛЬНАЯ РЕГУЛЯЦИЯ</h5>
+            <p>Наблюдается выраженная эмоциональная нестабильность с частыми вспышками гнева и агрессии. Партнер не
+                способен к здоровому выражению эмоций.</p>
 
-            <h5>ПРОГНОЗ ПОВЕДЕНИЯ</h5>
-            <p>Прогноз поведения {{ partner_name }} крайне неблагоприятный. Без профессионального вмешательства его
-                поведение будет только ухудшаться.</p>
+            <h5>МЕЖЛИЧНОСТНЫЕ ОТНОШЕНИЯ</h5>
+            <p>В отношениях проявляет деструктивные паттерны: ревность, подозрительность, стремление к доминированию и
+                подчинению партнера.</p>
 
             <h5>РЕКОМЕНДАЦИИ</h5>
-            <p>Рекомендуется немедленное обращение за профессиональной помощью к специалистам по домашнему насилию.</p>
+            <p>Требуется профессиональная психологическая помощь. Рекомендуется установление четких границ и работа с
+                квалифицированным специалистом.</p>
             {% endif %}
         </div>
     </div>
 
-    <!-- Behavioral Patterns -->
+    <!-- AI Analysis -->
+    {% if ai_analysis %}
     <div class="section">
-        <h2 class="section-title">🔍 ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ</h2>
-        <div class="patterns-grid">
-            <div class="pattern-item">
-                <div class="pattern-header">
-                    <span>🎭</span>
-                    <span class="pattern-title">Методы манипуляций</span>
-                </div>
-                <div class="pattern-point">• Газлайтинг и искажение реальности</div>
-                <div class="pattern-point">• Эмоциональный шантаж</div>
-                <div class="pattern-point">• Контроль через чувство вины</div>
-            </div>
-
-            <div class="pattern-item">
-                <div class="pattern-header">
-                    <span>⚡</span>
-                    <span class="pattern-title">Триггеры эскалации</span>
-                </div>
-                <div class="pattern-point">• Критика или несогласие</div>
-                <div class="pattern-point">• Попытки установить границы</div>
-                <div class="pattern-point">• Отказ от требований</div>
-            </div>
-
-            <div class="pattern-item">
-                <div class="pattern-header">
-                    <span>🧠</span>
-                    <span class="pattern-title">Эмоциональные паттерны</span>
-                </div>
-                <div class="pattern-point">• Эмоциональная нестабильность</div>
-                <div class="pattern-point">• Перепады настроения</div>
-                <div class="pattern-point">• Взрывные реакции</div>
-            </div>
-
-            <div class="pattern-item">
-                <div class="pattern-header">
-                    <span>⚠️</span>
-                    <span class="pattern-title">Индикаторы насилия</span>
-                </div>
-                <div class="pattern-point">• Угрозы и запугивание</div>
-                <div class="pattern-point">• Физическая агрессия</div>
-                <div class="pattern-point">• Контроль передвижений</div>
-            </div>
+        <h2 class="section-title">🤖 ДЕТАЛЬНЫЙ АНАЛИЗ ИИ</h2>
+        <div class="ai-analysis-content">
+            {{ ai_analysis|safe }}
         </div>
     </div>
+    {% endif %}
 
-    <!-- Recommendations -->
-    <div class="recommendations no-break">
-        <h3>💡 РЕКОМЕНДАЦИИ И ПЛАН ДЕЙСТВИЙ</h3>
-
-        {% if risk_score >= 70 %}
-        <h4 style="color: #dc3545;">🆘 НЕОТЛОЖНЫЕ МЕРЫ</h4>
+    <!-- Recommendations - Two columns -->
+    <div class="recommendations">
+        <h3>💡 РЕКОМЕНДАЦИИ СПЕЦИАЛИСТОВ</h3>
         <ul>
-            <li>Обратиться к специалисту по домашнему насилию</li>
-            <li>Создать план экстренной эвакуации</li>
-            <li>Сообщить близким о ситуации</li>
-            <li>Подготовить документы и средства на экстренный случай</li>
+            <li>Обратитесь к семейному психологу для работы с парой</li>
+            <li>Установите четкие личные границы и придерживайтесь их</li>
+            <li>Ведите дневник инцидентов для отслеживания паттернов</li>
+            <li>Поддерживайте связь с друзьями и семьей</li>
+            <li>Изучите техники ассертивного поведения</li>
+            <li>Рассмотрите возможность индивидуальной терапии</li>
+            <li>Создайте план безопасности на случай эскалации</li>
+            <li>Не изолируйтесь от поддерживающего окружения</li>
         </ul>
-        {% elif risk_score >= 40 %}
-        <h4 style="color: #fd7e14;">⚠️ ВАЖНЫЕ ДЕЙСТВИЯ</h4>
-        <ul>
-            <li>Обратиться к психологу, специализирующемуся на токсичных отношениях</li>
-            <li>Создать план безопасности</li>
-            <li>Начать документирование инцидентов</li>
-            <li>Восстановить социальную поддержку</li>
-        </ul>
-        {% else %}
-        <h4 style="color: #28a745;">✅ ПРОФИЛАКТИЧЕСКИЕ МЕРЫ</h4>
-        <ul>
-            <li>Обратиться к семейному консультанту</li>
-            <li>Работать над улучшением коммуникации</li>
-            <li>Развивать эмоциональную интеллектуальность</li>
-        </ul>
-        {% endif %}
     </div>
 
-    <!-- Methodology -->
-    <div class="methodology no-break">
-        <h4>🔬 Методология исследования</h4>
-        <p>Данный анализ основан на следующих научно валидированных методиках:</p>
+    <!-- Methodology - Two columns -->
+    <div class="methodology">
+        <h4>📋 МЕТОДОЛОГИЯ АНАЛИЗА</h4>
         <ul>
-            <li><strong>Dark Triad Assessment:</strong> Оценка нарциссизма, макиавеллизма и психопатии</li>
-            <li><strong>DSM-5 критерии:</strong> Диагностические критерии расстройств личности</li>
-            <li><strong>Hare Psychopathy Checklist:</strong> Оценка психопатических черт</li>
+            <li>Анализ поведенческих паттернов по DSM-5</li>
+            <li>Оценка Dark Triad (нарциссизм, макиавеллизм, психопатия)</li>
+            <li>Клиническая оценка межличностных отношений</li>
+            <li>Анализ техник эмоционального воздействия</li>
+            <li>Оценка рисков для психологического здоровья</li>
+            <li>Сравнение с нормативными показателями</li>
+            <li>Интеграция множественных источников данных</li>
+            <li>Валидация через перекрестную проверку</li>
         </ul>
-
-        <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0;">
-            <strong>⚖️ Важное уведомление:</strong> Данный анализ предназначен для информационных целей и не заменяет
-            профессиональную помощь.
-        </div>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-        <div><strong>PsychoDetective</strong> | Анализ выполнен {{ date }} | ID отчета: {{ report_id }}</div>
-        <div>Основан на научных исследованиях в области психологии</div>
+        <p><strong>Важно:</strong> Данный анализ носит информационный характер и не заменяет профессиональную
+            психологическую консультацию. При серьезных проблемах в отношениях обращайтесь к квалифицированным
+            специалистам.</p>
+        <p>Анализ выполнен с использованием современных методик клинической психологии и поведенческого анализа.</p>
     </div>
 </body>
 

@@ -367,6 +367,11 @@ async def process_text_answer(message: Message, state: FSMContext, question_id: 
         question = free_form_questions.get(question_id, {})
         min_length = question.get('min_length', 50)
         
+        # Check if analysis is already running
+        if data.get('analysis_running', False):
+            logger.warning(f"Analysis already running for user {message.from_user.id}, ignoring duplicate")
+            return
+        
         # Validate answer length
         if len(answer_text) < min_length:
             await message.answer(
@@ -382,18 +387,18 @@ async def process_text_answer(message: Message, state: FSMContext, question_id: 
         text_answers = data.get('text_answers', {})
         text_answers[question_id] = answer_text
         
-        # Check if this was the last question
+        # Check if this was the last question (current_question_num is 1-based, so 28 is the last)
         total_questions = len(question_order)
-        is_last_question = current_question_num >= total_questions
+        is_last_question = current_question_num == total_questions
         
         if is_last_question:
             # All questions answered - start analysis
-            await state.update_data(text_answers=text_answers)
+            await state.update_data(text_answers=text_answers, analysis_running=True)
             await start_analysis(message, state, ai_service, html_pdf_service, user_service, profile_service, message.from_user.id)
         else:
             # Move to next question
             next_question_num = current_question_num + 1
-            next_question_id = question_order[current_question_num]  # current_question_num is already the next index
+            next_question_id = question_order[current_question_num]  # current_question_num is already the next index (0-based)
             next_question = free_form_questions.get(next_question_id, {})
             
             # Update state
@@ -443,7 +448,7 @@ async def process_text_answer(message: Message, state: FSMContext, question_id: 
             await message.answer(
                 f"✅ <b>Ответ сохранен</b>\n\n"
                 f"🎯 <b>Вопрос {next_question_num} из {total_questions}</b> (Свободная форма)\n\n"
-                f"📝 <b>О {partner_name}:</b>\n\n"
+            f"📝 <b>О {partner_name}:</b>\n\n"
                 f"❓ <b>{next_question['text']}</b>\n\n"
                 f"💭 <i>{next_question['context']}</i>\n\n"
                 f"🔍 <b>Подсказки для ответа:</b>\n"
@@ -453,7 +458,7 @@ async def process_text_answer(message: Message, state: FSMContext, question_id: 
                 f"✏️ <b>Напишите ваш ответ:</b>\n"
                 f"<i>Минимум {next_question['min_length']} символов</i>",
                 parse_mode="HTML"
-            )
+        )
         
     except Exception as e:
         logger.error(f"Error in process_text_answer: {e}")
@@ -821,9 +826,9 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
         
         for question_id, answer_text in text_answers.items():
             question = free_form_questions.get(question_id, {})
-            formatted_answers.append({
-                'question_id': question_id,
-                'question': question.get('text', ''),
+                formatted_answers.append({
+                    'question_id': question_id,
+                    'question': question.get('text', ''),
                 'answer': answer_text,
                 'block': question.get('block', 'unknown')
             })
@@ -861,7 +866,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             
             # Save analysis to database
             try:
-                await local_user_service.save_analysis(
+                    await local_user_service.save_analysis(
                     user_id=user_id,
                     analysis_type=AnalysisType.PARTNER_PROFILE,
                     analysis_data=analysis_result,
@@ -872,7 +877,7 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
             
             # Save partner profile to database
             try:
-                await local_profile_service.create_profile_from_profiler(
+                    await local_profile_service.create_profile_from_profiler(
                     user_id=user_id,
                     partner_name=partner_name,
                     partner_description=partner_description,
@@ -881,12 +886,12 @@ async def start_analysis(message: Message, state: FSMContext, ai_service: AIServ
                     answers=text_answers,
                     analysis_result=analysis_result
                 )
-                logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
+                    logger.info(f"Partner profile saved for user {user_id} (telegram_id: {telegram_id})")
             except Exception as e:
                 logger.error(f"Failed to save partner profile: {e}")
             
             # Send results
-            logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
+                logger.info(f"Analysis completed successfully for user {user_id} (telegram_id: {telegram_id})")
             await send_analysis_results(message, analysis_result, pdf_bytes, partner_name)
             
         except Exception as e:
